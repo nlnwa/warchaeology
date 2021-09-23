@@ -25,19 +25,31 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 )
 
 func NewCommand() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "console",
+		Use:   "console <directory>",
 		Short: "A shell for working with WARC files",
 		Long:  ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				state.dir = args[0]
 			}
-			fmt.Println(state.dir)
+			var err error
+			if state.dir, err = filepath.Abs(state.dir); err != nil {
+				return err
+			}
+			var f os.FileInfo
+			f, err = os.Lstat(state.dir)
+			if err != nil {
+				return err
+			}
+			if !f.IsDir() {
+				return fmt.Errorf("%s is not a directory", state.dir)
+			}
 
 			return runE()
 		},
