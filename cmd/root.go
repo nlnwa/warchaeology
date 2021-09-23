@@ -96,17 +96,18 @@ func (c *conf) initConfig() {
 		viper.AddConfigPath(".")           // optionally look for config in the working directory
 	}
 
-	viper.WatchConfig()
-	viper.OnConfigChange(func(e fsnotify.Event) {
-		fmt.Println("Config file changed:", e.Name)
-	})
-
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found; ignore error
+			return
 		} else {
 			// Config file was found but another error was produced
 			log.Fatalf("error reading config file: %v", err)
 		}
 	}
+
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		fmt.Println("Config file changed:", e.Name)
+	})
 }
