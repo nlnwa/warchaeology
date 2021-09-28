@@ -42,6 +42,9 @@ func NewCommand() *cobra.Command {
 			if state.dir, err = filepath.Abs(state.dir); err != nil {
 				return err
 			}
+			if state.dir, err = filepath.EvalSymlinks(state.dir); err != nil {
+				return err
+			}
 			var f os.FileInfo
 			f, err = os.Lstat(state.dir)
 			if err != nil {
@@ -61,6 +64,7 @@ func NewCommand() *cobra.Command {
 var state = &State{curView: "dir"}
 
 func runE() error {
+	os.Setenv("COLORTERM", "truecolor")
 	g, err := gocui.NewGui(gocui.OutputTrue, true)
 	if err != nil {
 		log.Panicln(err)
@@ -265,6 +269,7 @@ func readRecord(g *gocui.Gui, widget *ListWidget) {
 		panic(err)
 	}
 	hv.Clear()
+	hv.WriteString(rec.Version().String() + "\n")
 	rec.WarcHeader().Write(hv)
 
 	cv, err := g.View("content")

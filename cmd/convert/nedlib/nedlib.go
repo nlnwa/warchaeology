@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package create
+package nedlib
 
 import (
 	"bufio"
@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/cmd/convert/internal"
 	"github.com/spf13/cobra"
 	"io"
 	"io/fs"
@@ -34,15 +35,7 @@ import (
 )
 
 type conf struct {
-	dir               string
-	fileName          string
-	compress          bool
-	concurrentWriters int
-	maxFileSize       int64
-	filePrefix        string
-	defaultTimeString string
-	defaultTime       time.Time
-	outDir            string
+	dir string
 }
 
 const dateFormat = "2006-1-2"
@@ -50,8 +43,8 @@ const dateFormat = "2006-1-2"
 func NewCommand() *cobra.Command {
 	c := &conf{}
 	var cmd = &cobra.Command{
-		Use:   "create <dir>",
-		Short: "Create warc files",
+		Use:   "nedlib <dir>",
+		Short: "Convert directory with files harvested with Nedlib into warc files",
 		Long:  ``,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -59,41 +52,30 @@ func NewCommand() *cobra.Command {
 				return errors.New("missing directory name")
 			}
 			c.dir = args[0]
-			if t, err := time.Parse(dateFormat, c.defaultTimeString); err != nil {
-				return err
-			} else {
-				c.defaultTime = t.Add(12 * time.Hour)
-			}
 			return runE(c)
 		},
 	}
-
-	cmd.Flags().IntVarP(&c.concurrentWriters, "concurrent-writers", "c", 1, "maximum concurrent WARC writers")
-	cmd.Flags().Int64VarP(&c.maxFileSize, "file-size", "s", 1024*1024*1024, "The maximum size for WARC files")
-	cmd.Flags().BoolVarP(&c.compress, "compress", "z", false, "use gzip compression for WARC files")
-	cmd.Flags().StringVarP(&c.filePrefix, "prefix", "p", "", "filename prefix for WARC files")
-	cmd.Flags().StringVarP(&c.defaultTimeString, "time", "t", time.Now().Format(dateFormat), "fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date")
-	cmd.Flags().StringVarP(&c.outDir, "warc-dir", "w", ".", "output directory for generated warc files. Directory must exist.")
 
 	return cmd
 }
 
 func runE(c *conf) error {
-	if f, err := os.Lstat(c.outDir); err != nil {
-		return fmt.Errorf("could not write to output directory '%s': %w", c.outDir, err.(*os.PathError).Err)
+	if f, err := os.Lstat(internal.ConvertConf.OutDir); err != nil {
+		return fmt.Errorf("could not write to output directory '%s': %w", internal.ConvertConf.OutDir, err.(*os.PathError).Err)
 	} else if !f.IsDir() {
-		return fmt.Errorf("could not write to output directory: '%s' is not a directory", c.outDir)
+		return fmt.Errorf("could not write to output directory: '%s' is not a directory", internal.ConvertConf.OutDir)
 	}
 
 	namer := &gowarc.PatternNameGenerator{
-		Directory: c.outDir,
-		Prefix:    c.filePrefix,
+		Directory: internal.ConvertConf.OutDir,
+		Prefix:    internal.ConvertConf.FilePrefix,
 	}
 	writer := gowarc.NewWarcFileWriter(
-		gowarc.WithMaxConcurrentWriters(c.concurrentWriters),
-		gowarc.WithCompression(c.compress),
-		gowarc.WithMaxFileSize(c.maxFileSize),
-		gowarc.WithFileNameGenerator(namer))
+		gowarc.WithMaxConcurrentWriters(internal.ConvertConf.ConcurrentWriters),
+		gowarc.WithCompression(internal.ConvertConf.Compress),
+		gowarc.WithMaxFileSize(internal.ConvertConf.MaxFileSize),
+		gowarc.WithFileNameGenerator(namer),
+		gowarc.WithFlush(internal.ConvertConf.Flush))
 	fmt.Println(writer)
 
 	defer func(writer *gowarc.WarcFileWriter) {
@@ -182,7 +164,12 @@ func writeRecord(ctx context.Context, writer *gowarc.WarcFileWriter, config *con
 		return "", err
 	}
 
-	rb := gowarc.NewRecordBuilder(gowarc.Response, gowarc.WithAddMissingDigest(true), gowarc.WithFixDigest(true), gowarc.WithFixContentLength(true))
+	rb := gowarc.NewRecordBuilder(gowarc.Response,
+		gowarc.WithAddMissingDigest(true),
+		gowarc.WithFixDigest(true),
+		gowarc.WithFixContentLength(true),
+		gowarc.WithVersion(internal.ConvertConf.WarcVersion))
+
 	rb.AddWarcHeader(gowarc.ContentType, "application/http;msgtype=response")
 
 	header := response.Header
@@ -194,7 +181,7 @@ func writeRecord(ctx context.Context, writer *gowarc.WarcFileWriter, config *con
 		}
 		rb.AddWarcHeaderTime(gowarc.WarcDate, t)
 	} else {
-		rb.AddWarcHeaderTime(gowarc.WarcDate, config.defaultTime)
+		rb.AddWarcHeaderTime(gowarc.WarcDate, internal.ConvertConf.DefaultTime)
 	}
 
 	for i, _ := range header {

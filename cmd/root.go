@@ -21,7 +21,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/nlnwa/warchaeology/cmd/cat"
 	"github.com/nlnwa/warchaeology/cmd/console"
-	"github.com/nlnwa/warchaeology/cmd/create"
+	"github.com/nlnwa/warchaeology/cmd/convert"
 	"github.com/nlnwa/warchaeology/cmd/ls"
 	"github.com/nlnwa/warchaeology/cmd/validate"
 	log "github.com/sirupsen/logrus"
@@ -71,7 +71,7 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(cat.NewCommand())
 	cmd.AddCommand(validate.NewCommand())
 	cmd.AddCommand(console.NewCommand())
-	cmd.AddCommand(create.NewCommand())
+	cmd.AddCommand(convert.NewCommand())
 
 	return cmd
 }
