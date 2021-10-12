@@ -39,6 +39,7 @@ type unmarshaler struct {
 	LastOffset int64
 	version    int
 	warcInfoID string
+	gz         *gzip.Reader
 }
 
 func NewUnmarshaler(opts ...gowarc.WarcRecordOption) Unmarshaler {
@@ -58,17 +59,16 @@ func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gow
 		return nil, offset, validation, err
 	}
 
-	var g *gzip.Reader
 	if magic[0] == 0x1f && magic[1] == 0x8b {
 		log.Debug("detected gzip record")
 		var x io.ByteReader
 		x = io.ByteReader(b)
-		g, err = gzip.NewReader(x.(io.Reader))
+		u.gz, err = gzip.NewReader(x.(io.Reader))
 		if err != nil {
 			return nil, offset, validation, err
 		}
-		g.Multistream(false)
-		r = bufio.NewReader(g)
+		u.gz.Multistream(false)
+		r = bufio.NewReader(u.gz)
 	} else {
 		fmt.Printf("Magic: %x %x\n", magic[0], magic[1])
 		r = b
@@ -85,20 +85,20 @@ func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gow
 	} else {
 		wr, validation, err = u.parseRecord(r, l)
 		if err != nil {
-			fmt.Printf("STREAM %T %v\n", r, g)
+			fmt.Printf("STREAM %T %v\n", r, u.gz)
 		}
 	}
 
 	// Discarding 1 byte which makes up the end of record marker (\n)
 	// TODO: validate that record ends with correct marker
 	_, _ = r.Discard(1)
-	if g != nil {
-		n, err := io.Copy(io.Discard, g)
+	if u.gz != nil {
+		n, err := io.Copy(io.Discard, u.gz)
 		if n > 0 {
 			fmt.Println("AFTER READ", n, err)
 			panic("JADDA")
 		}
-		_ = g.Close()
+		_ = u.gz.Close()
 	}
 	return wr, 0, validation, err
 }

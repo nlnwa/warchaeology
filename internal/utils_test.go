@@ -17,7 +17,7 @@
 package internal_test
 
 import (
-	"github.com/nlnwa/gowarc/cmd/warc/internal"
+	"github.com/nlnwa/warchaeology/internal"
 	"testing"
 )
 

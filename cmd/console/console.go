@@ -82,6 +82,7 @@ func runE() error {
 	g.SelBgColor = gocui.ColorDefault
 	g.SelFrameColor = gocui.ColorCyan
 	g.SupportOverlaps = true
+	g.Mouse = true
 
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
@@ -99,6 +100,9 @@ func runE() error {
 		panic(err)
 	}
 	if err := g.SetKeybinding("", 'e', gocui.ModNone, state.filter.toggleErrorFilter); err != nil {
+		log.Panicln(err)
+	}
+	if err := g.SetKeybinding("help", gocui.MouseLeft, gocui.ModNone, state.filter.mouseToggleFilter); err != nil {
 		log.Panicln(err)
 	}
 	if err := g.SetKeybinding("", 'i', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
@@ -173,7 +177,7 @@ func layout(g *gocui.Gui) error {
 		v.BgColor = gocui.ColorDefault
 		v.SelBgColor = gocui.ColorWhite
 		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = true
+		v.Highlight = false
 		v.Autoscroll = false
 		v.Title = "Records"
 	}
@@ -230,7 +234,7 @@ func layout(g *gocui.Gui) error {
 		}
 		v.SelBgColor = gocui.ColorWhite
 		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = true
+		v.Highlight = false
 	}
 
 	if _, err := g.SetCurrentView(state.curView); err != nil {
