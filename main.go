@@ -19,9 +19,11 @@ package main
 
 import (
 	"github.com/nlnwa/warchaeology/cmd"
+	"runtime"
 )
 
 func main() {
+	runtime.GOMAXPROCS(128)
 	c := cmd.NewCommand()
 	_ = c.Execute()
 }

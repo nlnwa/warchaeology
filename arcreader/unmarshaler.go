@@ -70,7 +70,6 @@ func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gow
 		u.gz.Multistream(false)
 		r = bufio.NewReader(u.gz)
 	} else {
-		fmt.Printf("Magic: %x %x\n", magic[0], magic[1])
 		r = b
 	}
 

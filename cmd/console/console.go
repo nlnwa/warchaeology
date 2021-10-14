@@ -182,7 +182,7 @@ func layout(g *gocui.Gui) error {
 		v.Title = "Records"
 	}
 
-	if v, err := g.SetView("header", 50, 10, maxX-60, 25, gocui.BOTTOM|gocui.RIGHT); err != nil {
+	if v, err := g.SetView("header", 50, 10, maxX-60, 30, gocui.BOTTOM|gocui.RIGHT); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -194,7 +194,7 @@ func layout(g *gocui.Gui) error {
 		v.Title = "WARC header"
 	}
 
-	if v, err := g.SetView("content", 50, 25, maxX-60, maxY-2, gocui.TOP|gocui.RIGHT); err != nil {
+	if v, err := g.SetView("content", 50, 30, maxX-60, maxY-2, gocui.TOP|gocui.RIGHT); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}

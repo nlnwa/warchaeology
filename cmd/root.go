@@ -22,6 +22,7 @@ import (
 	"github.com/nlnwa/warchaeology/cmd/cat"
 	"github.com/nlnwa/warchaeology/cmd/console"
 	"github.com/nlnwa/warchaeology/cmd/convert"
+	"github.com/nlnwa/warchaeology/cmd/dedup"
 	"github.com/nlnwa/warchaeology/cmd/ls"
 	"github.com/nlnwa/warchaeology/cmd/validate"
 	log "github.com/sirupsen/logrus"
@@ -72,6 +73,7 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(validate.NewCommand())
 	cmd.AddCommand(console.NewCommand())
 	cmd.AddCommand(convert.NewCommand())
+	cmd.AddCommand(dedup.NewCommand())
 
 	return cmd
 }
