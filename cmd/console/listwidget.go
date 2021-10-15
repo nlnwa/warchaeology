@@ -311,6 +311,12 @@ func (w *ListWidget) refreshFilter(g *gocui.Gui, v *gocui.View) error {
 			select {
 			case <-ctx.Done():
 				return
+			case <-w.finished.Done():
+				if l < len(w.records) {
+					rec := w.records[l:]
+					w.upd(g, ctx, rec)
+				}
+				return
 			default:
 				if l < len(w.records) {
 					rec := w.records[l:]
