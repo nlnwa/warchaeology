@@ -25,6 +25,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 )
@@ -51,7 +52,9 @@ func NewCommand() *cobra.Command {
 				return err
 			}
 			if !f.IsDir() {
-				return fmt.Errorf("%s is not a directory", state.dir)
+				f := path.Base(state.dir)
+				state.dir = path.Dir(state.dir)
+				state.files = append(state.files, f)
 			}
 
 			return runE()
@@ -154,8 +157,6 @@ func runE() error {
 			panic(err)
 		}
 	}
-	fmt.Println(state.dir)
-
 	time.AfterFunc(100*time.Millisecond, func() {
 		filesWidget.Init(g, state.dir)
 	})
@@ -299,7 +300,8 @@ func readRecord(g *gocui.Gui, widget *ListWidget) {
 type State struct {
 	g       *gocui.Gui
 	curView string
-	dir     string
+	files   []string // Initial files from command line
+	dir     string   // Initial dir from command line
 	file    string
 	records *ListWidget
 	header  string
