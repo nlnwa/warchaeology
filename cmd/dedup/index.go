@@ -17,26 +17,14 @@
 package dedup
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	badger "github.com/dgraph-io/badger/v3"
 	"github.com/nlnwa/gowarc"
-	"sync"
 	"time"
 )
 
 type index struct {
 	digests *badger.DB
-}
-
-type codec struct {
-	enc     *gob.Encoder
-	dec     *gob.Decoder
-	encBuf  *bytes.Buffer
-	decBuf  *bytes.Buffer
-	encLock sync.Mutex
-	decLock sync.Mutex
 }
 
 type ref struct {
@@ -110,7 +98,7 @@ func (r *ref) MarshalBinary() (data []byte, err error) {
 
 func newDb(dir string, newIndex bool) (idx *index, err error) {
 	idx = &index{}
-	if idx.digests, err = badger.Open(badger.DefaultOptions(dir)); err != nil {
+	if idx.digests, err = badger.Open(badger.DefaultOptions(dir).WithLoggingLevel(badger.WARNING)); err != nil {
 		return
 	}
 	if newIndex {

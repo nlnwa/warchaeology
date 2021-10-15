@@ -31,7 +31,7 @@ type workerpool struct {
 func newWorkerpool(workers int) *workerpool {
 	w := &workerpool{
 		workers: workers,
-		jobs:    make(chan func(), workers*2),
+		jobs:    make(chan func(), workers*4),
 		wg:      sync.WaitGroup{},
 	}
 	for i := 0; i < workers; i++ {
