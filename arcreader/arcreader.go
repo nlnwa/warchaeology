@@ -26,7 +26,7 @@ type ArcFileReader struct {
 	file           *os.File
 	initialOffset  int64
 	offset         int64
-	warcReader     Unmarshaler
+	warcReader     gowarc.Unmarshaler
 	countingReader *CountingReader
 	bufferedReader *bufio.Reader
 	currentRecord  gowarc.WarcRecord

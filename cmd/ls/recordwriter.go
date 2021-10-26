@@ -55,6 +55,6 @@ type DefaultWriter struct {
 func (d DefaultWriter) Write(wr gowarc.WarcRecord, fileName string, offset int64) error {
 	recordID := wr.WarcHeader().Get(gowarc.WarcRecordID)
 	targetURI := internal.CropString(wr.WarcHeader().Get(gowarc.WarcTargetURI), 100)
-	fmt.Printf("%9d %s %-9.9s %s\n", offset, recordID, wr.Type(), targetURI)
+	fmt.Printf("%11d %s %-9.9s %s\n", offset, recordID, wr.Type(), targetURI)
 	return nil
 }

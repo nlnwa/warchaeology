@@ -1,6 +1,8 @@
-package filewalker
+package filewalker_test
 
 import (
+	"context"
+	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -36,8 +38,10 @@ func TestFilewalker_Walk(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := walker{}
-			f := New(tt.paths, tt.recursive, tt.followSymlinks, tt.suffixes, w.walkfunc)
-			err := f.Walk()
+			f := filewalker.New(tt.paths, tt.recursive, tt.followSymlinks, tt.suffixes, 1, w.walkfunc)
+			ctx := context.TODO()
+			stats := &result{}
+			err := f.Walk(ctx, stats)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, w)
 		})
@@ -46,6 +50,53 @@ func TestFilewalker_Walk(t *testing.T) {
 
 type walker []string
 
-func (w *walker) walkfunc(path string) {
+func (w *walker) walkfunc(path string) filewalker.Result {
 	*w = append(*w, path)
+	return &result{}
+}
+
+type result struct{}
+
+func (r *result) IncrRecords() {
+}
+
+func (r *result) IncrProcessed() {
+}
+
+func (r *result) AddError(err error) {
+}
+
+func (r *result) Records() int64 {
+	return 0
+}
+
+func (r *result) Processed() int64 {
+	return 0
+}
+
+func (r *result) ErrorCount() int64 {
+	return 0
+}
+
+func (r *result) Errors() []error {
+	return []error{}
+}
+
+func (r *result) Error() string {
+	return ""
+}
+
+func (r *result) Merge(s filewalker.Stats) {
+}
+
+func (r *result) String() string {
+	return ""
+}
+
+func (r *result) Log(fileNum int) string {
+	return ""
+}
+
+func (r *result) GetStats() filewalker.Stats {
+	return r
 }

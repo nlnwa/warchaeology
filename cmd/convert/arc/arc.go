@@ -17,93 +17,155 @@
 package arc
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/arcreader"
-	"github.com/nlnwa/warchaeology/cmd/convert/internal"
+	"github.com/nlnwa/warchaeology/internal/filewalker"
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"io"
 	"os"
-	"path"
-	"strings"
+	"os/signal"
+	"runtime"
+	"syscall"
+	"time"
 )
 
 type conf struct {
-	fileName string
+	files       []string
+	concurrency int
+	writerConf  *warcwriterconfig.WarcWriterConfig
 }
 
 func NewCommand() *cobra.Command {
 	c := &conf{}
 	var cmd = &cobra.Command{
-		Use:   "arc <file>",
+		Use:   "arc <files/dirs>",
 		Short: "Convert arc file into warc file",
 		Long:  ``,
-		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return errors.New("missing directory name")
+			if wc, err := warcwriterconfig.NewFromViper(); err != nil {
+				return err
+			} else {
+				c.writerConf = wc
 			}
-			c.fileName = args[0]
+			c.concurrency = viper.GetInt(flag.Concurrency)
+
+			if len(args) == 0 {
+				return errors.New("missing file or directory name")
+			}
+			c.files = args
 			return runE(c)
 		},
 	}
+
+	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)
+	cmd.Flags().BoolP(flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
+	cmd.Flags().StringSlice(flag.Suffixes, []string{".arc", ".arc.gz"}, flag.SuffixesHelp)
+	cmd.Flags().IntP(flag.Concurrency, "c", int(float32(runtime.NumCPU())*float32(1.5)), flag.ConcurrencyHelp)
+	cmd.Flags().IntP(flag.ConcurrentWriters, "C", 1, flag.ConcurrentWritersHelp)
+	cmd.Flags().Int64P(flag.FileSize, "S", 1024*1024*1024, flag.FileSizeHelp)
+	cmd.Flags().BoolP(flag.Compress, "z", false, flag.CompressHelp)
+	cmd.Flags().Bool(flag.CompressionLevel, false, flag.CompressionLevelHelp)
+	cmd.Flags().StringP(flag.FilePrefix, "p", "", flag.FilePrefixHelp)
+	cmd.Flags().StringP(flag.WarcDir, "w", ".", flag.WarcDirHelp)
+	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
+	cmd.Flags().String(flag.NameGenerator, "default", flag.NameGeneratorHelp)
+	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
+	cmd.Flags().String(flag.WarcVersion, "1.1", flag.WarcVersionHelp)
+	cmd.Flags().StringP(flag.DefaultDate, "t", time.Now().Format(warcwriterconfig.DefaultDateFormat), flag.DefaultDateHelp)
 
 	return cmd
 }
 
 func runE(c *conf) error {
-	f := path.Base(c.fileName)
-	f = strings.TrimSuffix(f, ".gz")
-	f = strings.ReplaceAll(f, ".arc", ".warc")
-	namer := arc2warcNamer(f)
+	ctx, cancel := context.WithCancel(context.Background())
 
-	writer := gowarc.NewWarcFileWriter(
-		gowarc.WithMaxConcurrentWriters(internal.ConvertConf.ConcurrentWriters),
-		gowarc.WithCompression(internal.ConvertConf.Compress),
-		gowarc.WithMaxFileSize(internal.ConvertConf.MaxFileSize),
-		gowarc.WithFileNameGenerator(&namer),
-		gowarc.WithFlush(internal.ConvertConf.Flush))
-	fmt.Println(writer)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		cancel()
+	}()
 
-	defer func(writer *gowarc.WarcFileWriter) {
-		err := writer.Close()
-		if err != nil {
-			fmt.Printf("Error closing WARC writer: %v\n", err)
-		}
-	}(writer)
+	defer c.writerConf.Close()
+	fileWalker := filewalker.NewFromViper(c.files, c.readFile)
+	stats := filewalker.NewStats()
+	return fileWalker.Walk(ctx, stats)
+}
 
-	count := 0
-	errors := 0
+func (c *conf) readFile(fileName string) filewalker.Result {
+	result := filewalker.NewResult(fileName)
 
-	a, err := arcreader.NewArcFileReader(c.fileName, 0, gowarc.WithStrictValidation(), gowarc.WithVersion(internal.ConvertConf.WarcVersion))
+	a, err := arcreader.NewArcFileReader(fileName, 0,
+		gowarc.WithVersion(c.writerConf.WarcVersion),
+		gowarc.WithAddMissingDigest(true),
+	)
 	if err != nil {
-		return err
+		result.AddError(err)
+		return result
 	}
-	defer a.Close()
+	defer func() { _ = a.Close() }()
+
+	var writer *gowarc.WarcFileWriter
+	if c.writerConf.WarcFileNameGenerator == "identity" {
+		defer func() {
+			if writer != nil {
+				_ = writer.Close()
+			}
+		}()
+	}
 
 	for {
-		wr, _, _, err := a.Next()
+		var currentOffset int64
+		currentOffset, writer, err = handleRecord(c, a, fileName, result, writer)
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return err
+			result.AddError(fmt.Errorf("error: %v, rec num: %d, offset %d", err.Error(), result.Records(), currentOffset))
+			break
 		}
-		resp := writer.Write(wr)
-		if resp[0].Err != nil {
-			fmt.Printf("Err: %v\n", resp[0].Err)
-			errors++
-		}
-		count++
-		wr.Close()
 	}
-	_, _ = fmt.Fprintf(os.Stderr, "\nCount: %d, Errors: %d\n", count, errors)
-	return nil
+
+	return result
 }
 
-type arc2warcNamer string
+// handleRecord processes one record
+// The input parameter writer and output parameter writerOut is only used for identity transformation. In this case there is one writer
+// per file which should be closed by readFile when the file is processed. But since we need the warc date of the first record to open
+// the writer, it must be opened in this function. These parameters are used for giving readFile access to the writer.
+func handleRecord(c *conf, wf *arcreader.ArcFileReader, fileName string, result filewalker.Result, writer *gowarc.WarcFileWriter) (offset int64, writerOut *gowarc.WarcFileWriter, err error) {
+	writerOut = writer
 
-func (a arc2warcNamer) NewWarcfileName() (string, string) {
-	return internal.ConvertConf.OutDir, string(a)
+	wr, currentOffset, validation, e := wf.Next()
+	offset = currentOffset
+	result.IncrRecords()
+	result.IncrProcessed()
+	if e != nil {
+		err = e
+		return
+	}
+	if !validation.Valid() {
+		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), currentOffset, validation))
+	}
+
+	defer func() { _ = wr.Close() }()
+
+	if writer == nil {
+		writer = c.writerConf.GetWarcWriter(fileName, wr.WarcHeader().Get(gowarc.WarcDate))
+		if c.writerConf.WarcFileNameGenerator == "identity" {
+			writerOut = writer
+		}
+	}
+	if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
+		fmt.Printf("Offset: %d\n", currentOffset)
+		wr.WarcHeader().Write(os.Stdout)
+		panic(rr[0].Err)
+	}
+	return
 }

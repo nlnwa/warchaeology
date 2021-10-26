@@ -17,201 +17,155 @@
 package nedlib
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/cmd/convert/internal"
+	"github.com/nlnwa/warchaeology/internal/filewalker"
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
+	"github.com/nlnwa/warchaeology/nedlibreader"
 	"github.com/spf13/cobra"
-	"io"
-	"io/fs"
-	"net/http"
+	"github.com/spf13/viper"
 	"os"
-	"path/filepath"
-	"strings"
+	"os/signal"
+	"runtime"
+	"syscall"
 	"time"
 )
 
 type conf struct {
-	dir string
+	files       []string
+	concurrency int
+	writerConf  *warcwriterconfig.WarcWriterConfig
 }
-
-const dateFormat = "2006-1-2"
 
 func NewCommand() *cobra.Command {
 	c := &conf{}
 	var cmd = &cobra.Command{
-		Use:   "nedlib <dir>",
+		Use:   "nedlib <files/dirs>",
 		Short: "Convert directory with files harvested with Nedlib into warc files",
 		Long:  ``,
-		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return errors.New("missing directory name")
+			if wc, err := warcwriterconfig.NewFromViper(); err != nil {
+				return err
+			} else {
+				wc.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
+					payload := &gowarc.WarcFields{}
+					payload.Set("software", "warchaeology nedlib converter beta")
+					//payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", ww.settings.WarcVersion().Major(), ww.settings.WarcVersion().Minor()))
+					//payload.Set("collection", ww.collectionConfig.GetMeta().GetName())
+					//payload.Set("description", ww.collectionConfig.GetMeta().GetDescription())
+					//if ww.subCollection != config.Collection_UNDEFINED {
+					//	payload.Set("subCollection", ww.subCollection.String())
+					//}
+					//payload.Set("isPartOf", ww.CollectionName())
+					h, e := os.Hostname()
+					if e != nil {
+						return e
+					}
+					payload.Set("host", h)
+
+					_, err := recordBuilder.WriteString(payload.String())
+					return err
+				}
+
+				c.writerConf = wc
 			}
-			c.dir = args[0]
+			c.concurrency = viper.GetInt(flag.Concurrency)
+
+			if len(args) == 0 {
+				return errors.New("missing file or directory name")
+			}
+			c.files = args
 			return runE(c)
 		},
 	}
+
+	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)
+	cmd.Flags().BoolP(flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
+	cmd.Flags().StringSlice(flag.Suffixes, []string{".meta"}, flag.SuffixesHelp)
+	cmd.Flags().IntP(flag.Concurrency, "c", int(float32(runtime.NumCPU())*float32(1.5)), flag.ConcurrencyHelp)
+	cmd.Flags().IntP(flag.ConcurrentWriters, "C", 1, flag.ConcurrentWritersHelp)
+	cmd.Flags().Int64P(flag.FileSize, "S", 1024*1024*1024, flag.FileSizeHelp)
+	cmd.Flags().BoolP(flag.Compress, "z", false, flag.CompressHelp)
+	cmd.Flags().Bool(flag.CompressionLevel, false, flag.CompressionLevelHelp)
+	cmd.Flags().StringP(flag.FilePrefix, "p", "", flag.FilePrefixHelp)
+	cmd.Flags().StringP(flag.WarcDir, "w", ".", flag.WarcDirHelp)
+	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
+	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
+	cmd.Flags().String(flag.WarcVersion, "1.1", flag.WarcVersionHelp)
+	cmd.Flags().StringP(flag.DefaultDate, "t", time.Now().Format(warcwriterconfig.DefaultDateFormat), flag.DefaultDateHelp)
+
+	// Nedlib data has a structure which do not allow for identity transformation of filenames
+	//cmd.Flags().String(flag.NameGenerator, "default", flag.NameGeneratorHelp)
+	viper.Set(flag.NameGenerator, "default")
 
 	return cmd
 }
 
 func runE(c *conf) error {
-	if f, err := os.Lstat(internal.ConvertConf.OutDir); err != nil {
-		return fmt.Errorf("could not write to output directory '%s': %w", internal.ConvertConf.OutDir, err.(*os.PathError).Err)
-	} else if !f.IsDir() {
-		return fmt.Errorf("could not write to output directory: '%s' is not a directory", internal.ConvertConf.OutDir)
-	}
+	ctx, cancel := context.WithCancel(context.Background())
 
-	namer := &gowarc.PatternNameGenerator{
-		Directory: internal.ConvertConf.OutDir,
-		Prefix:    internal.ConvertConf.FilePrefix,
-	}
-	writer := gowarc.NewWarcFileWriter(
-		gowarc.WithMaxConcurrentWriters(internal.ConvertConf.ConcurrentWriters),
-		gowarc.WithCompression(internal.ConvertConf.Compress),
-		gowarc.WithMaxFileSize(internal.ConvertConf.MaxFileSize),
-		gowarc.WithFileNameGenerator(namer),
-		gowarc.WithFlush(internal.ConvertConf.Flush))
-	fmt.Println(writer)
-
-	defer func(writer *gowarc.WarcFileWriter) {
-		err := writer.Close()
-		if err != nil {
-			fmt.Printf("Error closing WARC writer: %v\n", err)
-		}
-	}(writer)
-
-	wp := NewWorkerPool(32)
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
-	go wp.Run(ctx)
-
-	count := 0
-	errors := 0
-
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		err := filepath.WalkDir(c.dir, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				fmt.Printf("%s, %v, %v", path, d, err)
-				return err
-			}
-			if d.IsDir() {
-				fmt.Printf("\nWorking on dir: '%s'\n", path)
-			} else {
-				fmt.Print(".")
-				if strings.HasSuffix(path, ".meta") {
-					count++
-
-					j := Job{
-						ID:           count,
-						ExecFn:       writeRecord,
-						writer:       writer,
-						config:       c,
-						metaFileName: path,
-					}
-					wp.jobs <- j
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			errors++
-			//return err
-		}
-		fmt.Println()
-
-		close(wp.jobs)
+		<-sigs
+		cancel()
 	}()
 
-	handleResults(wp)
-	_, _ = fmt.Fprintf(os.Stderr, "\nCount: %d, Errors: %d\n", count, errors)
-	return nil
+	defer c.writerConf.Close()
+
+	fileWalker := filewalker.NewFromViper(c.files, c.readFile)
+	stats := filewalker.NewStats()
+	return fileWalker.Walk(ctx, stats)
 }
 
-func walkDir() {
+func (c *conf) readFile(fileName string) filewalker.Result {
+	result := filewalker.NewResult(fileName)
 
-}
-
-func handleResults(wp WorkerPool) {
-	for {
-		select {
-		case _, ok := <-wp.Results():
-			if !ok {
-				continue
-			}
-
-		case <-wp.Done:
-			return
-		default:
-		}
-	}
-}
-
-func writeRecord(ctx context.Context, writer *gowarc.WarcFileWriter, config *conf, metaFileName string) (string, error) {
-	f, err := os.Open(metaFileName)
-	if err != nil {
-		return "", err
-	}
-
-	response, err := http.ReadResponse(bufio.NewReader(io.MultiReader(f, bytes.NewReader([]byte{'\r', '\n'}))), nil)
-	f.Close()
-	if err != nil {
-		return "", err
-	}
-
-	rb := gowarc.NewRecordBuilder(gowarc.Response,
+	r, err := nedlibreader.NewNedlibReader(fileName, c.writerConf.DefaultTime,
+		gowarc.WithVersion(c.writerConf.WarcVersion),
 		gowarc.WithAddMissingDigest(true),
 		gowarc.WithFixDigest(true),
 		gowarc.WithFixContentLength(true),
-		gowarc.WithVersion(internal.ConvertConf.WarcVersion))
-
-	rb.AddWarcHeader(gowarc.ContentType, "application/http;msgtype=response")
-
-	header := response.Header
-	dateString := header.Get("Date")
-	if dateString != "" {
-		t, err := time.Parse(time.RFC1123, dateString)
-		if err != nil {
-			return "", err
-		}
-		rb.AddWarcHeaderTime(gowarc.WarcDate, t)
-	} else {
-		rb.AddWarcHeaderTime(gowarc.WarcDate, internal.ConvertConf.DefaultTime)
-	}
-
-	for i, _ := range header {
-		if strings.HasPrefix(i, "Arc") {
-			if i == "Arc-Url" {
-				rb.AddWarcHeader(gowarc.WarcTargetURI, header.Get(i))
-			}
-			header.Del(i)
-		}
-	}
-	rb.WriteString(response.Proto + " " + response.Status + "\n")
-	header.Write(rb)
-
-	rb.WriteString("\r\n")
-
-	p, err := os.Open(strings.TrimSuffix(metaFileName, ".meta"))
-	defer p.Close()
+		gowarc.WithAddMissingContentLength(true),
+	)
 	if err != nil {
-		return "", err
+		result.AddError(err)
+		return result
+	}
+	defer func() { _ = r.Close() }()
+
+	_, err = handleRecord(c, r, fileName, result)
+	if err != nil {
+		result.AddError(fmt.Errorf("error: %v, rec num: %d", err.Error(), result.Records()))
+	}
+	return result
+}
+
+// handleRecord processes one record
+func handleRecord(c *conf, wf *nedlibreader.NedlibReader, fileName string, result filewalker.Result) (offset int64, err error) {
+	wr, currentOffset, validation, e := wf.Next()
+	offset = currentOffset
+	if e != nil {
+		err = e
+		return
+	}
+	result.IncrRecords()
+	result.IncrProcessed()
+	if !validation.Valid() {
+		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), currentOffset, validation))
 	}
 
-	rb.ReadFrom(p)
+	defer func() { _ = wr.Close() }()
 
-	wr, _, err := rb.Build()
-	defer wr.Close()
+	writer := c.writerConf.GetWarcWriter(fileName, wr.WarcHeader().Get(gowarc.WarcDate))
 
-	resp := writer.Write(wr)
-	if resp[0].Err != nil {
-		fmt.Printf("%s - %v", wr, resp[0].Err)
+	if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
+		fmt.Printf("Offset: %d\n", currentOffset)
+		wr.WarcHeader().Write(os.Stdout)
+		panic(rr[0].Err)
 	}
-
-	return fmt.Sprintf("%s - %v", wr, resp[0].Err), nil
+	return
 }

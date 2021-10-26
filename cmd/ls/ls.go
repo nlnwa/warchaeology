@@ -17,52 +17,68 @@
 package ls
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal"
+	"github.com/nlnwa/warchaeology/internal/filewalker"
+	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"io"
 	"os"
+	"os/signal"
 	"sort"
 	"strconv"
+	"syscall"
 )
 
 type conf struct {
+	files       []string
 	offset      int64
 	recordCount int
 	strict      bool
-	fileName    string
 	id          []string
 	format      string
 	writer      RecordWriter
+	concurrency int
 }
 
 func NewCommand() *cobra.Command {
 	c := &conf{}
 	var cmd = &cobra.Command{
-		Use:   "ls",
+		Use:   "ls <files/dirs>",
 		Short: "List records from warc files",
 		Long:  ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				return errors.New("missing file name")
+				return errors.New("missing file or directory")
 			}
-			c.fileName = args[0]
+			c.files = args
 			if c.offset >= 0 && c.recordCount == 0 {
 				c.recordCount = 1
+				// TODO: check that input is exactly one file when using offset
 			}
 			if c.offset < 0 {
 				c.offset = 0
 			}
 			sort.Strings(c.id)
+
+			if !cmd.Flag(flag.LogConsole).Changed {
+				viper.Set(flag.LogConsole, []string{"summary"})
+			}
 			return runE(c)
 		},
 	}
 
+	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)
+	cmd.Flags().BoolP(flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
+	cmd.Flags().StringSlice(flag.Suffixes, []string{".warc", ".warc.gz"}, flag.SuffixesHelp)
+	cmd.Flags().IntVarP(&c.concurrency, flag.Concurrency, "c", 1, flag.ConcurrencyHelp)
 	cmd.Flags().Int64VarP(&c.offset, "offset", "o", -1, "record offset")
-	cmd.Flags().IntVarP(&c.recordCount, "record-count", "c", 0, "The maximum number of records to show")
-	cmd.Flags().BoolVarP(&c.strict, "strict", "s", false, "strict parsing")
+	cmd.Flags().IntVarP(&c.recordCount, "record-count", "n", 0, "The maximum number of records to show")
+	cmd.Flags().BoolVar(&c.strict, "strict", false, "strict parsing")
 	cmd.Flags().StringArrayVar(&c.id, "id", []string{}, "specify record ids to ls")
 	cmd.Flags().StringVar(&c.format, "format", "", "specify output format. One of: 'cdx', 'cdxj'")
 
@@ -70,11 +86,23 @@ func NewCommand() *cobra.Command {
 }
 
 func runE(c *conf) error {
-	readFile(c, c.fileName)
-	return nil
+	ctx, cancel := context.WithCancel(context.Background())
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		cancel()
+	}()
+
+	fileWalker := filewalker.NewFromViper(c.files, c.readFile)
+	res := filewalker.NewStats()
+	return fileWalker.Walk(ctx, res)
 }
 
-func readFile(c *conf, fileName string) {
+func (c *conf) readFile(fileName string) filewalker.Result {
+	result := filewalker.NewResult(fileName)
+
 	var opts []gowarc.WarcRecordOption
 	if c.strict {
 		opts = append(opts, gowarc.WithStrictValidation())
@@ -107,8 +135,9 @@ func readFile(c *conf, fileName string) {
 		if err == io.EOF {
 			break
 		}
+		result.IncrRecords()
 		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error: %v, rec num: %v, Offset %v\n", err.Error(), strconv.Itoa(count), currentOffset)
+			result.AddError(fmt.Errorf("error: %v, rec num: %v, offset %v", err.Error(), strconv.Itoa(count), currentOffset))
 			break
 		}
 		if len(c.id) > 0 {
@@ -118,6 +147,7 @@ func readFile(c *conf, fileName string) {
 		}
 		count++
 
+		result.IncrProcessed()
 		if err := c.writer.Write(wr, fileName, currentOffset); err != nil {
 			panic(err)
 		}
@@ -126,5 +156,5 @@ func readFile(c *conf, fileName string) {
 			break
 		}
 	}
-	fmt.Fprintln(os.Stderr, "Count: ", count)
+	return result
 }

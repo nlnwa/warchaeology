@@ -17,37 +17,50 @@
 package dedup
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal/filewalker"
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"io"
-	"io/fs"
 	"os"
-	"path/filepath"
+	"os/signal"
+	"runtime"
 	"strings"
-	"sync"
-	"time"
+	"syscall"
 )
 
 type conf struct {
-	recordTypes  gowarc.RecordType
-	dirName      string
-	indexDir     string
-	writer       *gowarc.WarcFileWriter
-	skipSymlinks bool
-	index        *index
+	recordTypes gowarc.RecordType
+	files       []string
+	concurrency int
+	indexDir    string
+	index       *index
+	writerConf  *warcwriterconfig.WarcWriterConfig
 }
-
-var recordTypes []string
 
 func NewCommand() *cobra.Command {
 	c := &conf{}
+
 	var cmd = &cobra.Command{
 		Use:   "dedup",
 		Short: "Deduplicate WARC files",
 		Long:  ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if wc, err := warcwriterconfig.NewFromViper(); err != nil {
+				return err
+			} else {
+				c.writerConf = wc
+			}
+
+			c.indexDir = viper.GetString(flag.IndexDir)
+			c.concurrency = viper.GetInt(flag.Concurrency)
+
+			recordTypes := viper.GetStringSlice(flag.RecordType)
 			for _, r := range recordTypes {
 				switch strings.ToLower(r) {
 				case "warcinfo":
@@ -70,15 +83,11 @@ func NewCommand() *cobra.Command {
 			}
 
 			if len(args) == 0 {
-				return errors.New("missing directory name")
+				return errors.New("missing file or directory name")
 			}
-			c.dirName = args[0]
-			n, err := cmd.Flags().GetBool("new-index")
-			if err != nil {
-				return err
-			}
-			c.index, err = newDb(c.indexDir, n)
-			if err != nil {
+			c.files = args
+			var err error
+			if c.index, err = newDb(c.indexDir, !viper.GetBool("keep-index")); err != nil {
 				return err
 			}
 			defer c.index.close()
@@ -87,139 +96,108 @@ func NewCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&recordTypes, "type", "t", []string{"response"}, "record types to"+
-		" dedup. For more than one, repeat flag or comma separated list. Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion")
-	cmd.Flags().BoolVarP(&c.skipSymlinks, "skip-symlinks", "s", false, "skip symlinks")
-	cmd.Flags().Bool("new-index", false, "true to drop index on disk before dedup")
-	cmd.Flags().StringVarP(&c.indexDir, "index-dir", "i", "/tmp/warc-dedup", "directory to store deduplication index")
+	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{"response"}, flag.RecordTypeHelp)
+	cmd.Flags().Bool(flag.KeepIndex, false, flag.KeepIndexHelp)
+	cmd.Flags().StringP(flag.IndexDir, "i", "/tmp/warc-dedup", flag.IndexDirHelp)
+	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)
+	cmd.Flags().BoolP(flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
+	cmd.Flags().StringSlice(flag.Suffixes, []string{".warc", ".warc.gz"}, flag.SuffixesHelp)
+	cmd.Flags().IntP(flag.Concurrency, "c", int(float32(runtime.NumCPU())*float32(1.5)), flag.ConcurrencyHelp)
+	cmd.Flags().IntP(flag.ConcurrentWriters, "C", 16, flag.ConcurrentWritersHelp)
+	cmd.Flags().Int64P(flag.FileSize, "S", 1024*1024*1024, flag.FileSizeHelp)
+	cmd.Flags().BoolP(flag.Compress, "z", false, flag.CompressHelp)
+	cmd.Flags().Bool(flag.CompressionLevel, false, flag.CompressionLevelHelp)
+	cmd.Flags().StringP(flag.FilePrefix, "p", "", flag.FilePrefixHelp)
+	cmd.Flags().StringP(flag.WarcDir, "w", ".", flag.WarcDirHelp)
+	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
+	cmd.Flags().String(flag.NameGenerator, "default", flag.NameGeneratorHelp)
+	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
 
 	return cmd
 }
 
 func runE(c *conf) error {
-	startTime := time.Now()
+	ctx, cancel := context.WithCancel(context.Background())
 
-	c.writer = gowarc.NewWarcFileWriter(
-		gowarc.WithMaxConcurrentWriters(8),
-		gowarc.WithCompression(true),
-		//gowarc.WithMaxFileSize(internal.ConvertConf.MaxFileSize),
-		//gowarc.WithFileNameGenerator(&namer),
-		gowarc.WithFlush(false))
-
-	//gowarc.WithMaxConcurrentWriters(internal.ConvertConf.ConcurrentWriters),
-	//gowarc.WithCompression(internal.ConvertConf.Compress),
-	//gowarc.WithMaxFileSize(internal.ConvertConf.MaxFileSize),
-	//gowarc.WithFileNameGenerator(&namer),
-	//gowarc.WithFlush(internal.ConvertConf.Flush))
-	fmt.Println(c.writer)
-
-	defer func(writer *gowarc.WarcFileWriter) {
-		err := writer.Close()
-		if err != nil {
-			fmt.Printf("Error closing WARC writer: %v\n", err)
-		}
-	}(c.writer)
-
-	stats := &stat{}
-	result := make(chan *stat, 32)
-	allResults := &sync.WaitGroup{}
-	allResults.Add(1)
-	pool := newWorkerpool(16)
-	defer func() {
-		pool.close()
-		result <- nil
-		allResults.Wait()
-		timeSpent := time.Now().Sub(startTime)
-		fmt.Fprintf(os.Stderr, "Running time: %v, %s\n", timeSpent, stats)
-	}()
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		for {
-			s := <-result
-			if s == nil {
-				allResults.Done()
-				break
-			}
-			stats.count += s.count
-			stats.processed += s.processed
-			stats.duplicates += s.duplicates
-		}
+		<-sigs
+		cancel()
 	}()
 
-	walkDirs(c, c.dirName, pool, result)
-	return nil
+	defer c.writerConf.Close()
+
+	fileWalker := filewalker.NewFromViper(c.files, c.readFile)
+
+	stats := newStat()
+	return fileWalker.Walk(ctx, stats)
 }
 
-type stat struct {
-	count, processed, duplicates int
-}
+func (c *conf) readFile(fileName string) filewalker.Result {
+	result := &result{
+		Result: filewalker.NewResult(fileName),
+	}
 
-func (s *stat) String() string {
-	return fmt.Sprintf("records: %d, records evaluated: %d, duplicates: %d", s.count, s.processed, s.duplicates)
-}
-
-var fileCount int
-
-func walkDirs(c *conf, dirName string, pool *workerpool, result chan<- *stat) {
-	filepath.WalkDir(dirName, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			fmt.Println("ERROR:", err)
-		}
-		if d.IsDir() {
-		} else if strings.HasSuffix(path, ".warc") || strings.HasSuffix(path, ".warc.gz") {
-			pool.submit(func() {
-				fileCount++
-				s := readFile(c, path, fileCount)
-				result <- s
-			})
-		} else if !c.skipSymlinks && !d.IsDir() && !d.Type().IsRegular() {
-			s, _ := filepath.EvalSymlinks(path)
-			walkDirs(c, s, pool, result)
-		}
-		return nil
-	})
-	return
-}
-
-func readFile(c *conf, fileName string, filenum int) *stat {
 	wf, err := gowarc.NewWarcFileReader(fileName, 0, gowarc.WithAddMissingDigest(true))
 	if err != nil {
-		panic(err)
+		result.AddError(err)
+		return result
 	}
 	defer func() { _ = wf.Close() }()
 
-	stats := &stat{}
+	var writer *gowarc.WarcFileWriter
+	if c.writerConf.WarcFileNameGenerator == "identity" {
+		defer func() {
+			if writer != nil {
+				_ = writer.Close()
+			}
+		}()
+	}
 
 	for {
-		currentOffset, err := handleRecord(c, wf, fileName, stats)
+		var currentOffset int64
+		currentOffset, writer, err = handleRecord(c, wf, fileName, result, writer)
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error: %v, file: %s, rec num: %d, Offset %d\n", err.Error(), fileName, stats.count, currentOffset)
+			result.AddError(fmt.Errorf("error: %v, rec num: %d, offset %d", err.Error(), result.Records(), currentOffset))
 			break
 		}
 	}
 
-	fmt.Fprintf(os.Stderr, " %06d: %s %s\n", filenum, fileName, stats)
-	return stats
+	return result
 }
 
-func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, stats *stat) (offset int64, err error) {
+// handleRecord processes one record
+// The input parameter writer and output parameter writerOut is only used for identity transformation. In this case there is one writer
+// per file which should be closed by readFile when the file is processed. But since we need the warc date of the first record to open
+// the writer, it must be opened in this function. These parameters are used for giving readFile access to the writer.
+func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, result *result, writer *gowarc.WarcFileWriter) (offset int64, writerOut *gowarc.WarcFileWriter, err error) {
+	writerOut = writer
 	wr, currentOffset, validation, e := wf.Next()
 	offset = currentOffset
+	result.IncrRecords()
 	if e != nil {
 		err = e
 		return
 	}
-	stats.count++
 	if !validation.Valid() {
-		_, _ = fmt.Fprintf(os.Stderr, "Info: found problem in file: %s, rec num: %d, Offset %d: %s\n", fileName, stats.count, currentOffset, validation)
+		result.AddError(fmt.Errorf("info: found problem rec num: %d, offset %d: %w", result.Records(), currentOffset, validation))
 	}
 
 	defer func() { _ = wr.Close() }()
 
+	if writer == nil {
+		writer = c.writerConf.GetWarcWriter(fileName, wr.WarcHeader().Get(gowarc.WarcDate))
+		if c.writerConf.WarcFileNameGenerator == "identity" {
+			writerOut = writer
+		}
+	}
+
 	if wr.Type()&c.recordTypes != 0 && wr.WarcHeader().Get(gowarc.ContentType) != "" {
-		stats.processed++
+		result.IncrProcessed()
 
 		var digest string
 		if wr.WarcHeader().Has(gowarc.WarcPayloadDigest) {
@@ -227,44 +205,83 @@ func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, stats *st
 		} else if wr.WarcHeader().Has(gowarc.WarcBlockDigest) {
 			digest = wr.WarcHeader().Get(gowarc.WarcBlockDigest)
 		} else {
-			fmt.Printf("Missing digest\n")
+			result.AddError(fmt.Errorf("missing digest"))
 		}
 
 		revisitRef := &ref{gowarc.RevisitRef{
-			Profile:        gowarc.ProfileIdenticalPayloadDigestV1_1,
 			TargetRecordId: wr.WarcHeader().Get(gowarc.WarcRecordID),
 			TargetUri:      wr.WarcHeader().Get(gowarc.WarcTargetURI),
 			TargetDate:     wr.WarcHeader().Get(gowarc.WarcDate),
 		}}
+		switch wr.Version() {
+		case gowarc.V1_0:
+			revisitRef.Profile = gowarc.ProfileIdenticalPayloadDigestV1_0
+		default:
+			revisitRef.Profile = gowarc.ProfileIdenticalPayloadDigestV1_1
+		}
 
 		r, err := c.index.isRevisit(digest, revisitRef)
 		if err != nil {
-			fmt.Printf("Error getting revisit ref: %v\n", err)
+			result.AddError(fmt.Errorf("error getting revisit ref: %w", err))
 		}
 		if r != nil {
 			if r.Profile == "" {
 				panic(r)
 			}
-			stats.duplicates++
+			result.duplicates++
 			revisit, err := wr.ToRevisitRecord(&r.RevisitRef)
 
 			if err != nil {
-				fmt.Printf("Error creating revisit record: %v\n", err)
+				result.AddError(fmt.Errorf("error creating revisit record: %w", err))
 			}
-			if rr := c.writer.Write(revisit); rr != nil && rr[0].Err != nil {
+			if rr := writer.Write(revisit); rr != nil && rr[0].Err != nil {
 				fmt.Printf("Offset: %d\n", currentOffset)
 				wr.WarcHeader().Write(os.Stdout)
 				panic(rr[0].Err)
 			}
 		} else {
-			if rr := c.writer.Write(wr); rr != nil && rr[0].Err != nil {
+			if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
 				panic(rr[0].Err)
 			}
 		}
 	} else {
-		if rr := c.writer.Write(wr); rr != nil && rr[0].Err != nil {
+		if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
 			panic(rr[0].Err)
 		}
 	}
 	return
+}
+
+type stat struct {
+	filewalker.Stats
+	duplicates int64
+}
+
+func newStat() *stat {
+	return &stat{Stats: filewalker.NewStats()}
+}
+
+func (s *stat) Merge(m filewalker.Stats) {
+	if stats, ok := m.(*stat); ok {
+		s.Stats.Merge(stats.Stats)
+		s.duplicates += stats.duplicates
+	}
+}
+
+func (s *stat) String() string {
+	return fmt.Sprintf("%s, duplicates: %d", s.Stats.String(), s.duplicates)
+}
+
+type result struct {
+	filewalker.Result
+	duplicates int64
+}
+
+func (r *result) GetStats() filewalker.Stats {
+	stats := &stat{Stats: r.Result.GetStats(), duplicates: r.duplicates}
+	return stats
+}
+
+func (r *result) String() string {
+	return fmt.Sprintf("%s, duplicates: %d", r.Result.String(), r.duplicates)
 }

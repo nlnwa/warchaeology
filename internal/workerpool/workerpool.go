@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package dedup
+package workerpool
 
-import "sync"
-
-type result interface {
-	merge(r result) result
-}
+import (
+	"context"
+	"sync"
+)
 
 type workerpool struct {
 	workers int
@@ -28,7 +27,7 @@ type workerpool struct {
 	wg      sync.WaitGroup
 }
 
-func newWorkerpool(workers int) *workerpool {
+func New(ctx context.Context, workers int) *workerpool {
 	w := &workerpool{
 		workers: workers,
 		jobs:    make(chan func(), workers*4),
@@ -37,7 +36,11 @@ func newWorkerpool(workers int) *workerpool {
 	for i := 0; i < workers; i++ {
 		go func(jobs <-chan func()) {
 			for j := range jobs {
-				j()
+				select {
+				case <-ctx.Done():
+				default:
+					j()
+				}
 				w.wg.Done()
 			}
 		}(w.jobs)
@@ -45,12 +48,12 @@ func newWorkerpool(workers int) *workerpool {
 	return w
 }
 
-func (w *workerpool) close() {
+func (w *workerpool) CloseWait() {
 	close(w.jobs)
 	w.wg.Wait()
 }
 
-func (w *workerpool) submit(job func()) {
+func (w *workerpool) Submit(job func()) {
 	w.wg.Add(1)
 	w.jobs <- job
 }

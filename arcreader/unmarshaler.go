@@ -18,8 +18,8 @@ package arcreader
 
 import (
 	"bufio"
-	"compress/gzip"
 	"fmt"
+	"github.com/klauspost/compress/gzip"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal"
 	log "github.com/sirupsen/logrus"
@@ -30,10 +30,6 @@ import (
 	"time"
 )
 
-type Unmarshaler interface {
-	Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gowarc.Validation, error)
-}
-
 type unmarshaler struct {
 	opts       []gowarc.WarcRecordOption
 	LastOffset int64
@@ -42,7 +38,7 @@ type unmarshaler struct {
 	gz         *gzip.Reader
 }
 
-func NewUnmarshaler(opts ...gowarc.WarcRecordOption) Unmarshaler {
+func NewUnmarshaler(opts ...gowarc.WarcRecordOption) gowarc.Unmarshaler {
 	u := &unmarshaler{
 		opts: opts,
 	}
@@ -136,7 +132,6 @@ func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRe
 		return nil, nil, fmt.Errorf("Could not parse ARC record: %w", err)
 	}
 	read += len(l3)
-	//fmt.Println(l3)
 	remaining := length - int64(read)
 
 	rb := gowarc.NewRecordBuilder(0, u.opts...)
@@ -193,7 +188,7 @@ func (u *unmarshaler) parseRecord(r *bufio.Reader, l1 string) (gowarc.WarcRecord
 }
 
 func (u *unmarshaler) parseUrlRecordV1(l string) (gowarc.RecordType, string, string, time.Time, string, int64, error) {
-	reg := regexp.MustCompile("([^ ]*) ([^ ]*) (\\d*) ([^ ]*) (\\d*)")
+	reg := regexp.MustCompile(`([^ ]*) ([^ ]*) (\d*) ([^ ]*) (\d*)`)
 	subs := reg.FindStringSubmatch(l)
 	if subs == nil || len(subs) < 4 {
 		return 0, "", "", time.Time{}, "", 0, fmt.Errorf("Could not parse ARC record from: %s", l)
