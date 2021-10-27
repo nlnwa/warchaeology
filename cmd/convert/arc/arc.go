@@ -74,7 +74,7 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().StringP(flag.FilePrefix, "p", "", flag.FilePrefixHelp)
 	cmd.Flags().StringP(flag.WarcDir, "w", ".", flag.WarcDirHelp)
 	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
-	cmd.Flags().String(flag.NameGenerator, "default", flag.NameGeneratorHelp)
+	cmd.Flags().StringP(flag.NameGenerator, "n", "default", flag.NameGeneratorHelp)
 	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
 	cmd.Flags().String(flag.WarcVersion, "1.1", flag.WarcVersionHelp)
 	cmd.Flags().StringP(flag.DefaultDate, "t", time.Now().Format(warcwriterconfig.DefaultDateFormat), flag.DefaultDateHelp)
@@ -128,7 +128,6 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 		}
 		if err != nil {
 			result.AddError(fmt.Errorf("error: %v, rec num: %d, offset %d", err.Error(), result.Records(), currentOffset))
-			break
 		}
 	}
 

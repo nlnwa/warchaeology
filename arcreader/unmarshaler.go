@@ -18,11 +18,11 @@ package arcreader
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/klauspost/compress/gzip"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"regexp"
 	"strconv"
@@ -46,27 +46,44 @@ func NewUnmarshaler(opts ...gowarc.WarcRecordOption) gowarc.Unmarshaler {
 }
 
 func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gowarc.Validation, error) {
-	var r *bufio.Reader
-	var offset int64
 	validation := &gowarc.Validation{}
 
-	magic, err := b.Peek(5)
-	if err != nil {
+	isGzip, r, offset, err := u.searchNextRecord(b)
+
+	defer func() {
+		if r != nil {
+			// Discarding 1 byte which makes up the end of record marker (\n)
+			var lf byte = '\n'
+			bb, e := r.Peek(4)
+			if len(bb) == 0 {
+				err = fmt.Errorf("wrong peek: %d, %v", len(bb), e)
+			} else {
+				if len(bb) != 1 || bb[0] != lf || (e != nil && e != io.EOF) {
+					err = fmt.Errorf("wrong peek: %d, %q, %v", len(bb), bb[0], e)
+				}
+				_, _ = r.Discard(1)
+			}
+
+			if isGzip {
+				// Empty gzip reader to ensure gzip checksum is validated
+				b := make([]byte, 10)
+				var err error
+				for err == nil {
+					_, err = u.gz.Read(b)
+					if err == io.EOF || err == io.ErrUnexpectedEOF {
+						return
+					}
+				}
+				_ = u.gz.Close()
+			}
+		}
+	}()
+
+	if err == io.EOF {
 		return nil, offset, validation, err
 	}
-
-	if magic[0] == 0x1f && magic[1] == 0x8b {
-		log.Debug("detected gzip record")
-		var x io.ByteReader
-		x = io.ByteReader(b)
-		u.gz, err = gzip.NewReader(x.(io.Reader))
-		if err != nil {
-			return nil, offset, validation, err
-		}
-		u.gz.Multistream(false)
-		r = bufio.NewReader(u.gz)
-	} else {
-		r = b
+	if err != nil {
+		return nil, offset, validation, fmt.Errorf("Could not parse ARC record: %w", err)
 	}
 
 	l, err := r.ReadString('\n')
@@ -79,23 +96,71 @@ func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gow
 		wr, validation, err = u.parseFileHeader(r, l)
 	} else {
 		wr, validation, err = u.parseRecord(r, l)
+	}
+
+	return wr, offset, validation, err
+}
+
+func (u *unmarshaler) searchNextRecord(b *bufio.Reader) (bool, *bufio.Reader, int64, error) {
+	var offset int64
+	isGzip := false
+	var r *bufio.Reader
+	var err error
+
+	// Search for start of new record
+	expectedRecordStartOffset := offset
+	found := false
+
+	for !found {
+		var magic []byte
+		magic, err = b.Peek(4)
 		if err != nil {
-			fmt.Printf("STREAM %T %v\n", r, u.gz)
+			return false, nil, offset, err
+		}
+
+		switch {
+		case magic[0] == 0x1f && magic[1] == 0x8b:
+			if u.gz == nil {
+				u.gz, err = gzip.NewReader(b)
+			} else {
+				err = u.gz.Reset(b)
+			}
+			if err != nil {
+				if _, err = b.Discard(1); err != nil {
+					return false, nil, offset, err
+				}
+				offset++
+				continue
+			}
+			u.gz.Multistream(false)
+			r = bufio.NewReader(u.gz)
+			isGzip = true
+			found = true
+
+		case bytes.HasPrefix(magic, []byte("http")):
+			fallthrough
+		case bytes.HasPrefix(magic, []byte("file")):
+			fallthrough
+		case bytes.HasPrefix(magic, []byte("dns")):
+			fallthrough
+		case bytes.HasPrefix(magic, []byte("ftp")):
+			r = b
+			found = true
+
+		default:
+			if _, err = b.Discard(1); err != nil {
+				return false, nil, offset, err
+			}
+			offset++
 		}
 	}
 
-	// Discarding 1 byte which makes up the end of record marker (\n)
-	// TODO: validate that record ends with correct marker
-	_, _ = r.Discard(1)
-	if u.gz != nil {
-		n, err := io.Copy(io.Discard, u.gz)
-		if n > 0 {
-			fmt.Println("AFTER READ", n, err)
-			panic("JADDA")
-		}
-		_ = u.gz.Close()
+	if expectedRecordStartOffset != offset {
+		err = fmt.Errorf("expected start of record at offset: %d, but record was found at offset: %d",
+			expectedRecordStartOffset, offset)
 	}
-	return wr, 0, validation, err
+
+	return isGzip, r, offset, err
 }
 
 func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRecord, *gowarc.Validation, error) {
@@ -143,7 +208,13 @@ func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRe
 	rb.AddWarcHeaderInt64(gowarc.ContentLength, remaining)
 
 	c2 := NewLimitedCountingReader(r, remaining)
-	rb.ReadFrom(c2)
+	_, err = rb.ReadFrom(c2)
+	if err != nil {
+		if err == io.ErrUnexpectedEOF {
+			err = io.EOF
+		}
+		return nil, nil, err
+	}
 
 	wr, validation, err := rb.Build()
 	if wr.Type() == gowarc.Warcinfo {
@@ -181,6 +252,9 @@ func (u *unmarshaler) parseRecord(r *bufio.Reader, l1 string) (gowarc.WarcRecord
 	c2 := NewLimitedCountingReader(r, length)
 	_, err = rb.ReadFrom(c2)
 	if err != nil {
+		if err == io.ErrUnexpectedEOF {
+			err = io.EOF
+		}
 		return nil, nil, err
 	}
 

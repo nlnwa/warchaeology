@@ -47,6 +47,9 @@ func NewCommand() *cobra.Command {
 		Short: "Convert directory with files harvested with Nedlib into warc files",
 		Long:  ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Nedlib data has a structure which do not allow for identity transformation of filenames
+			viper.Set(flag.NameGenerator, "default")
+
 			if wc, err := warcwriterconfig.NewFromViper(); err != nil {
 				return err
 			} else {
@@ -96,10 +99,6 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
 	cmd.Flags().String(flag.WarcVersion, "1.1", flag.WarcVersionHelp)
 	cmd.Flags().StringP(flag.DefaultDate, "t", time.Now().Format(warcwriterconfig.DefaultDateFormat), flag.DefaultDateHelp)
-
-	// Nedlib data has a structure which do not allow for identity transformation of filenames
-	//cmd.Flags().String(flag.NameGenerator, "default", flag.NameGeneratorHelp)
-	viper.Set(flag.NameGenerator, "default")
 
 	return cmd
 }

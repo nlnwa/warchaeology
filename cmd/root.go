@@ -107,7 +107,6 @@ func (c *conf) initConfig() {
 	viper.SetDefault(flag.WarcVersion, "1.1")
 	viper.SetDefault(flag.CompressionLevel, gzip.DefaultCompression)
 	viper.SetDefault(flag.DefaultDate, time.Now().Format(warcwriterconfig.DefaultDateFormat))
-	//viper.SetDefault("loglevel", "info")
 
 	viper.AutomaticEnv() // read in environment variables that match
 

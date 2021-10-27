@@ -110,7 +110,7 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().StringP(flag.FilePrefix, "p", "", flag.FilePrefixHelp)
 	cmd.Flags().StringP(flag.WarcDir, "w", ".", flag.WarcDirHelp)
 	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
-	cmd.Flags().String(flag.NameGenerator, "default", flag.NameGeneratorHelp)
+	cmd.Flags().StringP(flag.NameGenerator, "n", "default", flag.NameGeneratorHelp)
 	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
 
 	return cmd

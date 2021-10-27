@@ -17,7 +17,6 @@
 package warcwriterconfig
 
 import (
-	"compress/gzip"
 	"fmt"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/flag"
@@ -45,19 +44,6 @@ type WarcWriterConfig struct {
 	writers               map[string]*gowarc.WarcFileWriter
 	WarcInfoFunc          func(recordBuilder gowarc.WarcRecordBuilder) error
 	writersGuard          sync.Mutex
-}
-
-func New() *WarcWriterConfig {
-	return &WarcWriterConfig{
-		Compress:          true,
-		CompressionLevel:  gzip.DefaultCompression,
-		ConcurrentWriters: 1,
-		MaxFileSize:       1024 * 1024 * 1024,
-		DefaultTime:       time.Now(),
-		OutDir:            ".",
-		WarcVersion:       gowarc.V1_1,
-		writers:           map[string]*gowarc.WarcFileWriter{},
-	}
 }
 
 func NewFromViper() (*WarcWriterConfig, error) {
@@ -115,8 +101,10 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) *gowarc.
 
 	switch w.WarcFileNameGenerator {
 	case "identity":
+		// Only one writer with unrestricted size to allow for one to one mapping
 		w.ConcurrentWriters = 1
 		w.MaxFileSize = 0
+
 		n := NewIdentityNamer(fromFileName)
 		n.Prefix = w.FilePrefix
 		s, err := parseSubdirPattern(w.SubDirPattern, warcDate)
