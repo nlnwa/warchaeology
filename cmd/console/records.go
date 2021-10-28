@@ -6,6 +6,7 @@ import (
 	"github.com/awesome-gocui/gocui"
 	"github.com/nlnwa/gowarc"
 	"io"
+	"io/fs"
 	"os"
 	"strings"
 )
@@ -89,6 +90,17 @@ func populateFiles(g *gocui.Gui, ctx context.Context, finishedCb func(), widget 
 	if v, err := g.View("dir"); err == nil {
 		v.Title = state.dir
 	}
+
+	if len(state.files) > 0 {
+		for _, f := range state.files {
+			if strings.HasSuffix(f, ".warc") || strings.HasSuffix(f, ".warc.gz") {
+				widget.records = append(widget.records, f)
+			}
+		}
+		finishedCb()
+		return
+	}
+
 	entries, err := os.ReadDir(state.dir)
 	if err != nil {
 		panic(err)
@@ -106,4 +118,35 @@ func populateFiles(g *gocui.Gui, ctx context.Context, finishedCb func(), widget 
 	}
 end:
 	finishedCb()
+}
+
+// Copied from standard lib for go 1.17 while we are waiting for 1.17 to be in common use
+// dirInfo is a DirEntry based on a FileInfo.
+type dirInfo struct {
+	fileInfo fs.FileInfo
+}
+
+func (di dirInfo) IsDir() bool {
+	return di.fileInfo.IsDir()
+}
+
+func (di dirInfo) Type() fs.FileMode {
+	return di.fileInfo.Mode().Type()
+}
+
+func (di dirInfo) Info() (fs.FileInfo, error) {
+	return di.fileInfo, nil
+}
+
+func (di dirInfo) Name() string {
+	return di.fileInfo.Name()
+}
+
+// FileInfoToDirEntry returns a DirEntry that returns information from info.
+// If info is nil, FileInfoToDirEntry returns nil.
+func FileInfoToDirEntry(info fs.FileInfo) fs.DirEntry {
+	if info == nil {
+		return nil
+	}
+	return dirInfo{fileInfo: info}
 }

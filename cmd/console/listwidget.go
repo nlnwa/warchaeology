@@ -61,10 +61,8 @@ func NewListWidget(this, prev, next string,
 
 func (w *ListWidget) Init(g *gocui.Gui, data interface{}) {
 	if w.cancelFunc != nil {
-		//if w.cancelRefreshFunc != nil {
 		w.cancelRefreshFunc()
 		w.cancelRefreshFunc = nil
-		//}
 		w.cancelFunc()
 		w.cancelFunc = nil
 		<-w.finished.Done()
@@ -75,7 +73,6 @@ func (w *ListWidget) Init(g *gocui.Gui, data interface{}) {
 	var finishedCb func()
 	var refreshCtx context.Context
 	refreshCtx, w.cancelRefreshFunc = context.WithCancel(context.Background())
-	//w.finished, finishedCb = context.WithCancel(refreshCtx)
 	w.finished, finishedCb = context.WithCancel(context.Background())
 	w.records = nil
 	w.filteredRecords = nil
@@ -93,10 +90,60 @@ func (w *ListWidget) keybindings(g *gocui.Gui) error {
 	if err := g.SetKeybinding(w.this, gocui.KeyArrowUp, gocui.ModNone, w.cursorUp); err != nil {
 		return err
 	}
+	if err := g.SetKeybinding(w.this, gocui.KeyHome, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
+		if view != nil {
+			return w.selectLine(g, view, 0)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(w.this, gocui.KeyEnd, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
+		if view != nil {
+			return w.selectLine(g, view, len(w.filteredRecords)-1)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(w.this, gocui.KeyPgdn, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
+		if view != nil {
+			_, h := view.Size()
+			h--
+			return w.selectLine(g, view, w.selected+h)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(w.this, gocui.KeyPgup, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
+		if view != nil {
+			_, h := view.Size()
+			h--
+			return w.selectLine(g, view, w.selected-h)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
 	if err := g.SetKeybinding(w.this, gocui.KeyEnter, gocui.ModNone, w.nextView); err != nil {
 		return err
 	}
 	if err := g.SetKeybinding(w.this, gocui.KeyEsc, gocui.ModNone, w.prevView); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(w.this, gocui.MouseLeft, gocui.ModNone, w.currentView); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(w.this, gocui.MouseRelease, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
+		return nil
+	}); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(w.this, gocui.MouseWheelDown, gocui.ModNone, w.cursorDown); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(w.this, gocui.MouseWheelUp, gocui.ModNone, w.cursorUp); err != nil {
 		return err
 	}
 	return nil
@@ -112,35 +159,51 @@ func (w *ListWidget) nextView(g *gocui.Gui, v *gocui.View) error {
 	return nil
 }
 
+func (w *ListWidget) currentView(g *gocui.Gui, v *gocui.View) error {
+	state.curView = v.Name()
+	_, oy := v.Origin()
+	_, cy := v.Cursor()
+	newSelect := cy + oy
+	w.selectLine(g, v, newSelect)
+	return nil
+}
+
 func (w *ListWidget) cursorDown(g *gocui.Gui, v *gocui.View) error {
 	if v != nil {
-		w.scrollView(g, v, 1)
+		w.selectLine(g, v, w.selected+1)
 	}
 	return nil
 }
 
 func (w *ListWidget) cursorUp(g *gocui.Gui, v *gocui.View) error {
 	if v != nil {
-		w.scrollView(g, v, -1)
+		w.selectLine(g, v, w.selected-1)
 	}
 	return nil
 }
 
-func (w *ListWidget) scrollView(g *gocui.Gui, v *gocui.View, dy int) error {
+func (w *ListWidget) selectLine(g *gocui.Gui, v *gocui.View, selected int) error {
 	if v != nil {
-		v.Autoscroll = false
 		ox, oy := v.Origin()
-		cx, cy := v.Cursor()
 		_, h := v.Size()
-		sy := cy + oy + dy
-		if sy < 0 || sy >= v.ViewLinesHeight()-1 {
+		if selected < 0 {
+			selected = 0
+		}
+		if selected >= v.ViewLinesHeight()-1 {
+			selected = v.ViewLinesHeight() - 2
+		}
+		if selected == w.selected {
 			return nil
 		}
-		w.selected = sy
+		if w.selected != -1 {
+			_ = v.SetLine(w.selected, fmt.Sprintf("%s", w.filteredRecords[w.selected]))
+		}
+		w.selected = selected
+		_ = v.SetHighlight(w.selected, true)
 
-		cy += dy
+		cy := w.selected - oy
 		if cy < 0 {
-			oy += dy
+			oy += cy
 			cy = 0
 		} else if cy >= h {
 			oy += (cy - h) + 1
@@ -150,7 +213,7 @@ func (w *ListWidget) scrollView(g *gocui.Gui, v *gocui.View, dy int) error {
 		if err := v.SetOrigin(ox, oy); err != nil {
 			return err
 		}
-		if err := v.SetCursor(cx, cy); err != nil {
+		if err := v.SetCursor(0, cy); err != nil {
 			return err
 		}
 
@@ -220,7 +283,7 @@ func (w *ListWidget) upd(g *gocui.Gui, ctx context.Context, rec []interface{}) {
 					w.filteredRecords = append(w.filteredRecords, r)
 					fmt.Fprintf(v, "%s\n", r)
 					if len(w.filteredRecords) == 1 {
-						w.selected = 0
+						w.selectLine(g, v, 0)
 						w.selectFunc(g, w)
 					}
 				}
@@ -247,6 +310,12 @@ func (w *ListWidget) refreshFilter(g *gocui.Gui, v *gocui.View) error {
 		for {
 			select {
 			case <-ctx.Done():
+				return
+			case <-w.finished.Done():
+				if l < len(w.records) {
+					rec := w.records[l:]
+					w.upd(g, ctx, rec)
+				}
 				return
 			default:
 				if l < len(w.records) {

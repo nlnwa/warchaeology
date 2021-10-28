@@ -18,10 +18,22 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"github.com/nlnwa/warchaeology/cmd"
+	"runtime"
+)
+
+// Overridden by ldflags
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
 )
 
 func main() {
+	runtime.GOMAXPROCS(128)
 	c := cmd.NewCommand()
+	c.SetVersionTemplate(`{{with .Name}}{{printf "%s " .}}{{end}}{{printf "%s\n" .Version}}`)
+	c.Version = fmt.Sprintf("%s (commit: %s, %s)", version, commit, date)
 	_ = c.Execute()
 }

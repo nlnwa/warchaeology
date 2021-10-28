@@ -19,14 +19,20 @@ package cmd
 import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
+	"github.com/klauspost/compress/gzip"
 	"github.com/nlnwa/warchaeology/cmd/cat"
 	"github.com/nlnwa/warchaeology/cmd/console"
-	"github.com/nlnwa/warchaeology/cmd/create"
+	"github.com/nlnwa/warchaeology/cmd/convert"
+	"github.com/nlnwa/warchaeology/cmd/dedup"
 	"github.com/nlnwa/warchaeology/cmd/ls"
 	"github.com/nlnwa/warchaeology/cmd/validate"
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"time"
 )
 
 type conf struct {
@@ -43,16 +49,32 @@ func NewCommand() *cobra.Command {
 		Long:  ``,
 
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if c.logLevel == "" {
-				c.logLevel = viper.GetString("loglevel")
+			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+				// Hack to let bool flags toggle on or off
+				if flag.Value.Type() == "bool" {
+					fv, err := cmd.Flags().GetBool(flag.Name)
+					if err != nil {
+						panic(err)
+					}
+					vv := viper.GetBool(flag.Name)
+					if fv {
+						vv = !vv
+					}
+					if vv {
+						err = cmd.Flags().Set(flag.Name, "true")
+					} else {
+						err = cmd.Flags().Set(flag.Name, "false")
+					}
+					if err != nil {
+						panic(err)
+					}
+				}
+			})
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				panic(err)
 			}
 
-			level, err := log.ParseLevel(c.logLevel)
-			if err != nil {
-				return fmt.Errorf("'%s' is not part of the valid levels: 'panic', 'fatal', 'error', 'warn', 'warning', 'info', 'debug', 'trace'", c.logLevel)
-			}
-
-			log.SetLevel(level)
 			return nil
 		},
 	}
@@ -60,8 +82,10 @@ func NewCommand() *cobra.Command {
 	cobra.OnInitialize(func() { c.initConfig() })
 
 	// Flags
-	cmd.PersistentFlags().StringVarP(&c.logLevel, "log-level", "l", "", "set the log level of gowarc, it will take precedence over config 'loglevel'")
 	cmd.PersistentFlags().StringVar(&c.cfgFile, "config", "", "config file. If not set, /etc/warc/, $HOME/.warc/ and current working dir will be searched for file config.yaml")
+	cmd.PersistentFlags().StringP(flag.LogFileName, "L", "", flag.LogFileNameHelp)
+	cmd.PersistentFlags().StringSlice(flag.LogFile, []string{"info", "error", "summary"}, flag.LogFileHelp)
+	cmd.PersistentFlags().StringSlice(flag.LogConsole, []string{"progress", "summary"}, flag.LogConsoleHelp)
 	if err := viper.BindPFlag("config", cmd.PersistentFlags().Lookup("config")); err != nil {
 		panic(err)
 	}
@@ -71,7 +95,8 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(cat.NewCommand())
 	cmd.AddCommand(validate.NewCommand())
 	cmd.AddCommand(console.NewCommand())
-	cmd.AddCommand(create.NewCommand())
+	cmd.AddCommand(convert.NewCommand())
+	cmd.AddCommand(dedup.NewCommand())
 
 	return cmd
 }
@@ -79,8 +104,9 @@ func NewCommand() *cobra.Command {
 // initConfig reads in config file and ENV variables if set.
 func (c *conf) initConfig() {
 	viper.SetTypeByDefaultValue(true)
-	viper.SetDefault("warcdir", []string{"."})
-	viper.SetDefault("loglevel", "info")
+	viper.SetDefault(flag.WarcVersion, "1.1")
+	viper.SetDefault(flag.CompressionLevel, gzip.DefaultCompression)
+	viper.SetDefault(flag.DefaultDate, time.Now().Format(warcwriterconfig.DefaultDateFormat))
 
 	viper.AutomaticEnv() // read in environment variables that match
 

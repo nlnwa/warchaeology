@@ -25,6 +25,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 )
@@ -42,13 +43,18 @@ func NewCommand() *cobra.Command {
 			if state.dir, err = filepath.Abs(state.dir); err != nil {
 				return err
 			}
+			if state.dir, err = filepath.EvalSymlinks(state.dir); err != nil {
+				return err
+			}
 			var f os.FileInfo
 			f, err = os.Lstat(state.dir)
 			if err != nil {
 				return err
 			}
 			if !f.IsDir() {
-				return fmt.Errorf("%s is not a directory", state.dir)
+				f := path.Base(state.dir)
+				state.dir = path.Dir(state.dir)
+				state.files = append(state.files, f)
 			}
 
 			return runE()
@@ -61,6 +67,7 @@ func NewCommand() *cobra.Command {
 var state = &State{curView: "dir"}
 
 func runE() error {
+	os.Setenv("COLORTERM", "truecolor")
 	g, err := gocui.NewGui(gocui.OutputTrue, true)
 	if err != nil {
 		log.Panicln(err)
@@ -78,6 +85,7 @@ func runE() error {
 	g.SelBgColor = gocui.ColorDefault
 	g.SelFrameColor = gocui.ColorCyan
 	g.SupportOverlaps = true
+	g.Mouse = true
 
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
@@ -95,6 +103,9 @@ func runE() error {
 		panic(err)
 	}
 	if err := g.SetKeybinding("", 'e', gocui.ModNone, state.filter.toggleErrorFilter); err != nil {
+		log.Panicln(err)
+	}
+	if err := g.SetKeybinding("help", gocui.MouseLeft, gocui.ModNone, state.filter.mouseToggleFilter); err != nil {
 		log.Panicln(err)
 	}
 	if err := g.SetKeybinding("", 'i', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
@@ -146,8 +157,6 @@ func runE() error {
 			panic(err)
 		}
 	}
-	fmt.Println(state.dir)
-
 	time.AfterFunc(100*time.Millisecond, func() {
 		filesWidget.Init(g, state.dir)
 	})
@@ -169,12 +178,12 @@ func layout(g *gocui.Gui) error {
 		v.BgColor = gocui.ColorDefault
 		v.SelBgColor = gocui.ColorWhite
 		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = true
+		v.Highlight = false
 		v.Autoscroll = false
 		v.Title = "Records"
 	}
 
-	if v, err := g.SetView("header", 50, 10, maxX-60, 25, gocui.BOTTOM|gocui.RIGHT); err != nil {
+	if v, err := g.SetView("header", 50, 10, maxX-60, 30, gocui.BOTTOM|gocui.RIGHT); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -186,7 +195,7 @@ func layout(g *gocui.Gui) error {
 		v.Title = "WARC header"
 	}
 
-	if v, err := g.SetView("content", 50, 25, maxX-60, maxY-2, gocui.TOP|gocui.RIGHT); err != nil {
+	if v, err := g.SetView("content", 50, 30, maxX-60, maxY-2, gocui.TOP|gocui.RIGHT); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -226,7 +235,7 @@ func layout(g *gocui.Gui) error {
 		}
 		v.SelBgColor = gocui.ColorWhite
 		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = true
+		v.Highlight = false
 	}
 
 	if _, err := g.SetCurrentView(state.curView); err != nil {
@@ -265,6 +274,7 @@ func readRecord(g *gocui.Gui, widget *ListWidget) {
 		panic(err)
 	}
 	hv.Clear()
+	hv.WriteString(rec.Version().String() + "\n")
 	rec.WarcHeader().Write(hv)
 
 	cv, err := g.View("content")
@@ -290,7 +300,8 @@ func readRecord(g *gocui.Gui, widget *ListWidget) {
 type State struct {
 	g       *gocui.Gui
 	curView string
-	dir     string
+	files   []string // Initial files from command line
+	dir     string   // Initial dir from command line
 	file    string
 	records *ListWidget
 	header  string
