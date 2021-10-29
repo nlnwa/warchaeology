@@ -129,7 +129,7 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) *gowarc.
 			gowarc.WithFileNameGenerator(n),
 			gowarc.WithFlush(w.Flush),
 			gowarc.WithWarcInfoFunc(w.WarcInfoFunc),
-			gowarc.WithRecordOptions(gowarc.WithVersion(w.WarcVersion)),
+			gowarc.WithRecordOptions(gowarc.WithVersion(w.WarcVersion), gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir))),
 		)
 	default:
 		n := &gowarc.PatternNameGenerator{Prefix: w.FilePrefix}
@@ -162,7 +162,7 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) *gowarc.
 			gowarc.WithFileNameGenerator(namer),
 			gowarc.WithFlush(w.Flush),
 			gowarc.WithWarcInfoFunc(w.WarcInfoFunc),
-			gowarc.WithRecordOptions(gowarc.WithVersion(w.WarcVersion)),
+			gowarc.WithRecordOptions(gowarc.WithVersion(w.WarcVersion), gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir))),
 		)
 		w.writers[lookupKey] = ww
 		if err := os.MkdirAll(dir, 0777); err != nil {

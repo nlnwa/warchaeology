@@ -104,6 +104,7 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 	a, err := arcreader.NewArcFileReader(fileName, 0,
 		gowarc.WithVersion(c.writerConf.WarcVersion),
 		gowarc.WithAddMissingDigest(true),
+		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)),
 	)
 	if err != nil {
 		result.AddError(err)
@@ -145,6 +146,11 @@ func handleRecord(c *conf, wf *arcreader.ArcFileReader, fileName string, result 
 	offset = currentOffset
 	result.IncrRecords()
 	result.IncrProcessed()
+	defer func() {
+		if wr != nil {
+			_ = wr.Close()
+		}
+	}()
 	if e != nil {
 		err = e
 		return
@@ -152,8 +158,6 @@ func handleRecord(c *conf, wf *arcreader.ArcFileReader, fileName string, result 
 	if !validation.Valid() {
 		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), currentOffset, validation))
 	}
-
-	defer func() { _ = wr.Close() }()
 
 	if writer == nil {
 		writer = c.writerConf.GetWarcWriter(fileName, wr.WarcHeader().Get(gowarc.WarcDate))
