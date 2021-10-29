@@ -1,0 +1,61 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod tidy
+    # you may remove this if you don't need go generate
+    - go generate ./...
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - 386
+    binary: warc
+
+archives:
+  - format: binary
+    replacements:
+      386: i386
+      amd64: x86_64
+    name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+
+nfpms:
+  - vendor: National Library of Norway
+    description: All things WARC
+    license: Apache 2.0
+    file_name_template: "{{ .PackageName }}_{{ .Version }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+    replacements:
+      386: i386
+    formats:
+      - deb
+      - rpm
+    scripts:
+      postinstall: "script/postinstall.sh"
+    contents:
+      - dst: /etc/bash_completion.d/warc
+        type: ghost
+    overrides:
+      rpm:
+        replacements:
+          amd64: x86_64
+          arm64: aarch64
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
