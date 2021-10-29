@@ -18,8 +18,8 @@ limitations under the License.
 package main
 
 import (
-	"fmt"
 	"github.com/nlnwa/warchaeology/cmd"
+	"github.com/nlnwa/warchaeology/internal/cmdversion"
 	"runtime"
 )
 
@@ -27,13 +27,13 @@ import (
 var (
 	version = "dev"
 	commit  = "none"
-	date    = "unknown"
 )
 
 func main() {
 	runtime.GOMAXPROCS(128)
 	c := cmd.NewCommand()
-	c.SetVersionTemplate(`{{with .Name}}{{printf "%s " .}}{{end}}{{printf "%s\n" .Version}}`)
-	c.Version = fmt.Sprintf("%s (commit: %s, %s)", version, commit, date)
+	cmdversion.SetVersion(c.Name(), version, commit)
+	c.SetVersionTemplate(`{{printf "%s\n" .Version}}`)
+	c.Version = cmdversion.CmdVersion()
 	_ = c.Execute()
 }

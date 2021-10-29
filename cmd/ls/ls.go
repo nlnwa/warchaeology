@@ -104,6 +104,7 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 	result := filewalker.NewResult(fileName)
 
 	var opts []gowarc.WarcRecordOption
+	opts = append(opts, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if c.strict {
 		opts = append(opts, gowarc.WithStrictValidation())
 	} else {

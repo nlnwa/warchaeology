@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/awesome-gocui/gocui"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/spf13/viper"
 	"io"
 	"io/fs"
 	"os"
@@ -51,7 +53,7 @@ func (r record) String() string {
 }
 
 func populateRecords(g *gocui.Gui, ctx context.Context, finishedCb func(), widget *ListWidget, data interface{}) {
-	r, err := gowarc.NewWarcFileReader(data.(string), 0)
+	r, err := gowarc.NewWarcFileReader(data.(string), 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
 		panic(err)
 	}

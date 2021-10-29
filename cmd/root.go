@@ -17,8 +17,6 @@
 package cmd
 
 import (
-	"fmt"
-	"github.com/fsnotify/fsnotify"
 	"github.com/klauspost/compress/gzip"
 	"github.com/nlnwa/warchaeology/cmd/cat"
 	"github.com/nlnwa/warchaeology/cmd/console"
@@ -32,6 +30,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"os"
 	"time"
 )
 
@@ -49,6 +48,14 @@ func NewCommand() *cobra.Command {
 		Long:  ``,
 
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// Overwrite config values if set in command specific key
+			cv := viper.Sub(cmd.Name())
+			if cv != nil {
+				for _, k := range cv.AllKeys() {
+					viper.Set(k, cv.Get(k))
+				}
+			}
+
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				// Hack to let bool flags toggle on or off
 				if flag.Value.Type() == "bool" {
@@ -83,12 +90,13 @@ func NewCommand() *cobra.Command {
 
 	// Flags
 	cmd.PersistentFlags().StringVar(&c.cfgFile, "config", "", "config file. If not set, /etc/warc/, $HOME/.warc/ and current working dir will be searched for file config.yaml")
-	cmd.PersistentFlags().StringP(flag.LogFileName, "L", "", flag.LogFileNameHelp)
-	cmd.PersistentFlags().StringSlice(flag.LogFile, []string{"info", "error", "summary"}, flag.LogFileHelp)
-	cmd.PersistentFlags().StringSlice(flag.LogConsole, []string{"progress", "summary"}, flag.LogConsoleHelp)
 	if err := viper.BindPFlag("config", cmd.PersistentFlags().Lookup("config")); err != nil {
 		panic(err)
 	}
+	cmd.PersistentFlags().StringP(flag.LogFileName, "L", "", flag.LogFileNameHelp)
+	cmd.PersistentFlags().StringSlice(flag.LogFile, []string{"info", "error", "summary"}, flag.LogFileHelp)
+	cmd.PersistentFlags().StringSlice(flag.LogConsole, []string{"progress", "summary"}, flag.LogConsoleHelp)
+	cmd.PersistentFlags().String(flag.TmpDir, os.TempDir(), flag.TmpDirHelp)
 
 	// Subcommands
 	cmd.AddCommand(ls.NewCommand())
@@ -97,6 +105,7 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(console.NewCommand())
 	cmd.AddCommand(convert.NewCommand())
 	cmd.AddCommand(dedup.NewCommand())
+	cmd.AddCommand(completionCmd)
 
 	return cmd
 }
@@ -131,9 +140,4 @@ func (c *conf) initConfig() {
 			log.Fatalf("error reading config file: %v", err)
 		}
 	}
-
-	viper.WatchConfig()
-	viper.OnConfigChange(func(e fsnotify.Event) {
-		fmt.Println("Config file changed:", e.Name)
-	})
 }

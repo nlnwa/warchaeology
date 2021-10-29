@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"github.com/awesome-gocui/gocui"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"io"
 	"log"
 	"os"
@@ -257,7 +259,8 @@ func readFile(g *gocui.Gui, widget *ListWidget) {
 }
 
 func readRecord(g *gocui.Gui, widget *ListWidget) {
-	r, err := gowarc.NewWarcFileReader(state.dir+"/"+state.file, widget.filteredRecords[widget.selected].(record).offset)
+	r, err := gowarc.NewWarcFileReader(state.dir+"/"+state.file, widget.filteredRecords[widget.selected].(record).offset,
+		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
 		panic(err)
 	}

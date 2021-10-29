@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal"
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/spf13/viper"
 	"io"
 	"os"
 	"sort"
@@ -73,7 +75,7 @@ func runE(c *conf) error {
 }
 
 func readFile(c *conf, fileName string) {
-	wf, err := gowarc.NewWarcFileReader(fileName, c.offset)
+	wf, err := gowarc.NewWarcFileReader(fileName, c.offset, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	defer func() { _ = wf.Close() }()
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)

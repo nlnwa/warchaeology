@@ -213,6 +213,7 @@ func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRe
 		if err == io.ErrUnexpectedEOF {
 			err = io.EOF
 		}
+		_ = rb.Close()
 		return nil, nil, err
 	}
 
@@ -255,6 +256,7 @@ func (u *unmarshaler) parseRecord(r *bufio.Reader, l1 string) (gowarc.WarcRecord
 		if err == io.ErrUnexpectedEOF {
 			err = io.EOF
 		}
+		_ = rb.Close()
 		return nil, nil, err
 	}
 

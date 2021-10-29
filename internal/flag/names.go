@@ -22,6 +22,7 @@ const (
 	Flush             = "flush"
 	WarcVersion       = "warc-version"
 	DefaultDate       = "default-date"
+	TmpDir            = "tmpdir"
 
 	LogFileNameHelp = `a file to write log output. Empty for no log file`
 	LogFileHelp     = `The kind of log output to write to file. Valid values: info, error, summary`
@@ -55,4 +56,5 @@ output file name (preix and suffix might still change). In this mode exactly one
 	FlushHelp       = `if true, sync WARC file to disk after writing each record`
 	WarcVersionHelp = `the WARC version to use for created files`
 	DefaultDateHelp = `fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date`
+	TmpDirHelp      = `directory to use for temporary files`
 )

@@ -24,6 +24,7 @@ import (
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"io"
 	"os"
 	"os/signal"
@@ -80,7 +81,7 @@ func runE(c *conf) error {
 func validateFile(file string) filewalker.Result {
 	result := filewalker.NewResult(file)
 
-	wf, err := gowarc.NewWarcFileReader(file, 0)
+	wf, err := gowarc.NewWarcFileReader(file, 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
 		result.AddError(err)
 		return result

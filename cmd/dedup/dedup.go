@@ -96,9 +96,14 @@ func NewCommand() *cobra.Command {
 		},
 	}
 
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		panic(err)
+	}
+
 	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{"response"}, flag.RecordTypeHelp)
 	cmd.Flags().Bool(flag.KeepIndex, false, flag.KeepIndexHelp)
-	cmd.Flags().StringP(flag.IndexDir, "i", "/tmp/warc-dedup", flag.IndexDirHelp)
+	cmd.Flags().StringP(flag.IndexDir, "i", cacheDir+"/warc/dedup-index", flag.IndexDirHelp)
 	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)
 	cmd.Flags().BoolP(flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
 	cmd.Flags().StringSlice(flag.Suffixes, []string{".warc", ".warc.gz"}, flag.SuffixesHelp)
@@ -139,7 +144,7 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 		Result: filewalker.NewResult(fileName),
 	}
 
-	wf, err := gowarc.NewWarcFileReader(fileName, 0, gowarc.WithAddMissingDigest(true))
+	wf, err := gowarc.NewWarcFileReader(fileName, 0, gowarc.WithAddMissingDigest(true), gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
 		result.AddError(err)
 		return result

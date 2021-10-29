@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal/cmdversion"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
@@ -55,8 +56,8 @@ func NewCommand() *cobra.Command {
 			} else {
 				wc.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
 					payload := &gowarc.WarcFields{}
-					payload.Set("software", "warchaeology nedlib converter beta")
-					//payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", ww.settings.WarcVersion().Major(), ww.settings.WarcVersion().Minor()))
+					payload.Set("software", cmdversion.SoftwareVersion())
+					payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", wc.WarcVersion.Minor(), wc.WarcVersion.Minor()))
 					//payload.Set("collection", ww.collectionConfig.GetMeta().GetName())
 					//payload.Set("description", ww.collectionConfig.GetMeta().GetDescription())
 					//if ww.subCollection != config.Collection_UNDEFINED {
