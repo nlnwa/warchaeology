@@ -52,7 +52,7 @@ type walker []string
 
 func (w *walker) walkfunc(path string) filewalker.Result {
 	*w = append(*w, path)
-	return &result{}
+	return filewalker.NewResult(path)
 }
 
 type result struct{}

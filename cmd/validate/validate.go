@@ -51,7 +51,7 @@ func NewCommand() *cobra.Command {
 				return errors.New("missing file or directory name")
 			}
 			c.files = args
-			return runE(c)
+			return runE(cmd.Name(), c)
 		},
 	}
 
@@ -63,7 +63,7 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func runE(c *conf) error {
+func runE(cmd string, c *conf) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	sigs := make(chan os.Signal, 1)
@@ -73,7 +73,7 @@ func runE(c *conf) error {
 		cancel()
 	}()
 
-	fileWalker := filewalker.NewFromViper(c.files, validateFile)
+	fileWalker := filewalker.NewFromViper(cmd, c.files, validateFile)
 	stats := filewalker.NewStats()
 	return fileWalker.Walk(ctx, stats)
 }

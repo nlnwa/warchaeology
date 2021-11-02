@@ -6,6 +6,7 @@ const (
 	LogConsole        = "log-console"
 	RecordType        = "record-type"
 	WarcDir           = "warc-dir"
+	NewIndex          = "new-index"
 	KeepIndex         = "keep-index"
 	IndexDir          = "index-dir"
 	Recursive         = "recursive"
@@ -30,8 +31,9 @@ const (
 	RecordTypeHelp  = `record types to dedup. For more than one, repeat flag or comma separated list.
 Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion`
 	WarcDirHelp           = `output directory for generated warc files. Directory must exist.`
-	KeepIndexHelp         = `true to keep index on disk after dedup, so that it can be used for the next run`
-	IndexDirHelp          = `directory to store deduplication index`
+	NewIndexHelp          = `true to start from a fresh index, deleting eventual index from last run`
+	KeepIndexHelp         = `true to keep index on disk so that the next run will continue where the previous run left off`
+	IndexDirHelp          = `directory to store indexes`
 	RecursiveHelp         = `walk directories recursively`
 	FollowSymlinksHelp    = `follow symlinks`
 	SuffixesHelp          = `filter by suffixes`

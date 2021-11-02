@@ -28,6 +28,7 @@ const (
 )
 
 type filewalker struct {
+	cmd             string
 	paths           []string
 	recursive       bool
 	followSymlinks  bool
@@ -40,13 +41,14 @@ type filewalker struct {
 	logfileTypes    logType
 	logConsoleTypes logType
 	processedPaths  map[string]bool
+	fileIndex       *FileIndex
 }
 
 func New(paths []string, recursive, followSymlinks bool, suffixes []string, concurrency int, fn func(path string) Result) FileWalker {
 	return &filewalker{paths: paths, recursive: recursive, followSymlinks: followSymlinks, suffixes: suffixes, concurrency: concurrency, processor: fn, processedPaths: map[string]bool{}}
 }
 
-func NewFromViper(paths []string, fn func(path string) Result) FileWalker {
+func NewFromViper(cmd string, paths []string, fn func(path string) Result) FileWalker {
 	var consoleType logType
 	var fileType logType
 	for _, t := range viper.GetStringSlice(flag.LogConsole) {
@@ -76,6 +78,7 @@ func NewFromViper(paths []string, fn func(path string) Result) FileWalker {
 		}
 	}
 	return &filewalker{
+		cmd:             cmd,
 		paths:           paths,
 		recursive:       viper.GetBool(flag.Recursive),
 		followSymlinks:  viper.GetBool(flag.FollowSymlinks),
@@ -90,6 +93,15 @@ func NewFromViper(paths []string, fn func(path string) Result) FileWalker {
 }
 
 func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
+	if viper.GetBool(flag.KeepIndex) {
+		if fileIndex, err := NewFileIndex(viper.GetBool(flag.NewIndex), f.cmd); err != nil {
+			return err
+		} else {
+			f.fileIndex = fileIndex
+		}
+		defer f.fileIndex.Close()
+	}
+
 	startTime := time.Now()
 
 	if f.logFileName != "" {
@@ -105,7 +117,19 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 	resultChan := make(chan Result, 32)
 	f.fn = func(path string) {
 		wp.Submit(func() {
-			resultChan <- f.processor(path)
+			if f.fileIndex != nil {
+				if r := f.fileIndex.GetFileStats(path); r != nil {
+					resultChan <- r
+					return
+				}
+			}
+
+			r := f.processor(path)
+
+			if f.fileIndex != nil {
+				f.fileIndex.SaveFileStats(path, r)
+			}
+			resultChan <- r
 		})
 	}
 
@@ -163,7 +187,7 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 func (f *filewalker) walkDir(ctx context.Context, root, dirName string) error {
 	return filepath.WalkDir(dirName, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error:", err)
+			_, _ = fmt.Fprintln(os.Stderr, "Error:", err)
 			return filepath.SkipDir
 		}
 		if d.IsDir() {

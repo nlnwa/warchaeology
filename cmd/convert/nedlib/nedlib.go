@@ -82,12 +82,20 @@ func NewCommand() *cobra.Command {
 				return errors.New("missing file or directory name")
 			}
 			c.files = args
-			return runE(c)
+			return runE(cmd.Name(), c)
 		},
+	}
+
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		panic(err)
 	}
 
 	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)
 	cmd.Flags().BoolP(flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
+	cmd.Flags().BoolP(flag.KeepIndex, "k", false, flag.KeepIndexHelp)
+	cmd.Flags().BoolP(flag.NewIndex, "K", false, flag.NewIndexHelp)
+	cmd.Flags().StringP(flag.IndexDir, "i", cacheDir+"/warc", flag.IndexDirHelp)
 	cmd.Flags().StringSlice(flag.Suffixes, []string{".meta"}, flag.SuffixesHelp)
 	cmd.Flags().IntP(flag.Concurrency, "c", int(float32(runtime.NumCPU())*float32(1.5)), flag.ConcurrencyHelp)
 	cmd.Flags().IntP(flag.ConcurrentWriters, "C", 1, flag.ConcurrentWritersHelp)
@@ -104,7 +112,7 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func runE(c *conf) error {
+func runE(cmd string, c *conf) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	sigs := make(chan os.Signal, 1)
@@ -116,7 +124,7 @@ func runE(c *conf) error {
 
 	defer c.writerConf.Close()
 
-	fileWalker := filewalker.NewFromViper(c.files, c.readFile)
+	fileWalker := filewalker.NewFromViper(cmd, c.files, c.readFile)
 	stats := filewalker.NewStats()
 	return fileWalker.Walk(ctx, stats)
 }
@@ -164,7 +172,7 @@ func handleRecord(c *conf, wf *nedlibreader.NedlibReader, fileName string, resul
 
 	if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
 		fmt.Printf("Offset: %d\n", currentOffset)
-		wr.WarcHeader().Write(os.Stdout)
+		_, _ = wr.WarcHeader().Write(os.Stdout)
 		panic(rr[0].Err)
 	}
 	return
