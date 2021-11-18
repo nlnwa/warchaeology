@@ -79,7 +79,6 @@ func runE() error {
 	state.g = g
 
 	g.Cursor = false
-	g.SetManagerFunc(layout)
 	g.Highlight = true
 	g.FgColor = gocui.ColorYellow
 	g.BgColor = gocui.ColorDefault
@@ -89,21 +88,21 @@ func runE() error {
 	g.SupportOverlaps = true
 	g.Mouse = true
 
+	nonWidgets := gocui.ManagerFunc(layout)
+	fl := gocui.ManagerFunc(flowLayout)
+
+	filesWidget := NewListWidget("dir", "Records", "Records", readFile, populateFiles)
+
+	recordsWidget := NewListWidget("Records", "dir", "dir", readRecord, populateRecords)
+	state.filter = &recordFilter{}
+	recordsWidget.filterFunc = state.filter.filterFunc
+
+	g.SetManager(filesWidget, recordsWidget, nonWidgets, fl)
+
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
 	}
 
-	filesWidget := NewListWidget("dir", "records", "records", readFile, populateFiles)
-	if err := filesWidget.keybindings(g); err != nil {
-		panic(err)
-	}
-
-	recordsWidget := NewListWidget("records", "dir", "dir", readRecord, populateRecords)
-	state.filter = &recordFilter{}
-	recordsWidget.filterFunc = state.filter.filterFunc
-	if err := recordsWidget.keybindings(g); err != nil {
-		panic(err)
-	}
 	if err := g.SetKeybinding("", 'e', gocui.ModNone, state.filter.toggleErrorFilter); err != nil {
 		log.Panicln(err)
 	}
@@ -169,21 +168,36 @@ func runE() error {
 	return nil
 }
 
-func layout(g *gocui.Gui) error {
+func flowLayout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
+	views := g.Views()
 
-	if v, err := g.SetView("records", 0, 10, 49, maxY-2, 0); err != nil {
-		if err != gocui.ErrUnknownView {
+	for _, v := range views {
+		var x0, y0, x1, y1 int
+		switch v.Name() {
+		case "Records":
+			x0 = 0
+			y0 = 10
+			x1 = 49
+			y1 = maxY - 2
+		case "dir":
+			x0 = 0
+			y0 = 0
+			x1 = maxX - 1
+			y1 = 9
+		default:
+			continue
+		}
+		_, err := g.SetView(v.Name(), x0, y0, x1, y1, 0)
+		if err != nil && !errors.Is(err, gocui.ErrUnknownView) {
 			return err
 		}
-		v.FgColor = gocui.ColorGreen
-		v.BgColor = gocui.ColorDefault
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
-		v.Autoscroll = false
-		v.Title = "Records"
 	}
+	return nil
+}
+
+func layout(g *gocui.Gui) error {
+	maxX, maxY := g.Size()
 
 	if v, err := g.SetView("header", 50, 10, maxX-60, 30, gocui.BOTTOM|gocui.RIGHT); err != nil {
 		if err != gocui.ErrUnknownView {
@@ -231,16 +245,11 @@ func layout(g *gocui.Gui) error {
 	}
 	state.filter.refreshHelp(g)
 
-	if v, err := g.SetView("dir", 0, 0, maxX-1, 9, 0); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
+	v := state.curView
+	if state.modalView != "" {
+		v = state.modalView
 	}
-
-	if _, err := g.SetCurrentView(state.curView); err != nil {
+	if _, err := g.SetCurrentView(v); err != nil {
 		return err
 	}
 
@@ -266,7 +275,7 @@ func readRecord(g *gocui.Gui, widget *ListWidget) {
 	}
 	defer r.Close()
 
-	rec, _, val, err := r.Next()
+	rec, offset, val, err := r.Next()
 	if err != nil {
 		panic(err)
 	}
@@ -279,6 +288,7 @@ func readRecord(g *gocui.Gui, widget *ListWidget) {
 	hv.Clear()
 	hv.WriteString(rec.Version().String() + "\n")
 	rec.WarcHeader().Write(hv)
+	hv.Subtitle = fmt.Sprintf("Offset: %d", offset)
 
 	cv, err := g.View("content")
 	if err != nil {
@@ -301,14 +311,15 @@ func readRecord(g *gocui.Gui, widget *ListWidget) {
 }
 
 type State struct {
-	g       *gocui.Gui
-	curView string
-	files   []string // Initial files from command line
-	dir     string   // Initial dir from command line
-	file    string
-	records *ListWidget
-	header  string
-	content string
-	errors  string
-	filter  *recordFilter
+	g         *gocui.Gui
+	curView   string
+	modalView string
+	files     []string // Initial files from command line
+	dir       string   // Initial dir from command line
+	file      string
+	records   *ListWidget
+	header    string
+	content   string
+	errors    string
+	filter    *recordFilter
 }

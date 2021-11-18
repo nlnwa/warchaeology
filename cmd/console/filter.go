@@ -76,7 +76,7 @@ func indexFunc(r rune) bool {
 
 func (r *recordFilter) toggleErrorFilter(g *gocui.Gui, v *gocui.View) error {
 	r.error = !r.error
-	v2, err := g.View("records")
+	v2, err := g.View("Records")
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (r *recordFilter) toggleErrorFilter(g *gocui.Gui, v *gocui.View) error {
 
 func (r *recordFilter) toggleRecordTypeFilter(g *gocui.Gui, recType gowarc.RecordType) error {
 	r.recType = r.recType ^ recType
-	v2, err := g.View("records")
+	v2, err := g.View("Records")
 	if err != nil {
 		return err
 	}
