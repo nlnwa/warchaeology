@@ -106,10 +106,13 @@ func validateFile(file string) filewalker.Result {
 			break
 		}
 
+		if err := wr.Close(); err != nil {
+			*validation = append(*validation, err)
+		}
+
 		if !validation.Valid() {
 			result.AddError(fmt.Errorf("rec num: %d, offset: %d, record: %s, cause: %w", result.Records(), currentOffset, wr, validation))
 		}
-		_ = wr.Close()
 	}
 	return result
 }

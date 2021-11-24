@@ -302,12 +302,16 @@ func readRecord(g *gocui.Gui, widget *ListWidget) {
 	io.Copy(cv, rr)
 	rec.ValidateDigest(val)
 
+	if err := rec.Close(); err != nil {
+		*val = append(*val, err)
+	}
+
 	ev, err := g.View("errors")
 	if err != nil {
 		panic(err)
 	}
 	ev.Clear()
-	fmt.Fprintf(ev, "%s\n", val)
+	_, _ = fmt.Fprintf(ev, "%s\n", val)
 }
 
 type State struct {
