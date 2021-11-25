@@ -108,7 +108,10 @@ func (r *recordFilter) refreshHelp(g *gocui.Gui) {
 	sb.WriteString(filterString("coNversion", ConversionColor, r.recType&gowarc.Conversion != 0))
 	if v, err := g.View("help"); err == nil {
 		v.Clear()
-		fmt.Fprintf(v, "%s", sb.String())
+		txt := "h: help"
+		width, _ := v.Size()
+		space := width - 85
+		fmt.Fprintf(v, "%[1]s%[2]*[3]s", sb.String(), space, txt)
 	}
 }
 

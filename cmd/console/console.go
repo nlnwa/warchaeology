@@ -18,13 +18,9 @@ package console
 
 import (
 	"errors"
-	"fmt"
 	"github.com/awesome-gocui/gocui"
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"io"
 	"log"
 	"os"
 	"path"
@@ -91,13 +87,15 @@ func runE() error {
 	nonWidgets := gocui.ManagerFunc(layout)
 	fl := gocui.ManagerFunc(flowLayout)
 
-	filesWidget := NewListWidget("dir", "Records", "Records", readFile, populateFiles)
+	filesWidget := NewListWidget("dir", "Content_error", "Records", readFile, populateFiles)
 
-	recordsWidget := NewListWidget("Records", "dir", "dir", readRecord, populateRecords)
+	viewRecordWidget := NewRecordWidget("Content", "Records", "dir")
+
+	recordsWidget := NewListWidget("Records", "dir", "Content_header", viewRecordWidget.readRecord, populateRecords)
 	state.filter = &recordFilter{}
 	recordsWidget.filterFunc = state.filter.filterFunc
 
-	g.SetManager(filesWidget, recordsWidget, nonWidgets, fl)
+	g.SetManager(filesWidget, recordsWidget, viewRecordWidget, nonWidgets, fl)
 
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
@@ -149,6 +147,13 @@ func runE() error {
 	}); err != nil {
 		log.Panicln(err)
 	}
+	if err := g.SetKeybinding("", 'h', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
+		v := NewShortcutHelpWidget()
+		return v.Layout(g)
+	}); err != nil {
+		log.Panicln(err)
+	}
+
 	state.records = recordsWidget
 
 	if state.dir == "" {
@@ -199,43 +204,6 @@ func flowLayout(g *gocui.Gui) error {
 func layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
 
-	if v, err := g.SetView("header", 50, 10, maxX-60, 30, gocui.BOTTOM|gocui.RIGHT); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.FgColor = gocui.ColorDefault
-		v.BgColor = gocui.ColorDefault
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
-		v.Title = "WARC header"
-	}
-
-	if v, err := g.SetView("content", 50, 30, maxX-60, maxY-2, gocui.TOP|gocui.RIGHT); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.FgColor = gocui.ColorDefault
-		v.BgColor = gocui.ColorDefault
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
-		v.Title = "WARC content"
-	}
-
-	if v, err := g.SetView("errors", maxX-60, 10, maxX-1, maxY-2, gocui.LEFT); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.FgColor = gocui.ColorRed
-		v.BgColor = gocui.ColorDefault
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
-		v.Title = "Errors"
-		v.Wrap = true
-	}
-
 	if v, err := g.SetView("help", 0, maxY-2, maxX, maxY, 0); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
@@ -265,53 +233,6 @@ func readFile(g *gocui.Gui, widget *ListWidget) {
 		state.file = widget.filteredRecords[widget.selected].(string)
 		state.records.Init(g, state.dir+"/"+state.file)
 	}
-}
-
-func readRecord(g *gocui.Gui, widget *ListWidget) {
-	r, err := gowarc.NewWarcFileReader(state.dir+"/"+state.file, widget.filteredRecords[widget.selected].(record).offset,
-		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
-	if err != nil {
-		panic(err)
-	}
-	defer r.Close()
-
-	rec, offset, val, err := r.Next()
-	if err != nil {
-		panic(err)
-	}
-	defer rec.Close()
-
-	hv, err := g.View("header")
-	if err != nil {
-		panic(err)
-	}
-	hv.Clear()
-	hv.WriteString(rec.Version().String() + "\n")
-	rec.WarcHeader().Write(hv)
-	hv.Subtitle = fmt.Sprintf("Offset: %d", offset)
-
-	cv, err := g.View("content")
-	if err != nil {
-		panic(err)
-	}
-	cv.Clear()
-	rr, err := rec.Block().RawBytes()
-	if err != nil {
-		panic(err)
-	}
-	io.Copy(cv, rr)
-	rec.ValidateDigest(val)
-
-	if err := rec.Close(); err != nil {
-		*val = append(*val, err)
-	}
-
-	ev, err := g.View("errors")
-	if err != nil {
-		panic(err)
-	}
-	ev.Clear()
-	_, _ = fmt.Fprintf(ev, "%s\n", val)
 }
 
 type State struct {
