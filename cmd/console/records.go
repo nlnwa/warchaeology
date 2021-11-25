@@ -77,9 +77,13 @@ func populateRecords(g *gocui.Gui, ctx context.Context, finishedCb func(), widge
 				id:         rec.WarcHeader().Get(gowarc.WarcRecordID),
 				offset:     offset,
 				recordType: rec.Type(),
-				hasError:   !validate.Valid(),
 			}
-			rec.Close()
+
+			if err := rec.Close(); err != nil {
+				*validate = append(*validate, err)
+			}
+			wr.hasError = !validate.Valid()
+
 			widget.records = append(widget.records, wr)
 		}
 	}

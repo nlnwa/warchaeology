@@ -18,13 +18,9 @@ package console
 
 import (
 	"errors"
-	"fmt"
 	"github.com/awesome-gocui/gocui"
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"io"
 	"log"
 	"os"
 	"path"
@@ -79,7 +75,6 @@ func runE() error {
 	state.g = g
 
 	g.Cursor = false
-	g.SetManagerFunc(layout)
 	g.Highlight = true
 	g.FgColor = gocui.ColorYellow
 	g.BgColor = gocui.ColorDefault
@@ -89,21 +84,23 @@ func runE() error {
 	g.SupportOverlaps = true
 	g.Mouse = true
 
+	nonWidgets := gocui.ManagerFunc(layout)
+	fl := gocui.ManagerFunc(flowLayout)
+
+	filesWidget := NewListWidget("dir", "Content_error", "Records", readFile, populateFiles)
+
+	viewRecordWidget := NewRecordWidget("Content", "Records", "dir")
+
+	recordsWidget := NewListWidget("Records", "dir", "Content_header", viewRecordWidget.readRecord, populateRecords)
+	state.filter = &recordFilter{}
+	recordsWidget.filterFunc = state.filter.filterFunc
+
+	g.SetManager(filesWidget, recordsWidget, viewRecordWidget, nonWidgets, fl)
+
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
 	}
 
-	filesWidget := NewListWidget("dir", "records", "records", readFile, populateFiles)
-	if err := filesWidget.keybindings(g); err != nil {
-		panic(err)
-	}
-
-	recordsWidget := NewListWidget("records", "dir", "dir", readRecord, populateRecords)
-	state.filter = &recordFilter{}
-	recordsWidget.filterFunc = state.filter.filterFunc
-	if err := recordsWidget.keybindings(g); err != nil {
-		panic(err)
-	}
 	if err := g.SetKeybinding("", 'e', gocui.ModNone, state.filter.toggleErrorFilter); err != nil {
 		log.Panicln(err)
 	}
@@ -150,6 +147,13 @@ func runE() error {
 	}); err != nil {
 		log.Panicln(err)
 	}
+	if err := g.SetKeybinding("", 'h', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
+		v := NewShortcutHelpWidget()
+		return v.Layout(g)
+	}); err != nil {
+		log.Panicln(err)
+	}
+
 	state.records = recordsWidget
 
 	if state.dir == "" {
@@ -169,58 +173,36 @@ func runE() error {
 	return nil
 }
 
+func flowLayout(g *gocui.Gui) error {
+	maxX, maxY := g.Size()
+	views := g.Views()
+
+	for _, v := range views {
+		var x0, y0, x1, y1 int
+		switch v.Name() {
+		case "Records":
+			x0 = 0
+			y0 = 10
+			x1 = 49
+			y1 = maxY - 2
+		case "dir":
+			x0 = 0
+			y0 = 0
+			x1 = maxX - 1
+			y1 = 9
+		default:
+			continue
+		}
+		_, err := g.SetView(v.Name(), x0, y0, x1, y1, 0)
+		if err != nil && !errors.Is(err, gocui.ErrUnknownView) {
+			return err
+		}
+	}
+	return nil
+}
+
 func layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
-
-	if v, err := g.SetView("records", 0, 10, 49, maxY-2, 0); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.FgColor = gocui.ColorGreen
-		v.BgColor = gocui.ColorDefault
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
-		v.Autoscroll = false
-		v.Title = "Records"
-	}
-
-	if v, err := g.SetView("header", 50, 10, maxX-60, 30, gocui.BOTTOM|gocui.RIGHT); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.FgColor = gocui.ColorDefault
-		v.BgColor = gocui.ColorDefault
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
-		v.Title = "WARC header"
-	}
-
-	if v, err := g.SetView("content", 50, 30, maxX-60, maxY-2, gocui.TOP|gocui.RIGHT); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.FgColor = gocui.ColorDefault
-		v.BgColor = gocui.ColorDefault
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
-		v.Title = "WARC content"
-	}
-
-	if v, err := g.SetView("errors", maxX-60, 10, maxX-1, maxY-2, gocui.LEFT); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.FgColor = gocui.ColorRed
-		v.BgColor = gocui.ColorDefault
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
-		v.Title = "Errors"
-		v.Wrap = true
-	}
 
 	if v, err := g.SetView("help", 0, maxY-2, maxX, maxY, 0); err != nil {
 		if err != gocui.ErrUnknownView {
@@ -231,16 +213,11 @@ func layout(g *gocui.Gui) error {
 	}
 	state.filter.refreshHelp(g)
 
-	if v, err := g.SetView("dir", 0, 0, maxX-1, 9, 0); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
+	v := state.curView
+	if state.modalView != "" {
+		v = state.modalView
 	}
-
-	if _, err := g.SetCurrentView(state.curView); err != nil {
+	if _, err := g.SetCurrentView(v); err != nil {
 		return err
 	}
 
@@ -258,57 +235,16 @@ func readFile(g *gocui.Gui, widget *ListWidget) {
 	}
 }
 
-func readRecord(g *gocui.Gui, widget *ListWidget) {
-	r, err := gowarc.NewWarcFileReader(state.dir+"/"+state.file, widget.filteredRecords[widget.selected].(record).offset,
-		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
-	if err != nil {
-		panic(err)
-	}
-	defer r.Close()
-
-	rec, _, val, err := r.Next()
-	if err != nil {
-		panic(err)
-	}
-	defer rec.Close()
-
-	hv, err := g.View("header")
-	if err != nil {
-		panic(err)
-	}
-	hv.Clear()
-	hv.WriteString(rec.Version().String() + "\n")
-	rec.WarcHeader().Write(hv)
-
-	cv, err := g.View("content")
-	if err != nil {
-		panic(err)
-	}
-	cv.Clear()
-	rr, err := rec.Block().RawBytes()
-	if err != nil {
-		panic(err)
-	}
-	io.Copy(cv, rr)
-	rec.ValidateDigest(val)
-
-	ev, err := g.View("errors")
-	if err != nil {
-		panic(err)
-	}
-	ev.Clear()
-	fmt.Fprintf(ev, "%s\n", val)
-}
-
 type State struct {
-	g       *gocui.Gui
-	curView string
-	files   []string // Initial files from command line
-	dir     string   // Initial dir from command line
-	file    string
-	records *ListWidget
-	header  string
-	content string
-	errors  string
-	filter  *recordFilter
+	g         *gocui.Gui
+	curView   string
+	modalView string
+	files     []string // Initial files from command line
+	dir       string   // Initial dir from command line
+	file      string
+	records   *ListWidget
+	header    string
+	content   string
+	errors    string
+	filter    *recordFilter
 }
