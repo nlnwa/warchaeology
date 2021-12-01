@@ -97,6 +97,17 @@ func NewCommand() *cobra.Command {
 	cmd.PersistentFlags().StringSlice(flag.LogFile, []string{"info", "error", "summary"}, flag.LogFileHelp)
 	cmd.PersistentFlags().StringSlice(flag.LogConsole, []string{"progress", "summary"}, flag.LogConsoleHelp)
 	cmd.PersistentFlags().String(flag.TmpDir, os.TempDir(), flag.TmpDirHelp)
+	cmd.RegisterFlagCompletionFunc(flag.LogFile, flag.SliceCompletion{
+		"info\tShow stats for each file",
+		"error\tPrint errors",
+		"summary\tCreate a summary after completion",
+	}.CompletionFn)
+	cmd.RegisterFlagCompletionFunc(flag.LogConsole, flag.SliceCompletion{
+		"info\tShow stats for each file",
+		"error\tPrint errors",
+		"summary\tCreate a summary after completion",
+		"progress\tShow progress while running",
+	}.CompletionFn)
 
 	// Subcommands
 	cmd.AddCommand(ls.NewCommand())

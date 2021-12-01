@@ -70,6 +70,7 @@ func NewCommand() *cobra.Command {
 			}
 			return runE(cmd.Name(), c)
 		},
+		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
 	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)

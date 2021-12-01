@@ -61,6 +61,7 @@ func NewCommand() *cobra.Command {
 			c.files = args
 			return runE(cmd.Name(), c)
 		},
+		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
 	cacheDir, err := os.UserCacheDir()
