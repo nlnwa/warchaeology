@@ -7,7 +7,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/klauspost/compress v1.13.6
-	github.com/nlnwa/gowarc v1.0.0-alpha.22
+	github.com/nlnwa/gowarc v1.0.0-alpha.23
 	github.com/nlnwa/whatwg-url v0.1.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.2.1
