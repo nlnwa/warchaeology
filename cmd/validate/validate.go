@@ -53,6 +53,7 @@ func NewCommand() *cobra.Command {
 			c.files = args
 			return runE(cmd.Name(), c)
 		},
+		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
 	cmd.Flags().BoolVarP(&c.recursive, flag.Recursive, "r", false, flag.RecursiveHelp)

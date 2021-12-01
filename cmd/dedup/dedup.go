@@ -93,6 +93,7 @@ func NewCommand() *cobra.Command {
 
 			return runE(cmd.Name(), c)
 		},
+		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
 	cacheDir, err := os.UserCacheDir()

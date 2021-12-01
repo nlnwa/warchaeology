@@ -20,6 +20,7 @@ import (
 	"errors"
 	"github.com/awesome-gocui/gocui"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
@@ -54,10 +55,16 @@ func NewCommand() *cobra.Command {
 				state.dir = path.Dir(state.dir)
 				state.files = append(state.files, f)
 			}
+			if state.suffixes, err = cmd.Flags().GetStringSlice(flag.Suffixes); err != nil {
+				return err
+			}
 
 			return runE()
 		},
+		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
+
+	cmd.Flags().StringSlice(flag.Suffixes, []string{".warc", ".warc.gz"}, flag.SuffixesHelp)
 
 	return cmd
 }
@@ -239,6 +246,7 @@ type State struct {
 	g         *gocui.Gui
 	curView   string
 	modalView string
+	suffixes  []string
 	files     []string // Initial files from command line
 	dir       string   // Initial dir from command line
 	file      string

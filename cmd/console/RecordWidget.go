@@ -212,7 +212,9 @@ func (w *RecordWidget) poopulateContent(g *gocui.Gui, rec gowarc.WarcRecord) {
 	}
 	view.Clear()
 	if _, ok := rec.Block().(gowarc.PayloadBlock); ok {
-		rec.Block().Cache()
+		if err = rec.Block().Cache(); err != nil {
+			panic(err)
+		}
 	}
 	f := &visibleLineEndingFilter{view}
 	rr, err := rec.Block().RawBytes()
