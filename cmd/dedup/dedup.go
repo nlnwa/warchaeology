@@ -35,11 +35,12 @@ import (
 )
 
 type conf struct {
-	recordTypes gowarc.RecordType
-	files       []string
-	concurrency int
-	digestIndex *DigestIndex
-	writerConf  *warcwriterconfig.WarcWriterConfig
+	recordTypes     gowarc.RecordType
+	files           []string
+	concurrency     int
+	digestIndex     *DigestIndex
+	writerConf      *warcwriterconfig.WarcWriterConfig
+	minimumSizeGain int64
 }
 
 func NewCommand() *cobra.Command {
@@ -57,6 +58,7 @@ func NewCommand() *cobra.Command {
 			}
 
 			c.concurrency = viper.GetInt(flag.Concurrency)
+			c.minimumSizeGain = viper.GetInt64(flag.DedupSizeGain)
 
 			recordTypes := viper.GetStringSlice(flag.RecordType)
 			for _, r := range recordTypes {
@@ -118,6 +120,35 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
 	cmd.Flags().StringP(flag.NameGenerator, "n", "default", flag.NameGeneratorHelp)
 	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
+	cmd.Flags().Int64P(flag.DedupSizeGain, "g", 1024*2, flag.DedupSizeGainHelp)
+
+	if err := cmd.RegisterFlagCompletionFunc(flag.RecordType, flag.SliceCompletion{
+		"warcinfo",
+		"request",
+		"response",
+		"metadata",
+		"revisit",
+		"resource",
+		"continuation",
+		"conversion",
+	}.CompletionFn); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagDirname(flag.IndexDir); err != nil {
+		panic(err)
+	}
+	if err := cmd.RegisterFlagCompletionFunc(flag.FilePrefix, cobra.NoFileCompletions); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagDirname(flag.WarcDir); err != nil {
+		panic(err)
+	}
+	if err := cmd.RegisterFlagCompletionFunc(flag.SubdirPattern, cobra.NoFileCompletions); err != nil {
+		panic(err)
+	}
+	if err := cmd.RegisterFlagCompletionFunc(flag.NameGenerator, cobra.NoFileCompletions); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -200,55 +231,102 @@ func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, result fi
 		}
 	}
 
-	if wr.Type()&c.recordTypes != 0 && wr.WarcHeader().Get(gowarc.ContentType) != "" {
+	if wr.Type()&c.recordTypes != 0 {
 		result.IncrProcessed()
 
-		var digest string
-		if wr.WarcHeader().Has(gowarc.WarcPayloadDigest) {
-			digest = wr.WarcHeader().Get(gowarc.WarcPayloadDigest)
-		} else if wr.WarcHeader().Has(gowarc.WarcBlockDigest) {
-			digest = wr.WarcHeader().Get(gowarc.WarcBlockDigest)
-		} else {
-			result.AddError(fmt.Errorf("missing digest"))
-		}
-
-		var profile string
-		switch wr.Version() {
-		case gowarc.V1_0:
-			profile = gowarc.ProfileIdenticalPayloadDigestV1_0
-		default:
-			profile = gowarc.ProfileIdenticalPayloadDigestV1_1
-		}
+		length := payloadLength(wr)
+		digest := getDigest(wr, validation, result)
+		profile := getRevisitProfile(wr)
 		revisitRef, _ := wr.CreateRevisitRef(profile)
 
 		r, err := c.digestIndex.IsRevisit(digest, revisitRef)
 		if err != nil {
 			result.AddError(fmt.Errorf("error getting revisit ref: %w", err))
 		}
-		if r != nil {
+		if r != nil && int64(revisitRefSize(r)) < length-c.minimumSizeGain {
 			if r.Profile == "" {
 				panic(r)
 			}
-			result.IncrDuplicates()
-			revisit, err := wr.ToRevisitRecord(r)
 
-			if err != nil {
+			if revisit, err := wr.ToRevisitRecord(r); err != nil {
 				result.AddError(fmt.Errorf("error creating revisit record: %w", err))
-			}
-			if rr := writer.Write(revisit); rr != nil && rr[0].Err != nil {
-				fmt.Printf("Offset: %d\n", currentOffset)
-				_, _ = wr.WarcHeader().Write(os.Stdout)
-				panic(rr[0].Err)
+				writeRecord(writer, currentOffset, wr)
+			} else {
+				writeRecord(writer, currentOffset, revisit)
+				result.IncrDuplicates()
 			}
 		} else {
-			if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
-				panic(rr[0].Err)
-			}
+			writeRecord(writer, currentOffset, wr)
 		}
 	} else {
-		if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
-			panic(rr[0].Err)
-		}
+		writeRecord(writer, currentOffset, wr)
 	}
 	return
+}
+
+func writeRecord(writer *gowarc.WarcFileWriter, offset int64, wr gowarc.WarcRecord) {
+	if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
+		fmt.Printf("Offset: %d\n", offset)
+		_, _ = wr.WarcHeader().Write(os.Stdout)
+		panic(rr[0].Err)
+	}
+}
+
+func getRevisitProfile(wr gowarc.WarcRecord) string {
+	switch wr.Version() {
+	case gowarc.V1_0:
+		return gowarc.ProfileIdenticalPayloadDigestV1_0
+	default:
+		return gowarc.ProfileIdenticalPayloadDigestV1_1
+	}
+}
+
+func getDigest(wr gowarc.WarcRecord, validation *gowarc.Validation, result filewalker.Result) string {
+	var digest string
+	if wr.WarcHeader().Has(gowarc.WarcPayloadDigest) {
+		digest = wr.WarcHeader().Get(gowarc.WarcPayloadDigest)
+	} else if wr.WarcHeader().Has(gowarc.WarcBlockDigest) {
+		digest = wr.WarcHeader().Get(gowarc.WarcBlockDigest)
+	} else {
+		if err := wr.Block().Cache(); err != nil {
+			panic("Could not cache record: " + err.Error())
+		}
+		if err := wr.ValidateDigest(validation); err != nil {
+			panic("Validate error: " + err.Error())
+		}
+		return getDigest(wr, validation, result)
+	}
+	return digest
+}
+
+func payloadLength(wr gowarc.WarcRecord) int64 {
+	var length int64
+	switch v := wr.Block().(type) {
+	case gowarc.HttpRequestBlock:
+		length, _ = wr.ContentLength()
+		length -= int64(len(v.HttpHeaderBytes()))
+	case gowarc.HttpResponseBlock:
+		length, _ = wr.ContentLength()
+		length -= int64(len(v.HttpHeaderBytes()))
+	case gowarc.WarcFieldsBlock:
+		length = v.Size()
+	}
+	return length
+}
+
+func revisitRefSize(r *gowarc.RevisitRef) int {
+	s := 0
+	if r.TargetRecordId != "" {
+		s += len(gowarc.WarcRefersTo) + len(r.TargetRecordId)
+	}
+	if r.Profile != "" {
+		s += len(gowarc.WarcProfile) + len(r.Profile)
+	}
+	if r.TargetUri != "" {
+		s += len(gowarc.WarcRefersToTargetURI) + len(r.TargetUri)
+	}
+	if r.TargetDate != "" {
+		s += len(gowarc.WarcRefersToDate) + len(r.TargetDate)
+	}
+	return s
 }
