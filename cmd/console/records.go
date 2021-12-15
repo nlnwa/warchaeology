@@ -100,7 +100,7 @@ func populateFiles(g *gocui.Gui, ctx context.Context, finishedCb func(), widget 
 	if len(state.files) > 0 {
 		for _, f := range state.files {
 			for _, suf := range state.suffixes {
-				if strings.HasSuffix(f, "."+suf) {
+				if strings.HasSuffix(f, suf) {
 					widget.records = append(widget.records, f)
 				}
 			}

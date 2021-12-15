@@ -284,9 +284,12 @@ func (w *ListWidget) selectLine(g *gocui.Gui, v *gocui.View, selected int) error
 		if selected >= v.ViewLinesHeight()-1 {
 			selected = v.ViewLinesHeight() - 2
 		}
-		if selected == w.selected {
+
+		// Do nothing if no movement or content is empty
+		if selected == w.selected || v.ViewLinesHeight() == 0 {
 			return nil
 		}
+
 		if w.selected != -1 {
 			_ = v.SetLine(w.selected, fmt.Sprintf("%s", w.filteredRecords[w.selected]))
 		}
@@ -391,6 +394,12 @@ func (w *ListWidget) refreshFilter(g *gocui.Gui, v *gocui.View) error {
 		w.cancelRefreshFunc()
 		w.cancelRefreshFunc = nil
 	}
+
+	// Skip filtering if records is empty and no read operation is in progress
+	if len(w.records) == 0 && w.finished == nil {
+		return nil
+	}
+
 	var ctx context.Context
 	ctx, w.cancelRefreshFunc = context.WithCancel(context.Background())
 	v.Clear()
