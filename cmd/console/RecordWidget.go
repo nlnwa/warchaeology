@@ -179,7 +179,9 @@ func (w *RecordWidget) readRecord(g *gocui.Gui, widget *ListWidget) {
 	w.poopulateHeader(g, rec, offset)
 	w.poopulateContent(g, rec)
 
-	rec.ValidateDigest(val)
+	if err := rec.ValidateDigest(val); err != nil {
+		*val = append(*val, err)
+	}
 
 	if err := rec.Close(); err != nil {
 		*val = append(*val, err)
@@ -212,9 +214,8 @@ func (w *RecordWidget) poopulateContent(g *gocui.Gui, rec gowarc.WarcRecord) {
 	}
 	view.Clear()
 	if _, ok := rec.Block().(gowarc.PayloadBlock); ok {
-		if err = rec.Block().Cache(); err != nil {
-			panic(err)
-		}
+		// Cache block when there is a defined payload so that we can get the payload size later.
+		_ = rec.Block().Cache()
 	}
 	f := &visibleLineEndingFilter{view}
 	rr, err := rec.Block().RawBytes()

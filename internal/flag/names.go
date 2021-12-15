@@ -24,6 +24,7 @@ const (
 	WarcVersion       = "warc-version"
 	DefaultDate       = "default-date"
 	TmpDir            = "tmpdir"
+	DedupSizeGain     = "min-size-gain"
 
 	LogFileNameHelp = `a file to write log output. Empty for no log file`
 	LogFileHelp     = `The kind of log output to write to file. Valid values: info, error, summary`
@@ -55,8 +56,9 @@ WARC files in different subdirectories. If NameGenerator is 'identity' only the 
 of each file's date is used to keep the file as one.`
 	NameGeneratorHelp = `the name generator to use. By setting this to 'identity', the input filename will also be used as
 output file name (preix and suffix might still change). In this mode exactly one file is generated for every input file`
-	FlushHelp       = `if true, sync WARC file to disk after writing each record`
-	WarcVersionHelp = `the WARC version to use for created files`
-	DefaultDateHelp = `fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date`
-	TmpDirHelp      = `directory to use for temporary files`
+	FlushHelp         = `if true, sync WARC file to disk after writing each record`
+	WarcVersionHelp   = `the WARC version to use for created files`
+	DefaultDateHelp   = `fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date`
+	TmpDirHelp        = `directory to use for temporary files`
+	DedupSizeGainHelp = `minimum bytes one must earn to perform a deduplication`
 )
