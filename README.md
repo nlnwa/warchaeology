@@ -1,33 +1,12 @@
 # warchaeology
 Command line tool for digging into WARC files
 
-# Installation
-## Linux
-### RPM package
-```
-curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology_0.1.0-RC.6_x86_64.rpm
-sudo rpm -Uvh warchaeology_0.1.0-RC.6_x86_64.rpm
-```
+## Installation
+[Installation instructions](https://nlnwa.github.io/warchaeology/install.html).
 
-### Debian package
-```
-curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology_0.1.0-RC.6_amd64.deb
-sudo dpkg -i warchaeology_0.1.0-RC.6_amd64.deb
-```
+## Documentation
+Usage information is available with the help command:
 
-### Binary download
-```
-curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warc_linux_x86_64
-sudo install warc_linux_x86_64 /usr/local/bin/warc
-```
+    warc help
 
-#### Command completion
-bash
-```
-sudo sh -c "/usr/local/bin/warc completion bash > /etc/bash_completion.d/warc"
-```
-
-zshell
-```
-source <(warc completion zsh)
-```
+This information can also be found [here](https://nlnwa.github.io/warchaeology/cmd/warc.html)
