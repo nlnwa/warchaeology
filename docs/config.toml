@@ -1,0 +1,35 @@
+baseURL = "https://nlnwa.github.io/warchaeology"
+languageCode = "en-us"
+title = "Warchaeology"
+theme = "ace-documentation"
+
+[params]
+  disableReadmoreNav = true
+  toc = false
+  disableSearch = true
+  ordersectionsby = "weight"
+
+[outputs]
+  home = ['HTML']
+  page = ['HTML']
+  section = ['HTML']
+  taxonomy = ['HTML']
+  term = ['HTML']
+
+[[menu.shortcuts]]
+  name = "<i class='fab fa-github'></i>"
+  url = "https://github.com/nlnwa/warchaeology"
+  weight = 1
+
+[security]
+  enableInlineShortcodes = false
+  [security.exec]
+    allow = ['^dart-sass-embedded$', '^go$', '^npx$', '^postcss$']
+    osEnv = ['(?i)^(PATH|PATHEXT|APPDATA|TMP|TEMP|TERM)$']
+
+  [security.funcs]
+    getenv = ['^HUGO_', '^GITHUB_']
+
+  [security.http]
+    methods = ['(?i)GET|POST']
+    urls = ['.*']

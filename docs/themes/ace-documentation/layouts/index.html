@@ -1,0 +1,9 @@
+{{ define "main" }}
+	{{if .Site.Home.Content }}
+
+	<h1>{{ .Title }}</h1>
+
+	{{.Site.Home.Content}}
+	{{ end }}
+
+{{ end }}

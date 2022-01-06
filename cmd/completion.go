@@ -12,40 +12,40 @@ var completionCmd = &cobra.Command{
 
 Bash:
 
-  $ source <(yourprogram completion bash)
+    $ source <(warc completion bash)
 
-  # To load completions for each session, execute once:
-  # Linux:
-  $ yourprogram completion bash > /etc/bash_completion.d/yourprogram
-  # macOS:
-  $ yourprogram completion bash > /usr/local/etc/bash_completion.d/yourprogram
+    # To load completions for each session, execute once:
+    # Linux:
+    $ warc completion bash > /etc/bash_completion.d/warc
+    # macOS:
+    $ warc completion bash > /usr/local/etc/bash_completion.d/warc
 
 Zsh:
 
-  # If shell completion is not already enabled in your environment,
-  # you will need to enable it.  You can execute the following once:
+    # If shell completion is not already enabled in your environment,
+    # you will need to enable it.  You can execute the following once:
 
-  $ echo "autoload -U compinit; compinit" >> ~/.zshrc
+    $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
-  # To load completions for each session, execute once:
-  $ yourprogram completion zsh > "${fpath[1]}/_yourprogram"
+    # To load completions for each session, execute once:
+    $ warc completion zsh > "${fpath[1]}/_warc"
 
-  # You will need to start a new shell for this setup to take effect.
+    # You will need to start a new shell for this setup to take effect.
 
 fish:
 
-  $ yourprogram completion fish | source
+    $ warc completion fish | source
 
-  # To load completions for each session, execute once:
-  $ yourprogram completion fish > ~/.config/fish/completions/yourprogram.fish
+    # To load completions for each session, execute once:
+    $ warc completion fish > ~/.config/fish/completions/warc.fish
 
 PowerShell:
 
-  PS> yourprogram completion powershell | Out-String | Invoke-Expression
+    PS> warc completion powershell | Out-String | Invoke-Expression
 
-  # To load completions for every new session, run:
-  PS> yourprogram completion powershell > yourprogram.ps1
-  # and source this file from your PowerShell profile.
+    # To load completions for every new session, run:
+    PS> warc completion powershell > warc.ps1
+    # and source this file from your PowerShell profile.
 `,
 	DisableFlagsInUseLine: true,
 	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
@@ -53,13 +53,13 @@ PowerShell:
 	Run: func(cmd *cobra.Command, args []string) {
 		switch args[0] {
 		case "bash":
-			cmd.Root().GenBashCompletionV2(os.Stdout, true)
+			_ = cmd.Root().GenBashCompletionV2(os.Stdout, true)
 		case "zsh":
-			cmd.Root().GenZshCompletion(os.Stdout)
+			_ = cmd.Root().GenZshCompletion(os.Stdout)
 		case "fish":
-			cmd.Root().GenFishCompletion(os.Stdout, true)
+			_ = cmd.Root().GenFishCompletion(os.Stdout, true)
 		case "powershell":
-			cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout)
+			_ = cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout)
 		}
 	},
 }
