@@ -1,4 +1,4 @@
-baseURL = "https://nlnwa.github.io/warchaeology"
+baseURL = "https://nlnwa.github.io/warchaeology/"
 languageCode = "en-us"
 title = "Warchaeology"
 theme = "ace-documentation"
