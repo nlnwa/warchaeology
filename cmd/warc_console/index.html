@@ -1,10 +1,9 @@
 <!doctype html><html><head>
-<meta name=generator content="Hugo 0.91.2">
 <meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no">
-<link rel=canonical href=https://nlnwa.github.io/warchaeology/>
+<link rel=canonical href=https://nlnwa.github.io/warchaeology/cmd/warc_console/>
 <title>
-Warchaeology
+warc console | Warchaeology
 </title>
 <link href=https://nlnwa.github.io/warchaeology/css/fontawesome.min.css rel=stylesheet>
 <link rel=stylesheet href=https://nlnwa.github.io/warchaeology/css/ace.min.css>
@@ -39,7 +38,7 @@ v0.1.0-RC.8
 </button>
 <div class="collapse navbar-collapse align-items-start flex-column" id=sidenav-left-collapse>
 <ul class="navbar-nav flex-column pt-3">
-<li data-nav-id=/warchaeology/cmd/ class="nav-item my-1 haschildren">
+<li data-nav-id=/warchaeology/cmd/ class="nav-item my-1 parent haschildren">
 <a class="nav-link p-0" href=/warchaeology/cmd/><h6>Usage</h6></a>
 <ul class="list-unstyled ml-2">
 <li data-nav-id=/warchaeology/cmd/warc/ class="nav-item my-1">
@@ -57,7 +56,7 @@ warc cat
 warc completion
 </a>
 </li>
-<li data-nav-id=/warchaeology/cmd/warc_console/ class="nav-item my-1">
+<li data-nav-id=/warchaeology/cmd/warc_console/ class="nav-item my-1 active">
 <a href=/warchaeology/cmd/warc_console/ class="nav-link p-0">
 warc console
 </a>
@@ -102,73 +101,22 @@ warc validate
 </nav>
 </div>
 <div class="main col-12 order-1 col-md-9 col-lg-10 col-xl-10 py-3">
-<h1>Warchaeology</h1>
-<p class=lead>
-Warchaeology is a collection of tools for inspecting, manipulating and validating WARC-files.
-</p>
-<h2 id=features>Features</h2>
-<div class="row py-3 mb-5">
-<div class=col-md-4>
-<div class="card flex-row border-0">
-<div class=mt-3>
-<span class="fas fa-check fa-2x text-primary"></span>
-</div>
-<div class="card-body pl-2">
-<h5 class=card-title>
-Validation
-</h5>
-<p class="card-text text-muted">
-Validate that WARC-files conforms to specification.
-</p>
-</div>
-</div>
-</div>
-<div class=col-md-4>
-<div class="card flex-row border-0">
-<div class=mt-3>
-<span class="fas fa-search fa-2x text-primary"></span>
-</div>
-<div class="card-body pl-2">
-<h5 class=card-title>
-Inspection
-</h5>
-<p class="card-text text-muted">
-Navigate WARC-files with terminal console.
-</p>
-</div>
-</div>
-</div>
-<div class=col-md-4>
-<div class="card flex-row border-0">
-<div class=mt-3>
-<span class="fas fa-magic fa-2x text-primary"></span>
-</div>
-<div class="card-body pl-2">
-<h5 class=card-title>
-Conversion
-</h5>
-<p class="card-text text-muted">
-Convert webarchives into WARC-format.
-</p>
-</div>
-</div>
-</div>
-<div class=col-md-4>
-<div class="card flex-row border-0">
-<div class=mt-3>
-<span class="fas fa-compress-arrows-alt fa-2x text-primary"></span>
-</div>
-<div class="card-body pl-2">
-<h5 class=card-title>
-Deduplication
-</h5>
-<p class="card-text text-muted">
-Reformat WARC-files to use revisit records for duplicate content.
-</p>
-</div>
-</div>
-</div>
-</div>
+<h2 id=warc-console>warc console</h2>
+<p>A shell for working with WARC files</p>
+<pre tabindex=0><code>warc console &lt;directory&gt; [flags]
+</code></pre><h3 id=options>Options</h3>
+<pre tabindex=0><code>  -h, --help               help for console
+      --suffixes strings   filter by suffixes (default [.warc,.warc.gz])
+</code></pre><h3 id=options-inherited-from-parent-commands>Options inherited from parent commands</h3>
+<pre tabindex=0><code>      --config string          config file. If not set, /etc/warc/, $HOME/.warc/ and current working dir will be searched for file config.yaml
+      --log-console strings    The kind of log output to write to console. Valid values: info, error, summary, progress (default [progress,summary])
+      --log-file strings       The kind of log output to write to file. Valid values: info, error, summary (default [info,error,summary])
+  -L, --log-file-name string   a file to write log output. Empty for no log file
+      --tmpdir string          directory to use for temporary files (default &quot;/tmp&quot;)
+</code></pre><h3 id=see-also>SEE ALSO</h3>
+<ul>
+<li><a href=../warc/>warc</a> - A tool for handling warc files</li>
+</ul>
 <div class=row></div>
 </div>
 </div>
