@@ -21,85 +21,61 @@ import (
 	"fmt"
 	"github.com/nlnwa/warchaeology/cmd"
 	"github.com/spf13/cobra/doc"
-	"html/template"
-	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 func main() {
 	// Find 'this' directory relative to this file to allow callers to be in any package
 	var _, b, _, _ = runtime.Caller(0)
 	var dir = filepath.Dir(b)
-	var docsDir = filepath.Join(dir, "../../docs")
-	var templateDir = filepath.Join(dir, "docs")
-
-	if len(os.Args) != 2 {
-		panic("Missing version")
-	}
+	var docsDir = filepath.Join(dir, "../../docs/content")
 
 	genMdDoc(docsDir)
-	parseTemplates(templateDir, docsDir, os.Args[1])
 }
+
+const fmTemplate = `---
+date: %s
+title: "%s"
+slug: %s
+url: %s
+---
+`
 
 func genMdDoc(docsDir string) {
 	var dir = filepath.Join(docsDir, "cmd")
 	fmt.Println("generating documentation")
-	if err := os.RemoveAll(dir); err != nil {
-		panic(err)
-	}
 
-	if err := os.MkdirAll(dir, 0777); err != nil {
-		panic(err)
+	if files, err := os.ReadDir(dir); err == nil {
+		for _, f := range files {
+			if strings.HasPrefix(f.Name(), "warc") {
+				p := path.Join(dir, f.Name())
+				_ = os.Remove(p)
+			}
+		}
 	}
 
 	c := cmd.NewCommand()
 	c.DisableAutoGenTag = true
-	if err := doc.GenMarkdownTree(c, dir); err != nil {
-		panic(err)
+
+	filePrepender := func(filename string) string {
+		now := time.Now().Format(time.RFC3339)
+		name := filepath.Base(filename)
+		base := strings.TrimSuffix(name, path.Ext(name))
+		url := "/cmd/" + strings.ToLower(base) + "/"
+		return fmt.Sprintf(fmTemplate, now, strings.Replace(base, "_", " ", -1), base, url)
 	}
-}
 
-func parseTemplates(templateDir, docsDir, version string) {
-	err := filepath.WalkDir(templateDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			relDir, err := filepath.Rel(templateDir, path)
-			if err != nil {
-				return err
-			}
-			outDir := filepath.Join(docsDir, relDir)
-			return os.MkdirAll(outDir, 0777)
-		} else if strings.HasSuffix(path, "tmpl") {
-			if filepath.Ext(d.Name()) != ".tmpl" {
-				return nil
-			}
-			outFile := strings.TrimSuffix(d.Name(), ".tmpl")
-			relDir, err := filepath.Rel(templateDir, filepath.Dir(path))
-			if err != nil {
-				return err
-			}
-			outPath := filepath.Join(docsDir, relDir, outFile)
-			fmt.Printf("docsDir: %s, path: %s, file: %s, rel: %s, out: %s\n", docsDir, path, d.Name(), relDir, outPath)
-			t, err := template.ParseFiles(path)
-			if err != nil {
-				return err
-			}
-			out, err := os.Create(outPath)
-			if err != nil {
-				return err
-			}
-			defer out.Close()
+	linkHandler := func(name string) string {
+		base := strings.TrimSuffix(name, path.Ext(name))
+		return "../" + strings.ToLower(base) + "/"
+	}
 
-			return t.Execute(out, version)
-		}
-		return nil
-	})
-	if err != nil {
+	if err := doc.GenMarkdownTreeCustom(c, dir, filePrepender, linkHandler); err != nil {
 		panic(err)
 	}
 }

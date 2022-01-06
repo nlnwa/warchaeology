@@ -47,7 +47,7 @@ add_tag() {
 }
 
 # create the release docs and tag it
-go run hack/release/md_docs.go ${1}
+go run hack/release/md_docs.go
 make_commit "v${1}"
 add_tag "v${1}"
 

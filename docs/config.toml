@@ -1,0 +1,22 @@
+baseURL = "https://nlnwa.github.io/warchaeology"
+languageCode = "en-us"
+title = "Warchaeology"
+theme = "ace-documentation"
+
+[params]
+  disableReadmoreNav = true
+  toc = false
+  disableSearch = true
+  ordersectionsby = "weight"
+
+[outputs]
+  home = ['HTML']
+  page = ['HTML']
+  section = ['HTML']
+  taxonomy = ['HTML']
+  term = ['HTML']
+
+[[menu.shortcuts]]
+  name = "<i class='fab fa-github'></i>"
+  url = "https://github.com/nlnwa/warchaeology"
+  weight = 1
