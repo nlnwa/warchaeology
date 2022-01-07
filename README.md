@@ -1,12 +1,12 @@
 # warchaeology
-Command line tool for digging into WARC files
+Warchaeology is a collection of tools for inspecting, manipulating and validating WARC-files.
 
 ## Installation
-[Installation instructions](https://nlnwa.github.io/warchaeology/install.html).
+[Installation instructions](https://nlnwa.github.io/warchaeology/installation).
 
 ## Documentation
 Usage information is available with the help command:
 
     warc help
 
-This information can also be found [here](https://nlnwa.github.io/warchaeology/cmd/warc.html)
+Complete documentation can be found [here](https://nlnwa.github.io/warchaeology/)

@@ -3,6 +3,7 @@ date: 2022-01-05T14:00:02+01:00
 title: "Installation"
 slug: installation
 url: /installation
+weight: 1
 ---
 
 ## Linux
@@ -11,9 +12,6 @@ url: /installation
 ```
 curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology_{{<version>}}_x86_64.rpm
 sudo rpm -Uvh warchaeology_{{<version>}}_x86_64.rpm
-
-curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology_rall_x86_64.rpm
-sudo rpm -Uvh warchaeology_rall_x86_64.rpm
 ```
 
 ### Debian package
@@ -30,6 +28,5 @@ sudo install warc_linux_x86_64 /usr/local/bin/warc
 
 #### Command completion
 When using .deb or .rpm packages, command completion is automatically configured.
-
 With other installation methods command completion scripts can be generated with
-the [`warc completion`](/cmd/warc_completion) command.
+the [`warc completion`](../cmd/warc_completion) command.
