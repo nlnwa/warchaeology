@@ -1,5 +1,5 @@
 ---
-date: 2022-01-07T16:26:57+01:00
+date: 2022-03-15T11:16:18+01:00
 title: "warc convert arc"
 slug: warc_convert_arc
 url: /cmd/warc_convert_arc/
@@ -20,7 +20,7 @@ warc convert arc <files/dirs> [flags]
   -c, --concurrency int          number of input files to process simultaneously. The default value is 1.5 x <number of cpu cores> (default 24)
   -C, --concurrent-writers int   maximum concurrent WARC writers. This is the number of WARC-files simultaneously written to.
                                  A consequence is that at least this many WARC files are created even if there is only one input file. (default 1)
-  -t, --default-date string      fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2022-1-7")
+  -t, --default-date string      fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2022-3-15")
   -S, --file-size int            The maximum size for WARC files (default 1073741824)
       --flush                    if true, sync WARC file to disk after writing each record
   -h, --help                     help for arc

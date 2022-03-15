@@ -1,5 +1,5 @@
 ---
-date: 2022-01-07T16:26:57+01:00
+date: 2022-03-15T11:16:18+01:00
 title: "warc cat"
 slug: warc_cat
 url: /cmd/warc_cat/
@@ -12,14 +12,27 @@ Concatenate and print warc files
 warc cat [flags]
 ```
 
+### Examples
+
+```
+# Print all content from a WARC file
+warc cat file1.warc.gz
+
+# Pipe payload from record #4 into the image viewer feh
+warc cat -n4 -P file1.warc.gz | feh -
+```
+
 ### Options
 
 ```
+  -w, --header             show WARC header
   -h, --help               help for cat
       --id stringArray     id
-  -o, --offset int         record offset (default -1)
-  -c, --record-count int   The maximum number of records to show
-  -s, --strict             strict parsing
+  -n, --num int            print the n'th record. This is applied after records are filtered out by other options (default -1)
+  -o, --offset int         print record at offset bytes (default -1)
+  -P, --payload            show payload
+  -p, --protocol-header    show protocol header
+  -c, --record-count int   The maximum number of records to show. Defaults to show all records except if -o or -n option is set, then default is one.
 ```
 
 ### Options inherited from parent commands
