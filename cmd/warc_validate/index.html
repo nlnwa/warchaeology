@@ -1,141 +1,22 @@
-<!doctype html><html><head>
-<meta charset=utf-8>
-<meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no">
-<link rel=canonical href=https://nlnwa.github.io/warchaeology/cmd/warc_validate/>
-<title>
-warc validate | Warchaeology
-</title>
-<link href=https://nlnwa.github.io/warchaeology/css/fontawesome.min.css rel=stylesheet>
-<link rel=stylesheet href=https://nlnwa.github.io/warchaeology/css/ace.min.css>
-</head>
-<body><nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow sticky-top" id=navbarMain>
-<div class=container>
-<div>
-<a class=navbar-brand href=/warchaeology>
-Warchaeology
-</a>
-v0.1.0-RC.9
-</div>
-<button class="navbar-toggler navbar-toggler-right collapsed" type=button data-toggle=collapse data-target=#navbarMainCollapse aria-controls=navbarMainCollapse aria-expanded=false aria-label="Toggle navigation">
-<span class=navbar-toggler-icon></span>
-</button>
-<div class="collapse navbar-collapse" id=navbarMainCollapse>
-<ul class="navbar-nav ml-auto">
-<li class=nav-item>
-<a class=nav-link href=https://github.com/nlnwa/warchaeology>
-<i class="fab fa-github"></i>
-</a>
-</li>
-</ul>
-</div>
-</div>
-</nav>
-<div class=container-fluid>
-<div class=row>
-<div class="docs-sidenav order-0 col-12 col-md-3 col-lg-2 col-xl-2 position-sticky border-right"><nav class="navbar navbar-expand-md navbar-light pl-0">
-<button class="navbar-toggler navbar-toggler-right collapsed" type=button data-toggle=collapse data-target=#sidenav-left-collapse aria-controls=sidenav-left-collapse aria-expanded=false aria-label="Toggle navigation">
-<span class=navbar-toggler-icon></span>
-</button>
-<div class="collapse navbar-collapse align-items-start flex-column" id=sidenav-left-collapse>
-<ul class="navbar-nav flex-column pt-3">
-<li data-nav-id=/warchaeology/installation/ class="nav-item my-1">
-<a class="nav-link p-0" href=/warchaeology/installation/><h6>Installation</h6></a>
-</li>
-<li data-nav-id=/warchaeology/cmd/ class="nav-item my-1 parent haschildren">
-<a class="nav-link p-0" href=/warchaeology/cmd/><h6>Usage</h6></a>
-<ul class="list-unstyled ml-2">
-<li data-nav-id=/warchaeology/cmd/warc/ class="nav-item my-1">
-<a href=/warchaeology/cmd/warc/ class="nav-link p-0">
-warc
-</a>
-</li>
-<li data-nav-id=/warchaeology/cmd/warc_cat/ class="nav-item my-1">
-<a href=/warchaeology/cmd/warc_cat/ class="nav-link p-0">
-warc cat
-</a>
-</li>
-<li data-nav-id=/warchaeology/cmd/warc_completion/ class="nav-item my-1">
-<a href=/warchaeology/cmd/warc_completion/ class="nav-link p-0">
-warc completion
-</a>
-</li>
-<li data-nav-id=/warchaeology/cmd/warc_console/ class="nav-item my-1">
-<a href=/warchaeology/cmd/warc_console/ class="nav-link p-0">
-warc console
-</a>
-</li>
-<li data-nav-id=/warchaeology/cmd/warc_convert/ class="nav-item my-1">
-<a href=/warchaeology/cmd/warc_convert/ class="nav-link p-0">
-warc convert
-</a>
-</li>
-<li data-nav-id=/warchaeology/cmd/warc_convert_arc/ class="nav-item my-1">
-<a href=/warchaeology/cmd/warc_convert_arc/ class="nav-link p-0">
-warc convert arc
-</a>
-</li>
-<li data-nav-id=/warchaeology/cmd/warc_convert_nedlib/ class="nav-item my-1">
-<a href=/warchaeology/cmd/warc_convert_nedlib/ class="nav-link p-0">
-warc convert nedlib
-</a>
-</li>
-<li data-nav-id=/warchaeology/cmd/warc_dedup/ class="nav-item my-1">
-<a href=/warchaeology/cmd/warc_dedup/ class="nav-link p-0">
-warc dedup
-</a>
-</li>
-<li data-nav-id=/warchaeology/cmd/warc_ls/ class="nav-item my-1">
-<a href=/warchaeology/cmd/warc_ls/ class="nav-link p-0">
-warc ls
-</a>
-</li>
-<li data-nav-id=/warchaeology/cmd/warc_validate/ class="nav-item my-1 active">
-<a href=/warchaeology/cmd/warc_validate/ class="nav-link p-0">
-warc validate
-</a>
-</li>
-</ul>
-</li>
-<li data-nav-id=/warchaeology/contributing/ class="nav-item my-1">
-<a class="nav-link p-0" href=/warchaeology/contributing/><h6>Contributing</h6></a>
-</li>
-</ul>
-</div>
-</nav>
-</div>
-<div class="main col-12 order-1 col-md-9 col-lg-10 col-xl-10 py-3">
-<h2 id=warc-validate>warc validate</h2>
-<p>Validate warc files</p>
-<div class=highlight><pre tabindex=0 style=background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback>warc validate &lt;files/dirs&gt; [flags]
-</code></pre></div><h3 id=options>Options</h3>
-<div class=highlight><pre tabindex=0 style=background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback>  -c, --concurrency int    number of input files to process simultaneously. The default value is 1.5 x &lt;number of cpu cores&gt; (default 24)
-  -h, --help               help for validate
-  -r, --recursive          walk directories recursively
-      --suffixes strings   filter by suffixes (default [.warc,.warc.gz])
-  -s, --symlinks           follow symlinks
-</code></pre></div><h3 id=options-inherited-from-parent-commands>Options inherited from parent commands</h3>
-<div class=highlight><pre tabindex=0 style=background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback>      --config string          config file. If not set, /etc/warc/, $HOME/.warc/ and current working dir will be searched for file config.yaml
-      --log-console strings    The kind of log output to write to console. Valid values: info, error, summary, progress (default [progress,summary])
-      --log-file strings       The kind of log output to write to file. Valid values: info, error, summary (default [info,error,summary])
-  -L, --log-file-name string   a file to write log output. Empty for no log file
-      --tmpdir string          directory to use for temporary files (default &#34;/tmp&#34;)
-</code></pre></div><h3 id=see-also>SEE ALSO</h3>
-<ul>
-<li><a href=../warc/>warc</a> - A tool for handling warc files</li>
-</ul>
-<div class=row></div>
-</div>
-</div>
-</div>
-<script src=https://nlnwa.github.io/warchaeology/lib/jquery.min.js></script>
+<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=canonical href=https://nlnwa.github.io/warchaeology/cmd/warc_validate/><title>warc validate | Warchaeology</title><link href=https://nlnwa.github.io/warchaeology/css/fontawesome.min.css rel=stylesheet><link rel=stylesheet href=https://nlnwa.github.io/warchaeology/css/ace.min.css></head><body><nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow sticky-top" id=navbarMain><div class=container><div><a class=navbar-brand href=/warchaeology>Warchaeology</a>
+v0.1.0-RC.10</div><button class="navbar-toggler navbar-toggler-right collapsed" type=button data-toggle=collapse data-target=#navbarMainCollapse aria-controls=navbarMainCollapse aria-expanded=false aria-label="Toggle navigation">
+<span class=navbar-toggler-icon></span></button><div class="collapse navbar-collapse" id=navbarMainCollapse><ul class="navbar-nav ml-auto"><li class=nav-item><a class=nav-link href=https://github.com/nlnwa/warchaeology><i class="fab fa-github"></i></a></li></ul></div></div></nav><div class=container-fluid><div class=row><div class="docs-sidenav order-0 col-12 col-md-3 col-lg-2 col-xl-2 position-sticky border-right"><nav class="navbar navbar-expand-md navbar-light pl-0"><button class="navbar-toggler navbar-toggler-right collapsed" type=button data-toggle=collapse data-target=#sidenav-left-collapse aria-controls=sidenav-left-collapse aria-expanded=false aria-label="Toggle navigation">
+<span class=navbar-toggler-icon></span></button><div class="collapse navbar-collapse align-items-start flex-column" id=sidenav-left-collapse><ul class="navbar-nav flex-column pt-3"><li data-nav-id=/warchaeology/installation/ class="nav-item my-1"><a class="nav-link p-0" href=/warchaeology/installation/><h6>Installation</h6></a></li><li data-nav-id=/warchaeology/cmd/ class="nav-item my-1 parent haschildren"><a class="nav-link p-0" href=/warchaeology/cmd/><h6>Usage</h6></a><ul class="list-unstyled ml-2"><li data-nav-id=/warchaeology/cmd/warc/ class="nav-item my-1"><a href=/warchaeology/cmd/warc/ class="nav-link p-0">warc</a></li><li data-nav-id=/warchaeology/cmd/warc_cat/ class="nav-item my-1"><a href=/warchaeology/cmd/warc_cat/ class="nav-link p-0">warc cat</a></li><li data-nav-id=/warchaeology/cmd/warc_completion/ class="nav-item my-1"><a href=/warchaeology/cmd/warc_completion/ class="nav-link p-0">warc completion</a></li><li data-nav-id=/warchaeology/cmd/warc_console/ class="nav-item my-1"><a href=/warchaeology/cmd/warc_console/ class="nav-link p-0">warc console</a></li><li data-nav-id=/warchaeology/cmd/warc_convert/ class="nav-item my-1"><a href=/warchaeology/cmd/warc_convert/ class="nav-link p-0">warc convert</a></li><li data-nav-id=/warchaeology/cmd/warc_convert_arc/ class="nav-item my-1"><a href=/warchaeology/cmd/warc_convert_arc/ class="nav-link p-0">warc convert arc</a></li><li data-nav-id=/warchaeology/cmd/warc_convert_nedlib/ class="nav-item my-1"><a href=/warchaeology/cmd/warc_convert_nedlib/ class="nav-link p-0">warc convert nedlib</a></li><li data-nav-id=/warchaeology/cmd/warc_dedup/ class="nav-item my-1"><a href=/warchaeology/cmd/warc_dedup/ class="nav-link p-0">warc dedup</a></li><li data-nav-id=/warchaeology/cmd/warc_ls/ class="nav-item my-1"><a href=/warchaeology/cmd/warc_ls/ class="nav-link p-0">warc ls</a></li><li data-nav-id=/warchaeology/cmd/warc_validate/ class="nav-item my-1 active"><a href=/warchaeology/cmd/warc_validate/ class="nav-link p-0">warc validate</a></li></ul></li><li data-nav-id=/warchaeology/contributing/ class="nav-item my-1"><a class="nav-link p-0" href=/warchaeology/contributing/><h6>Contributing</h6></a></li></ul></div></nav></div><div class="main col-12 order-1 col-md-9 col-lg-10 col-xl-10 py-3"><h2 id=warc-validate>warc validate</h2><p>Validate warc files</p><div class=highlight><pre tabindex=0 style=background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>warc validate &lt;files/dirs&gt; [flags]
+</span></span></code></pre></div><h3 id=options>Options</h3><div class=highlight><pre tabindex=0 style=background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>  -c, --concurrency int    number of input files to process simultaneously. The default value is 1.5 x &lt;number of cpu cores&gt; (default 24)
+</span></span><span style=display:flex><span>  -h, --help               help for validate
+</span></span><span style=display:flex><span>  -r, --recursive          walk directories recursively
+</span></span><span style=display:flex><span>      --suffixes strings   filter by suffixes (default [.warc,.warc.gz])
+</span></span><span style=display:flex><span>  -s, --symlinks           follow symlinks
+</span></span></code></pre></div><h3 id=options-inherited-from-parent-commands>Options inherited from parent commands</h3><div class=highlight><pre tabindex=0 style=background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-fallback data-lang=fallback><span style=display:flex><span>      --config string          config file. If not set, /etc/warc/, $HOME/.warc/ and current working dir will be searched for file config.yaml
+</span></span><span style=display:flex><span>      --log-console strings    The kind of log output to write to console. Valid values: info, error, summary, progress (default [progress,summary])
+</span></span><span style=display:flex><span>      --log-file strings       The kind of log output to write to file. Valid values: info, error, summary (default [info,error,summary])
+</span></span><span style=display:flex><span>  -L, --log-file-name string   a file to write log output. Empty for no log file
+</span></span><span style=display:flex><span>      --tmpdir string          directory to use for temporary files (default &#34;/tmp&#34;)
+</span></span></code></pre></div><h3 id=see-also>SEE ALSO</h3><ul><li><a href=../warc/>warc</a> - A tool for handling warc files</li></ul><div class=row></div></div></div></div><script src=https://nlnwa.github.io/warchaeology/lib/jquery.min.js></script>
 <script src=https://nlnwa.github.io/warchaeology/lib/popper.min.js></script>
 <script src=https://nlnwa.github.io/warchaeology/js/bootstrap.min.js></script>
 <script type=text/javascript src=/warchaeology/plugins/lunr.min.js></script>
 <script type=text/javascript src=/warchaeology/plugins/auto-complete.js></script>
-<link href=/warchaeology/plugins/auto-complete.css rel=stylesheet>
-<script type=text/javascript>var baseurl="https://nlnwa.github.io/warchaeology/"</script>
-<script type=text/javascript src=/warchaeology/plugins/search.js></script>
+<link href=/warchaeology/plugins/auto-complete.css rel=stylesheet><script type=text/javascript>var baseurl="https://nlnwa.github.io/warchaeology/"</script><script type=text/javascript src=/warchaeology/plugins/search.js></script>
 <script type=text/javascript src=/warchaeology/plugins/clipboard.js></script>
-<script>new ClipboardJS('.btn')</script>
-</body>
-</html>
+<script>new ClipboardJS(".btn")</script></body></html>
