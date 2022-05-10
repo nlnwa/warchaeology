@@ -20,29 +20,34 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal"
-	"github.com/nlnwa/warchaeology/internal/filewalker"
-	"github.com/nlnwa/warchaeology/internal/flag"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"io"
 	"os"
 	"os/signal"
 	"sort"
 	"strconv"
 	"syscall"
+
+	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal"
+	"github.com/nlnwa/warchaeology/internal/filewalker"
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type conf struct {
-	files       []string
-	offset      int64
-	recordCount int
-	strict      bool
-	id          []string
-	format      string
-	writer      RecordWriter
-	concurrency int
+	files           []string
+	offset          int64
+	recordCount     int
+	strict          bool
+	id              []string
+	format          string
+	writer          RecordWriter
+	concurrency     int
+	printOffset     bool
+	printRecordID   bool
+	printRecordType bool
+	printTargetURI  bool
 }
 
 func NewCommand() *cobra.Command {
@@ -83,6 +88,12 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().StringArrayVar(&c.id, "id", []string{}, "specify record ids to ls")
 	cmd.Flags().StringVar(&c.format, "format", "", "specify output format. One of: 'cdx', 'cdxj'")
 
+	// filter flags
+	cmd.Flags().BoolVar(&c.printOffset, "p-offset", true, "print offset, only works for default format")
+	cmd.Flags().BoolVar(&c.printRecordID, "p-record-id", true, "print record ID, only works for default format")
+	cmd.Flags().BoolVar(&c.printRecordType, "p-record-type", true, "print record type, only works for default format")
+	cmd.Flags().BoolVar(&c.printTargetURI, "p-target-uri", true, "print target URI, only works for default format")
+
 	return cmd
 }
 
@@ -96,9 +107,9 @@ func runE(cmd string, c *conf) error {
 		cancel()
 	}()
 
-	fileWalker := filewalker.NewFromViper(cmd, c.files, c.readFile)
+	walker := filewalker.NewFromViper(cmd, c.files, c.readFile)
 	res := filewalker.NewStats()
-	return fileWalker.Walk(ctx, res)
+	return walker.Walk(ctx, res)
 }
 
 func (c *conf) readFile(fileName string) filewalker.Result {
@@ -127,7 +138,12 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 			panic(fmt.Errorf("unknwon format %v, valid formats are: 'cdx', 'cdxj'", c.format))
 		}
 	} else {
-		c.writer = &DefaultWriter{}
+		writerBuilder := NewDefaultWriterBuilder()
+		writerBuilder = writerBuilder.FilterOffset(c.printOffset == false)
+		writerBuilder = writerBuilder.FilterRecordID(c.printRecordID == false)
+		writerBuilder = writerBuilder.FilterRecordType(c.printRecordType == false)
+		writerBuilder = writerBuilder.FilterRecordTargetURI(c.printTargetURI == false)
+		c.writer = writerBuilder.Build()
 	}
 
 	count := 0

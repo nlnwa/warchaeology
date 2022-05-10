@@ -3,15 +3,16 @@ package filewalker
 import (
 	"context"
 	"fmt"
-	"github.com/nlnwa/warchaeology/internal/flag"
-	"github.com/nlnwa/warchaeology/internal/workerpool"
-	"github.com/spf13/viper"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/workerpool"
+	"github.com/spf13/viper"
 )
 
 type FileWalker interface {
