@@ -29,7 +29,7 @@ func Contains(s []string, e string) bool {
 // Crops a given string if it is bigger than size
 func CropString(s string, size int) string {
 	if len(s) > size {
-		s = s[:size-3] + "..."
+		s = s[:size-1] + "\u2026"
 	}
 	return s
 }

@@ -31,6 +31,7 @@ import (
 	"os/signal"
 	"sort"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -41,6 +42,8 @@ type conf struct {
 	strict      bool
 	id          []string
 	format      string
+	fields      string
+	delimiter   string
 	writer      RecordWriter
 	concurrency int
 }
@@ -49,8 +52,33 @@ func NewCommand() *cobra.Command {
 	c := &conf{}
 	var cmd = &cobra.Command{
 		Use:   "ls <files/dirs>",
-		Short: "List records from warc files",
-		Long:  ``,
+		Short: "List warc file contents",
+		Long: `List information about records in one or more warc files.
+
+Several options exist to influence what to output.
+  --delimiter accepts a string to be used as the output field delimiter.
+  --format specifies one of the predefined output formats (only cdxj is supported at the moment).
+  --fields specifies which fields to include in output. Field specification letters are mostly the same as the fields in
+           the CDX file specification (https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2015/).
+           The following fields are supported:
+             a - original URL
+             b - date in 14 digit format
+             B - date in RFC3339 format
+             e - IP
+             g - file name
+             h - original host
+             i - record id
+             k - checksum
+             m - document mime type
+             M - meta tags (not implemented)
+             N - surt (not implemented)
+             r - redirect (not implemented)
+             s - http response code
+             S - record size in WARC file (not implemented)
+             T - record type
+             V - Offset in WARC file
+           A number after the field letter restricts the field length. By adding a + or - sign before the number the field is
+           padded to have the exact length. + is right aligned and - is left aligned.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return errors.New("missing file or directory")
@@ -82,6 +110,8 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&c.strict, "strict", false, "strict parsing")
 	cmd.Flags().StringArrayVar(&c.id, "id", []string{}, "specify record ids to ls")
 	cmd.Flags().StringVar(&c.format, "format", "", "specify output format. One of: 'cdx', 'cdxj'")
+	cmd.Flags().StringVarP(&c.delimiter, "delimiter", "d", " ", "use string instead of SPACE for field delimiter")
+	cmd.Flags().StringVarP(&c.fields, "fields", "f", "", "which fields to include. See 'warc help ls' for a description")
 
 	return cmd
 }
@@ -109,7 +139,7 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 	if c.strict {
 		opts = append(opts, gowarc.WithStrictValidation())
 	} else {
-		opts = append(opts, gowarc.WithNoValidation())
+		opts = append(opts, gowarc.WithSyntaxErrorPolicy(gowarc.ErrIgnore), gowarc.WithSpecViolationPolicy(gowarc.ErrIgnore), gowarc.WithUnknownRecordTypePolicy(gowarc.ErrIgnore))
 	}
 	wf, err := gowarc.NewWarcFileReader(fileName, c.offset, opts...)
 	defer func() { _ = wf.Close() }()
@@ -118,16 +148,20 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 	}
 
 	if c.format != "" {
-		switch c.format {
+		t := strings.SplitN(c.format, "=", 2)
+		switch t[0] {
 		case "cdx":
 			c.writer = &CdxLegacy{}
 		case "cdxj":
 			c.writer = &CdxJ{}
 		default:
-			panic(fmt.Errorf("unknwon format %v, valid formats are: 'cdx', 'cdxj'", c.format))
+			panic(fmt.Errorf("unknown format %v, valid formats are: 'cdx', 'cdxj'", c.format))
 		}
 	} else {
-		c.writer = &DefaultWriter{}
+		if c.fields == "" {
+			c.fields = "V+11iT-8a100"
+		}
+		c.writer = NewDefaultWriter(c.fields, c.delimiter)
 	}
 
 	count := 0
