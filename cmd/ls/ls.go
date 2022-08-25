@@ -31,7 +31,6 @@ import (
 	"os/signal"
 	"sort"
 	"strconv"
-	"strings"
 	"syscall"
 )
 
@@ -44,7 +43,7 @@ type conf struct {
 	format      string
 	fields      string
 	delimiter   string
-	writer      RecordWriter
+	writer      *RecordWriter
 	concurrency int
 }
 
@@ -74,7 +73,7 @@ Several options exist to influence what to output.
              N - surt (not implemented)
              r - redirect (not implemented)
              s - http response code
-             S - record size in WARC file (not implemented)
+             S - record size in WARC file
              T - record type
              V - Offset in WARC file
            A number after the field letter restricts the field length. By adding a + or - sign before the number the field is
@@ -109,7 +108,6 @@ Several options exist to influence what to output.
 	cmd.Flags().IntVarP(&c.recordCount, "record-count", "n", 0, "The maximum number of records to show")
 	cmd.Flags().BoolVar(&c.strict, "strict", false, "strict parsing")
 	cmd.Flags().StringArrayVar(&c.id, "id", []string{}, "specify record ids to ls")
-	cmd.Flags().StringVar(&c.format, "format", "", "specify output format. One of: 'cdx', 'cdxj'")
 	cmd.Flags().StringVarP(&c.delimiter, "delimiter", "d", " ", "use string instead of SPACE for field delimiter")
 	cmd.Flags().StringVarP(&c.fields, "fields", "f", "", "which fields to include. See 'warc help ls' for a description")
 
@@ -147,28 +145,19 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 		panic(err)
 	}
 
-	if c.format != "" {
-		t := strings.SplitN(c.format, "=", 2)
-		switch t[0] {
-		case "cdx":
-			c.writer = &CdxLegacy{}
-		case "cdxj":
-			c.writer = &CdxJ{}
-		default:
-			panic(fmt.Errorf("unknown format %v, valid formats are: 'cdx', 'cdxj'", c.format))
-		}
-	} else {
-		if c.fields == "" {
-			c.fields = "V+11iT-8a100"
-		}
-		c.writer = NewDefaultWriter(c.fields, c.delimiter)
+	if c.fields == "" {
+		c.fields = "V+11iT-8a100"
 	}
+	c.writer = NewRecordWriter(c.fields, c.delimiter)
 
 	count := 0
 
 	for {
 		wr, currentOffset, _, err := wf.Next()
-		if err == io.EOF {
+		if err == io.EOF || (c.recordCount > 0 && count >= c.recordCount) {
+			if err := c.writer.Write(wr, fileName, currentOffset); err != nil {
+				panic(err)
+			}
 			break
 		}
 		result.IncrRecords()
@@ -186,10 +175,6 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 		result.IncrProcessed()
 		if err := c.writer.Write(wr, fileName, currentOffset); err != nil {
 			panic(err)
-		}
-
-		if c.recordCount > 0 && count >= c.recordCount {
-			break
 		}
 	}
 	return result

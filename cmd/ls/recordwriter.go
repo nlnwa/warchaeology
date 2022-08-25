@@ -17,48 +17,25 @@
 package ls
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal"
 	"github.com/nlnwa/whatwg-url/url"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
-type RecordWriter interface {
-	Write(wr gowarc.WarcRecord, fileName string, offset int64) error
+type RecordWriter struct {
+	sep       string
+	fields    []writerFn
+	off       int64
+	line      string
+	sizeField int
 }
 
-type CdxLegacy struct {
-}
-
-type CdxJ struct {
-}
-
-func (c *CdxLegacy) Write(wr gowarc.WarcRecord, fileName string, offset int64) error {
-	return nil
-}
-
-func (c *CdxJ) Write(wr gowarc.WarcRecord, fileName string, offset int64) error {
-	if wr.Type() != gowarc.Warcinfo {
-		rec := internal.NewCdxRecord(wr, fileName, offset)
-		cdxj, err := json.Marshal(rec)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("%s %s %s %s\n", rec.Ssu, rec.Sts, rec.Srt, cdxj)
-	}
-	return nil
-}
-
-type DefaultWriter struct {
-	sep    string
-	fields []writerFn
-}
-
-func NewDefaultWriter(format, separator string) *DefaultWriter {
-	c := &DefaultWriter{
+func NewRecordWriter(format, separator string) *RecordWriter {
+	c := &RecordWriter{
 		sep: separator,
 	}
 	tokens := parseFormat(format)
@@ -146,9 +123,10 @@ func NewDefaultWriter(format, separator string) *DefaultWriter {
 			c.fields = append(c.fields, f)
 		case 'S':
 			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return "-"
+				return "%d"
 			})
 			c.fields = append(c.fields, f)
+			c.sizeField++
 		case 'T':
 			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
 				return wr.Type().String()
@@ -170,14 +148,28 @@ type toStringFn func(wr gowarc.WarcRecord, fileName string, offset int64) string
 
 type writerFn func(wr gowarc.WarcRecord, fileName string, offset int64) string
 
-func (c DefaultWriter) Write(wr gowarc.WarcRecord, fileName string, offset int64) error {
-	for i, fn := range c.fields {
-		if i > 0 {
-			fmt.Print(c.sep)
+func (c *RecordWriter) Write(wr gowarc.WarcRecord, fileName string, offset int64) error {
+	size := offset - c.off
+	c.off = offset
+	if c.line != "" {
+		var sf []interface{}
+		for i := 0; i < c.sizeField; i++ {
+			sf = append(sf, size)
 		}
-		fmt.Print(fn(wr, fileName, offset))
+		fmt.Printf(c.line, sf...)
+		fmt.Println()
+		c.line = ""
 	}
-	fmt.Println()
+	if wr != nil {
+		s := &strings.Builder{}
+		for i, fn := range c.fields {
+			if i > 0 {
+				s.WriteString(c.sep)
+			}
+			s.WriteString(fn(wr, fileName, offset))
+		}
+		c.line = s.String()
+	}
 	return nil
 }
 
