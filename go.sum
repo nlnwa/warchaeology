@@ -322,8 +322,8 @@ github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742/go.mod h1:bx2lN
 github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
-github.com/nlnwa/gowarc v1.0.0-beta.2 h1:9FyTTDTLP/Bxv7qL6J+zqDx6NLn1X8iuJiTl/d2VNVc=
-github.com/nlnwa/gowarc v1.0.0-beta.2/go.mod h1:37HyH1JP9GpGS5WZsBDTbZ8rwvCCDdsSDOr+3gYGEE4=
+github.com/nlnwa/gowarc v1.0.0-beta.4 h1:XxGNxZnW6Stmebsw458hM9NPf0YYp9siOiNYU6ONww4=
+github.com/nlnwa/gowarc v1.0.0-beta.4/go.mod h1:37HyH1JP9GpGS5WZsBDTbZ8rwvCCDdsSDOr+3gYGEE4=
 github.com/nlnwa/whatwg-url v0.0.0-20200306110950-d1a95e2e8fc3/go.mod h1:v3hJLcAdjhIn7PA89dVhJ9GSWooX0z2/qPgwlhz0HD8=
 github.com/nlnwa/whatwg-url v0.1.0 h1:nJcUTPO+K/jjP7ZsrALylQ8a7XtDDvh0aqGDMdKO4co=
 github.com/nlnwa/whatwg-url v0.1.0/go.mod h1:L97nLsTBZQV+fZTyMl1z6RdDhqgGzZTMmrpTkZDEdts=
