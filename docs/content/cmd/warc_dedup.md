@@ -1,5 +1,5 @@
 ---
-date: 2022-03-15T11:16:18+01:00
+date: 2022-08-26T13:11:58+02:00
 title: "warc dedup"
 slug: warc_dedup
 url: /cmd/warc_dedup/
@@ -42,7 +42,7 @@ warc dedup [flags]
                                  The date used is the WARC date of each record. Therefore a input file might be split into 
                                  WARC files in different subdirectories. If NameGenerator is 'identity' only the first record
                                  of each file's date is used to keep the file as one.
-      --suffixes strings         filter by suffixes (default [.warc,.warc.gz])
+      --suffixes strings         filter files by suffixes (default [.warc,.warc.gz])
   -s, --symlinks                 follow symlinks
   -w, --warc-dir string          output directory for generated warc files. Directory must exist. (default ".")
 ```

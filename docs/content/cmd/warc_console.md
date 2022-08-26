@@ -1,5 +1,5 @@
 ---
-date: 2022-03-15T11:16:18+01:00
+date: 2022-08-26T13:11:58+02:00
 title: "warc console"
 slug: warc_console
 url: /cmd/warc_console/
@@ -16,7 +16,7 @@ warc console <directory> [flags]
 
 ```
   -h, --help               help for console
-      --suffixes strings   filter by suffixes (default [.warc,.warc.gz])
+      --suffixes strings   filter files by suffixes (default [.warc,.warc.gz])
 ```
 
 ### Options inherited from parent commands

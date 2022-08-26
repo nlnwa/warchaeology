@@ -1,5 +1,5 @@
 ---
-date: 2022-03-15T11:16:18+01:00
+date: 2022-08-26T13:11:58+02:00
 title: "warc"
 slug: warc
 url: /cmd/warc/
@@ -26,6 +26,6 @@ A tool for handling warc files
 * [warc console](../warc_console/)	 - A shell for working with WARC files
 * [warc convert](../warc_convert/)	 - Convert web archives to warc files. Use subcommands for the supported formats
 * [warc dedup](../warc_dedup/)	 - Deduplicate WARC files
-* [warc ls](../warc_ls/)	 - List records from warc files
+* [warc ls](../warc_ls/)	 - List warc file contents
 * [warc validate](../warc_validate/)	 - Validate warc files
 

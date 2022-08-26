@@ -1,5 +1,5 @@
 ---
-date: 2022-03-15T11:16:18+01:00
+date: 2022-08-26T13:11:58+02:00
 title: "warc validate"
 slug: warc_validate
 url: /cmd/warc_validate/
@@ -18,7 +18,7 @@ warc validate <files/dirs> [flags]
   -c, --concurrency int    number of input files to process simultaneously. The default value is 1.5 x <number of cpu cores> (default 24)
   -h, --help               help for validate
   -r, --recursive          walk directories recursively
-      --suffixes strings   filter by suffixes (default [.warc,.warc.gz])
+      --suffixes strings   filter files by suffixes (default [.warc,.warc.gz])
   -s, --symlinks           follow symlinks
 ```
 
