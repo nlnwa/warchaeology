@@ -37,7 +37,7 @@ Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,c
 	IndexDirHelp          = `directory to store indexes`
 	RecursiveHelp         = `walk directories recursively`
 	FollowSymlinksHelp    = `follow symlinks`
-	SuffixesHelp          = `filter by suffixes`
+	SuffixesHelp          = `filter files by suffixes`
 	ConcurrencyHelp       = `number of input files to process simultaneously. The default value is 1.5 x <number of cpu cores>`
 	ConcurrentWritersHelp = `maximum concurrent WARC writers. This is the number of WARC-files simultaneously written to.
 A consequence is that at least this many WARC files are created even if there is only one input file.`

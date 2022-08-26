@@ -31,6 +31,7 @@ import (
 	"os/signal"
 	"sort"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -42,6 +43,7 @@ type conf struct {
 	id          []string
 	format      string
 	fields      string
+	recordTypes gowarc.RecordType
 	delimiter   string
 	writer      *RecordWriter
 	concurrency int
@@ -69,9 +71,6 @@ Several options exist to influence what to output.
              i - record id
              k - checksum
              m - document mime type
-             M - meta tags (not implemented)
-             N - surt (not implemented)
-             r - redirect (not implemented)
              s - http response code
              S - record size in WARC file
              T - record type
@@ -95,6 +94,29 @@ Several options exist to influence what to output.
 			if !cmd.Flag(flag.LogConsole).Changed {
 				viper.Set(flag.LogConsole, []string{"summary"})
 			}
+
+			recordTypes := viper.GetStringSlice(flag.RecordType)
+			for _, r := range recordTypes {
+				switch strings.ToLower(r) {
+				case "warcinfo":
+					c.recordTypes = c.recordTypes | gowarc.Warcinfo
+				case "request":
+					c.recordTypes = c.recordTypes | gowarc.Request
+				case "response":
+					c.recordTypes = c.recordTypes | gowarc.Response
+				case "metadata":
+					c.recordTypes = c.recordTypes | gowarc.Metadata
+				case "revisit":
+					c.recordTypes = c.recordTypes | gowarc.Revisit
+				case "resource":
+					c.recordTypes = c.recordTypes | gowarc.Resource
+				case "continuation":
+					c.recordTypes = c.recordTypes | gowarc.Continuation
+				case "conversion":
+					c.recordTypes = c.recordTypes | gowarc.Conversion
+				}
+			}
+
 			return runE(cmd.Name(), c)
 		},
 		ValidArgsFunction: flag.SuffixCompletionFn,
@@ -110,6 +132,21 @@ Several options exist to influence what to output.
 	cmd.Flags().StringArrayVar(&c.id, "id", []string{}, "specify record ids to ls")
 	cmd.Flags().StringVarP(&c.delimiter, "delimiter", "d", " ", "use string instead of SPACE for field delimiter")
 	cmd.Flags().StringVarP(&c.fields, "fields", "f", "", "which fields to include. See 'warc help ls' for a description")
+	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{}, "which record types to include. For more than one, repeat flag or comma separated list.\n"+
+		"Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion (defaults to all record types)")
+
+	if err := cmd.RegisterFlagCompletionFunc(flag.RecordType, flag.SliceCompletion{
+		"warcinfo",
+		"request",
+		"response",
+		"metadata",
+		"revisit",
+		"resource",
+		"continuation",
+		"conversion",
+	}.CompletionFn); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -151,15 +188,26 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 	c.writer = NewRecordWriter(c.fields, c.delimiter)
 
 	count := 0
+	var lastOffset int64
 
 	for {
 		wr, currentOffset, _, err := wf.Next()
+		size := currentOffset - lastOffset
+		lastOffset = currentOffset
+
 		if err == io.EOF || (c.recordCount > 0 && count >= c.recordCount) {
-			if err := c.writer.Write(wr, fileName, currentOffset); err != nil {
+			if err := c.writer.Write(nil, "", currentOffset, size); err != nil {
 				panic(err)
 			}
 			break
 		}
+		if c.recordTypes != 0 && wr.Type()&c.recordTypes == 0 {
+			if err := c.writer.Write(nil, "", currentOffset, size); err != nil {
+				panic(err)
+			}
+			continue
+		}
+
 		result.IncrRecords()
 		if err != nil {
 			result.AddError(fmt.Errorf("error: %v, rec num: %v, offset %v", err.Error(), strconv.Itoa(count), currentOffset))
@@ -173,7 +221,7 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 		count++
 
 		result.IncrProcessed()
-		if err := c.writer.Write(wr, fileName, currentOffset); err != nil {
+		if err := c.writer.Write(wr, fileName, currentOffset, size); err != nil {
 			panic(err)
 		}
 	}

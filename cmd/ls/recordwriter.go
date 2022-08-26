@@ -27,148 +27,75 @@ import (
 )
 
 type RecordWriter struct {
-	sep       string
-	fields    []writerFn
-	off       int64
-	line      string
-	sizeField int
-}
-
-func NewRecordWriter(format, separator string) *RecordWriter {
-	c := &RecordWriter{
-		sep: separator,
-	}
-	tokens := parseFormat(format)
-	for _, t := range tokens {
-		switch t.name {
-		case 'a':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return wr.WarcHeader().Get(gowarc.WarcTargetURI)
-			})
-			c.fields = append(c.fields, f)
-		case 'b':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				if s, err := internal.To14(wr.WarcHeader().Get(gowarc.WarcDate)); err == nil {
-					return s
-				}
-				return "              "
-			})
-			c.fields = append(c.fields, f)
-		case 'B':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return wr.WarcHeader().Get(gowarc.WarcDate)
-			})
-			c.fields = append(c.fields, f)
-		case 'e':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return wr.WarcHeader().Get(gowarc.WarcIPAddress)
-			})
-			c.fields = append(c.fields, f)
-		case 'g':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return fileName
-			})
-			c.fields = append(c.fields, f)
-		case 'h':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				if u, err := url.Parse(wr.WarcHeader().Get(gowarc.WarcTargetURI)); err == nil {
-					return u.Hostname()
-				}
-				return ""
-			})
-			c.fields = append(c.fields, f)
-		case 'i':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return wr.WarcHeader().Get(gowarc.WarcRecordID)
-			})
-			c.fields = append(c.fields, f)
-		case 'k':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return wr.WarcHeader().Get(gowarc.WarcBlockDigest)
-			})
-			c.fields = append(c.fields, f)
-		case 'm':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				if v, ok := wr.Block().(gowarc.HttpResponseBlock); ok {
-					return v.HttpHeader().Get(gowarc.ContentType)
-				}
-				if v, ok := wr.Block().(gowarc.HttpRequestBlock); ok {
-					return v.HttpHeader().Get(gowarc.ContentType)
-				}
-				return ""
-			})
-			c.fields = append(c.fields, f)
-		case 'M':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return "-"
-			})
-			c.fields = append(c.fields, f)
-		case 'N':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return "-"
-			})
-			c.fields = append(c.fields, f)
-		case 'r':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return "-"
-			})
-			c.fields = append(c.fields, f)
-		case 's':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				if v, ok := wr.Block().(gowarc.HttpResponseBlock); ok {
-					return strconv.Itoa(v.HttpStatusCode())
-				}
-				return "   "
-			})
-			c.fields = append(c.fields, f)
-		case 'S':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return "%d"
-			})
-			c.fields = append(c.fields, f)
-			c.sizeField++
-		case 'T':
-			f := createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return wr.Type().String()
-			})
-			c.fields = append(c.fields, f)
-		case 'V':
-			f := createInt64Fn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) int64 {
-				return offset
-			})
-			c.fields = append(c.fields, f)
-		}
-	}
-
-	return c
+	sep        string
+	fields     []*field
+	off        int64
+	line       string
+	sizeFields []*field
 }
 
 type toInt64Fn func(wr gowarc.WarcRecord, fileName string, offset int64) int64
 type toStringFn func(wr gowarc.WarcRecord, fileName string, offset int64) string
-
 type writerFn func(wr gowarc.WarcRecord, fileName string, offset int64) string
 
-func (c *RecordWriter) Write(wr gowarc.WarcRecord, fileName string, offset int64) error {
-	size := offset - c.off
-	c.off = offset
-	if c.line != "" {
-		var sf []interface{}
-		for i := 0; i < c.sizeField; i++ {
-			sf = append(sf, size)
+type field struct {
+	name   byte
+	length int
+	align  int
+	fn     writerFn
+}
+
+func NewRecordWriter(format, separator string) *RecordWriter {
+	rw := &RecordWriter{
+		sep: separator,
+	}
+
+	re := regexp.MustCompile("([abBeghikmMNrsSTV])([+-]?)(\\d*)")
+	m := re.FindAllStringSubmatch(format, -1)
+	for _, sm := range m {
+		t := &field{name: sm[1][0]}
+		if sm[2] == "-" {
+			t.align = -1
 		}
-		fmt.Printf(c.line, sf...)
+		if sm[2] == "+" {
+			t.align = 1
+		}
+		if len(sm[3]) > 0 {
+			n, err := strconv.ParseInt(sm[3], 10, 32)
+			if err != nil {
+				panic(err)
+			}
+			t.length = int(n)
+		}
+		rw.createFieldFunc(t)
+		rw.fields = append(rw.fields, t)
+	}
+
+	return rw
+}
+
+func (rw *RecordWriter) Write(wr gowarc.WarcRecord, fileName string, offset, size int64) error {
+	if rw.line != "" {
+		var v []interface{}
+		for _, sf := range rw.sizeFields {
+			if sf.length > 0 && sf.align != 0 {
+				v = append(v, sf.length)
+			}
+			v = append(v, size)
+		}
+		fmt.Printf(rw.line, v...)
 		fmt.Println()
-		c.line = ""
+		rw.line = ""
 	}
 	if wr != nil {
 		s := &strings.Builder{}
-		for i, fn := range c.fields {
+		for i, t := range rw.fields {
 			if i > 0 {
-				s.WriteString(c.sep)
+				s.WriteString(rw.sep)
 			}
-			s.WriteString(fn(wr, fileName, offset))
+			s.WriteString(t.fn(wr, fileName, offset))
 		}
-		c.line = s.String()
+		rw.line = s.String()
 	}
 	return nil
 }
@@ -186,7 +113,7 @@ func createInt64Fn(align, length int, valueFn toInt64Fn) writerFn {
 			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
 				return fmt.Sprintf("%*d", l, valueFn(wr, fileName, offset))
 			}
-		case align == 0:
+		default:
 			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
 				return fmt.Sprintf("%d", valueFn(wr, fileName, offset))
 			}
@@ -196,7 +123,6 @@ func createInt64Fn(align, length int, valueFn toInt64Fn) writerFn {
 			return fmt.Sprintf("%d", valueFn(wr, fileName, offset))
 		}
 	}
-	return nil
 }
 
 func createStringFn(align, length int, valueFn toStringFn) writerFn {
@@ -212,7 +138,7 @@ func createStringFn(align, length int, valueFn toStringFn) writerFn {
 			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
 				return fmt.Sprintf("%*s", l, internal.CropString(valueFn(wr, fileName, offset), length))
 			}
-		case align == 0:
+		default:
 			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
 				return fmt.Sprintf("%s", internal.CropString(valueFn(wr, fileName, offset), length))
 			}
@@ -222,37 +148,101 @@ func createStringFn(align, length int, valueFn toStringFn) writerFn {
 			return fmt.Sprintf("%s", valueFn(wr, fileName, offset))
 		}
 	}
-	return nil
 }
 
-type token struct {
-	name   byte
-	length int
-	align  int
-}
-
-func parseFormat(format string) []*token {
-	var res []*token
-
-	re := regexp.MustCompile("([abBeghikmMNrsSTV])([+-]?)(\\d*)")
-	m := re.FindAllStringSubmatch(format, -1)
-	for _, sm := range m {
-		t := &token{name: sm[1][0]}
-		if sm[2] == "-" {
-			t.align = -1
-		}
-		if sm[2] == "+" {
-			t.align = 1
-		}
-		if len(sm[3]) > 0 {
-			n, err := strconv.ParseInt(sm[3], 10, 32)
-			if err != nil {
-				panic(err)
+func (rw *RecordWriter) createFieldFunc(t *field) {
+	switch t.name {
+	case 'a':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			return wr.WarcHeader().Get(gowarc.WarcTargetURI)
+		})
+	case 'b':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			if s, err := internal.To14(wr.WarcHeader().Get(gowarc.WarcDate)); err == nil {
+				return s
 			}
-			t.length = int(n)
+			return "              "
+		})
+	case 'B':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			return wr.WarcHeader().Get(gowarc.WarcDate)
+		})
+	case 'e':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			return wr.WarcHeader().Get(gowarc.WarcIPAddress)
+		})
+	case 'g':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			return fileName
+		})
+	case 'h':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			if u, err := url.Parse(wr.WarcHeader().Get(gowarc.WarcTargetURI)); err == nil {
+				return u.Hostname()
+			}
+			return ""
+		})
+	case 'i':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			return wr.WarcHeader().Get(gowarc.WarcRecordID)
+		})
+	case 'k':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			return wr.WarcHeader().Get(gowarc.WarcBlockDigest)
+		})
+	case 'm':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			if v, ok := wr.Block().(gowarc.HttpResponseBlock); ok {
+				return v.HttpHeader().Get(gowarc.ContentType)
+			}
+			if v, ok := wr.Block().(gowarc.HttpRequestBlock); ok {
+				return v.HttpHeader().Get(gowarc.ContentType)
+			}
+			return ""
+		})
+	case 'M':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			return "-"
+		})
+	case 'N':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			return "-"
+		})
+	case 'r':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			return "-"
+		})
+	case 's':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			if v, ok := wr.Block().(gowarc.HttpResponseBlock); ok {
+				return strconv.Itoa(v.HttpStatusCode())
+			}
+			return "   "
+		})
+	case 'S':
+		// Size has special handling since value can't be calculated before next record is read.
+		t.fn = func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			if t.length > 0 {
+				switch {
+				case t.align < 0:
+					return "%-*d"
+				case t.align > 0:
+					return "%*d"
+				default:
+					return "%d"
+				}
+			} else {
+				return "%d"
+			}
 		}
-		res = append(res, t)
+		rw.sizeFields = append(rw.sizeFields, t)
+	case 'T':
+		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+			return wr.Type().String()
+		})
+	case 'V':
+		t.fn = createInt64Fn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) int64 {
+			return offset
+		})
 	}
-
-	return res
 }
