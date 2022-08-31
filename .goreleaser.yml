@@ -16,7 +16,7 @@ builds:
       - darwin
     goarch:
       - amd64
-      - 386
+      - "386"
     binary: warc
 
 archives:
@@ -36,6 +36,7 @@ nfpms:
     formats:
       - deb
       - rpm
+    bindir: /usr/bin
     scripts:
       postinstall: "script/postinstall.sh"
     contents:
