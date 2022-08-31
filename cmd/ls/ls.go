@@ -23,6 +23,7 @@ import (
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
+	"github.com/nlnwa/warchaeology/internal/filter"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -31,7 +32,6 @@ import (
 	"os/signal"
 	"sort"
 	"strconv"
-	"strings"
 	"syscall"
 )
 
@@ -43,7 +43,7 @@ type conf struct {
 	id          []string
 	format      string
 	fields      string
-	recordTypes gowarc.RecordType
+	filter      *filter.Filter
 	delimiter   string
 	writer      *RecordWriter
 	concurrency int
@@ -95,27 +95,7 @@ Several options exist to influence what to output.
 				viper.Set(flag.LogConsole, []string{"summary"})
 			}
 
-			recordTypes := viper.GetStringSlice(flag.RecordType)
-			for _, r := range recordTypes {
-				switch strings.ToLower(r) {
-				case "warcinfo":
-					c.recordTypes = c.recordTypes | gowarc.Warcinfo
-				case "request":
-					c.recordTypes = c.recordTypes | gowarc.Request
-				case "response":
-					c.recordTypes = c.recordTypes | gowarc.Response
-				case "metadata":
-					c.recordTypes = c.recordTypes | gowarc.Metadata
-				case "revisit":
-					c.recordTypes = c.recordTypes | gowarc.Revisit
-				case "resource":
-					c.recordTypes = c.recordTypes | gowarc.Resource
-				case "continuation":
-					c.recordTypes = c.recordTypes | gowarc.Continuation
-				case "conversion":
-					c.recordTypes = c.recordTypes | gowarc.Conversion
-				}
-			}
+			c.filter = filter.NewFromViper()
 
 			return runE(cmd.Name(), c)
 		},
@@ -201,7 +181,7 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 			}
 			break
 		}
-		if c.recordTypes != 0 && wr.Type()&c.recordTypes == 0 {
+		if !c.filter.Accept(wr) {
 			if err := c.writer.Write(nil, "", currentOffset, size); err != nil {
 				panic(err)
 			}
