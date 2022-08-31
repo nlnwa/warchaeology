@@ -1,5 +1,5 @@
 ---
-date: 2022-08-26T13:11:58+02:00
+date: 2022-08-31T12:06:31+02:00
 title: "warc console"
 slug: warc_console
 url: /cmd/warc_console/
