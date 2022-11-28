@@ -56,10 +56,11 @@ func NewCommand() *cobra.Command {
 		Short: "List warc file contents",
 		Long: `List information about records in one or more warc files.
 
-Several options exist to influence what to output.
-  --delimiter accepts a string to be used as the output field delimiter.
-  --format specifies one of the predefined output formats (only cdxj is supported at the moment).
-  --fields specifies which fields to include in output. Field specification letters are mostly the same as the fields in
+Output options:
+
+    --delimiter accepts a string to be used as the output field delimiter.
+    --format specifies one of the predefined output formats (only cdxj is supported at the moment).
+    --fields specifies which fields to include in output. Field specification letters are mostly the same as the fields in
            the CDX file specification (https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2015/).
            The following fields are supported:
              a - original URL
@@ -181,6 +182,8 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 			}
 			break
 		}
+
+		result.IncrRecords()
 		if !c.filter.Accept(wr) {
 			if err := c.writer.Write(nil, "", currentOffset, size); err != nil {
 				panic(err)
@@ -188,7 +191,6 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 			continue
 		}
 
-		result.IncrRecords()
 		if err != nil {
 			result.AddError(fmt.Errorf("error: %v, rec num: %v, offset %v", err.Error(), strconv.Itoa(count), currentOffset))
 			break
