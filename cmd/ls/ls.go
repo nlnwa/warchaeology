@@ -115,6 +115,8 @@ Output options:
 	cmd.Flags().StringVarP(&c.fields, "fields", "f", "", "which fields to include. See 'warc help ls' for a description")
 	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{}, "which record types to include. For more than one, repeat flag or comma separated list.\n"+
 		"Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion (defaults to all record types)")
+	cmd.Flags().StringP(flag.ResponseCode, "S", "", flag.ResponseCodeHelp)
+	cmd.Flags().StringSliceP(flag.MimeType, "m", []string{}, flag.MimeTypeHelp)
 
 	if err := cmd.RegisterFlagCompletionFunc(flag.RecordType, flag.SliceCompletion{
 		"warcinfo",
