@@ -31,7 +31,7 @@ $ goreleaser release --snapshot --rm-dist
 ## Documentation
 
 Documentation is generated with [Hugo](https://gohugo.io/). A local installation is not needed unless
-you want to view generate documentation on localhost. 
+you want to view generated documentation on localhost. 
 
 Start a webserver serving documentation on [http://localhost:1313/](http://localhost:1313/)
 ``` sh
