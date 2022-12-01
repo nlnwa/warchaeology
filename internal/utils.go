@@ -16,7 +16,7 @@
 
 package internal
 
-// Searches string array s from string e
+// Contains searches string array s from string e
 func Contains(s []string, e string) bool {
 	for _, a := range s {
 		if a == e {
@@ -26,7 +26,7 @@ func Contains(s []string, e string) bool {
 	return false
 }
 
-// Crops a given string if it is bigger than size
+// CropString crops a given string if it is bigger than size
 func CropString(s string, size int) string {
 	if len(s) > size {
 		s = s[:size-1] + "\u2026"
@@ -34,9 +34,8 @@ func CropString(s string, size int) string {
 	return s
 }
 
-// Source: http://cavaliercoder.com/blog/optimized-abs-for-int64-in-go.html:
-//
-// Takes an int64 and returns the absolute value
+// AbsInt64 takes an int64 and returns the absolute value
+// Source: http://cavaliercoder.com/blog/optimized-abs-for-int64-in-go.html
 func AbsInt64(n int64) int64 {
 	y := n >> 63
 	return (n ^ y) - y

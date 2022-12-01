@@ -41,7 +41,7 @@ func TestContainsNonMatchOnNonMatching(t *testing.T) {
 
 func TestCropStringCrops(t *testing.T) {
 	input := "123456789"
-	expected := "12..."
+	expected := "1234\u2026"
 
 	actual := internal.CropString(input, 5)
 

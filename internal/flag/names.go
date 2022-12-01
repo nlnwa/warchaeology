@@ -54,12 +54,12 @@ A consequence is that at least this many WARC files are created even if there is
 {YYYY} is replaced with a 4 digit year
 {YY} is replaced with a 2 digit year
 {MM} is replaced with a 2 digit month
-{DD} is replaced with a 2 day
+{DD} is replaced with a 2 digit day
 The date used is the WARC date of each record. Therefore a input file might be split into 
 WARC files in different subdirectories. If NameGenerator is 'identity' only the first record
 of each file's date is used to keep the file as one.`
 	NameGeneratorHelp = `the name generator to use. By setting this to 'identity', the input filename will also be used as
-output file name (preix and suffix might still change). In this mode exactly one file is generated for every input file`
+output file name (prefix and suffix might still change). In this mode exactly one file is generated for every input file`
 	FlushHelp         = `if true, sync WARC file to disk after writing each record`
 	WarcVersionHelp   = `the WARC version to use for created files`
 	DefaultDateHelp   = `fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date`
