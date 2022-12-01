@@ -56,10 +56,11 @@ func NewCommand() *cobra.Command {
 		Short: "List warc file contents",
 		Long: `List information about records in one or more warc files.
 
-Several options exist to influence what to output.
-  --delimiter accepts a string to be used as the output field delimiter.
-  --format specifies one of the predefined output formats (only cdxj is supported at the moment).
-  --fields specifies which fields to include in output. Field specification letters are mostly the same as the fields in
+Output options:
+
+    --delimiter accepts a string to be used as the output field delimiter.
+    --format specifies one of the predefined output formats (only cdxj is supported at the moment).
+    --fields specifies which fields to include in output. Field specification letters are mostly the same as the fields in
            the CDX file specification (https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2015/).
            The following fields are supported:
              a - original URL
@@ -114,6 +115,8 @@ Several options exist to influence what to output.
 	cmd.Flags().StringVarP(&c.fields, "fields", "f", "", "which fields to include. See 'warc help ls' for a description")
 	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{}, "which record types to include. For more than one, repeat flag or comma separated list.\n"+
 		"Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion (defaults to all record types)")
+	cmd.Flags().StringP(flag.ResponseCode, "S", "", flag.ResponseCodeHelp)
+	cmd.Flags().StringSliceP(flag.MimeType, "m", []string{}, flag.MimeTypeHelp)
 
 	if err := cmd.RegisterFlagCompletionFunc(flag.RecordType, flag.SliceCompletion{
 		"warcinfo",
@@ -181,6 +184,8 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 			}
 			break
 		}
+
+		result.IncrRecords()
 		if !c.filter.Accept(wr) {
 			if err := c.writer.Write(nil, "", currentOffset, size); err != nil {
 				panic(err)
@@ -188,7 +193,6 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 			continue
 		}
 
-		result.IncrRecords()
 		if err != nil {
 			result.AddError(fmt.Errorf("error: %v, rec num: %v, offset %v", err.Error(), strconv.Itoa(count), currentOffset))
 			break

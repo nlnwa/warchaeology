@@ -21,16 +21,22 @@ import (
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/viper"
+	"math"
+	"strconv"
 	"strings"
 )
 
 type Filter struct {
 	RecordTypes gowarc.RecordType
+	fromStatus  int
+	toStatus    int
+	mime        []string
 }
 
 func NewFromViper() *Filter {
 	f := &Filter{}
 
+	// Parse record types flag
 	recordTypes := viper.GetStringSlice(flag.RecordType)
 	for _, r := range recordTypes {
 		switch strings.ToLower(r) {
@@ -53,6 +59,45 @@ func NewFromViper() *Filter {
 		}
 	}
 
+	// Parse response code flag
+	rc := viper.GetString(flag.ResponseCode)
+	responseCodes := strings.Split(rc, "-")
+	switch len(responseCodes) {
+	case 1:
+		if len(responseCodes[0]) == 0 {
+			f.toStatus = math.MaxInt32
+		} else {
+			if i, e := strconv.Atoi(responseCodes[0]); e == nil {
+				f.fromStatus = i
+				f.toStatus = i + 1
+			} else {
+				panic(e)
+			}
+		}
+	case 2:
+		if len(responseCodes[0]) > 0 {
+			if i, e := strconv.Atoi(responseCodes[0]); e == nil {
+				f.fromStatus = i
+			} else {
+				panic(e)
+			}
+		}
+		if len(responseCodes[1]) == 0 {
+			f.toStatus = math.MaxInt32
+		} else {
+			if i, e := strconv.Atoi(responseCodes[1]); e == nil {
+				f.toStatus = i
+			} else {
+				panic(e)
+			}
+		}
+	default:
+		panic("Illegal response code")
+	}
+
+	// Parse document mmime-type flag
+	f.mime = viper.GetStringSlice(flag.MimeType)
+
 	return f
 }
 
@@ -60,6 +105,37 @@ func (f *Filter) Accept(wr gowarc.WarcRecord) bool {
 	// Check Record type
 	if f.RecordTypes != 0 && wr.Type()&f.RecordTypes == 0 {
 		return false
+	}
+
+	// Check HTTP response code
+	if v, ok := wr.Block().(gowarc.HttpResponseBlock); ok {
+		if v.HttpStatusCode() < f.fromStatus || v.HttpStatusCode() >= f.toStatus {
+			return false
+		}
+	} else {
+		return false
+	}
+
+	// Check document mime-type
+	if len(f.mime) > 0 {
+		switch v := wr.Block().(type) {
+		case gowarc.HttpRequestBlock:
+			for _, r := range f.mime {
+				if strings.Contains(v.HttpHeader().Get(gowarc.ContentType), r) {
+					return true
+				}
+			}
+			return false
+		case gowarc.HttpResponseBlock:
+			for _, r := range f.mime {
+				if strings.Contains(v.HttpHeader().Get(gowarc.ContentType), r) {
+					return true
+				}
+			}
+			return false
+		default:
+			return false
+		}
 	}
 
 	return true

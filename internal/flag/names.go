@@ -5,6 +5,8 @@ const (
 	LogFile           = "log-file"
 	LogConsole        = "log-console"
 	RecordType        = "record-type"
+	ResponseCode      = "response-code"
+	MimeType          = "mime-type"
 	WarcDir           = "warc-dir"
 	NewIndex          = "new-index"
 	KeepIndex         = "keep-index"
@@ -31,6 +33,8 @@ const (
 	LogConsoleHelp  = `The kind of log output to write to console. Valid values: info, error, summary, progress`
 	RecordTypeHelp  = `record types to dedup. For more than one, repeat flag or comma separated list.
 Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion`
+	ResponseCodeHelp      = "show only records with given http response code"
+	MimeTypeHelp          = "show only records with given mime-type"
 	WarcDirHelp           = `output directory for generated warc files. Directory must exist.`
 	NewIndexHelp          = `true to start from a fresh index, deleting eventual index from last run`
 	KeepIndexHelp         = `true to keep index on disk so that the next run will continue where the previous run left off`
