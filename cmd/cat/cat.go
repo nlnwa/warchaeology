@@ -149,14 +149,8 @@ func readFile(c *conf, fileName string) {
 		}
 
 		if c.showProtocolHeader {
-			switch b := wr.Block().(type) {
-			case gowarc.HttpRequestBlock:
-				_, err = out.Write(b.HttpHeaderBytes())
-				if err != nil {
-					fmt.Printf("Error: %v\n", err)
-				}
-			case gowarc.HttpResponseBlock:
-				_, err = out.Write(b.HttpHeaderBytes())
+			if b, ok := wr.Block().(gowarc.ProtocolHeaderBlock); ok {
+				_, err = out.Write(b.ProtocolHeaderBytes())
 				if err != nil {
 					fmt.Printf("Error: %v\n", err)
 				}
@@ -195,5 +189,5 @@ func readFile(c *conf, fileName string) {
 			break
 		}
 	}
-	fmt.Fprintln(os.Stderr, "Count: ", count)
+	_, _ = fmt.Fprintln(os.Stderr, "Count: ", count)
 }
