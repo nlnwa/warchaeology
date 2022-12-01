@@ -27,7 +27,7 @@ func parseSubdirPattern(dirPattern string, recordDate string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	p := strings.ReplaceAll(dirPattern, "{YYYY}", "2006")
+	p := strings.ReplaceAll(dirPattern, "{YYYY}", t.Format("2006"))
 	p = strings.ReplaceAll(p, "{YY}", t.Format("06"))
 	p = strings.ReplaceAll(p, "{MM}", t.Format("01"))
 	p = strings.ReplaceAll(p, "{DD}", t.Format("02"))
