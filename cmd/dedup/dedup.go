@@ -302,12 +302,12 @@ func getDigest(wr gowarc.WarcRecord, validation *gowarc.Validation, result filew
 func payloadLength(wr gowarc.WarcRecord) int64 {
 	var length int64
 	switch v := wr.Block().(type) {
-	case gowarc.HttpRequestBlock:
+	case gowarc.ProtocolHeaderBlock:
 		length, _ = wr.ContentLength()
-		length -= int64(len(v.HttpHeaderBytes()))
+		length -= int64(len(v.ProtocolHeaderBytes()))
 	case gowarc.HttpResponseBlock:
 		length, _ = wr.ContentLength()
-		length -= int64(len(v.HttpHeaderBytes()))
+		length -= int64(len(v.ProtocolHeaderBytes()))
 	case gowarc.WarcFieldsBlock:
 		length = v.Size()
 	}
