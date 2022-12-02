@@ -55,8 +55,9 @@ snapshot:
   name_template: "{{ incpatch .Version }}-next"
 
 changelog:
-  sort: asc
+  use: github
   filters:
     exclude:
       - '^docs:'
       - '^test:'
+      - 'typo'
