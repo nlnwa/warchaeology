@@ -1,5 +1,5 @@
 ---
-date: 2022-08-31T12:06:31+02:00
+date: 2022-12-02T15:31:39+01:00
 title: "warc ls"
 slug: warc_ls
 url: /cmd/warc_ls/
@@ -12,10 +12,11 @@ List warc file contents
 
 List information about records in one or more warc files.
 
-Several options exist to influence what to output.
-  --delimiter accepts a string to be used as the output field delimiter.
-  --format specifies one of the predefined output formats (only cdxj is supported at the moment).
-  --fields specifies which fields to include in output. Field specification letters are mostly the same as the fields in
+Output options:
+
+    --delimiter accepts a string to be used as the output field delimiter.
+    --format specifies one of the predefined output formats (only cdxj is supported at the moment).
+    --fields specifies which fields to include in output. Field specification letters are mostly the same as the fields in
            the CDX file specification (https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2015/).
            The following fields are supported:
              a - original URL
@@ -41,19 +42,21 @@ warc ls <files/dirs> [flags]
 ### Options
 
 ```
-  -c, --concurrency int       number of input files to process simultaneously. The default value is 1.5 x <number of cpu cores> (default 1)
-  -d, --delimiter string      use string instead of SPACE for field delimiter (default " ")
-  -f, --fields string         which fields to include. See 'warc help ls' for a description
-  -h, --help                  help for ls
-      --id stringArray        specify record ids to ls
-  -o, --offset int            record offset (default -1)
-  -n, --record-count int      The maximum number of records to show
-  -t, --record-type strings   which record types to include. For more than one, repeat flag or comma separated list.
-                              Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion (defaults to all record types)
-  -r, --recursive             walk directories recursively
-      --strict                strict parsing
-      --suffixes strings      filter files by suffixes (default [.warc,.warc.gz])
-  -s, --symlinks              follow symlinks
+  -c, --concurrency int        number of input files to process simultaneously. The default value is 1.5 x <number of cpu cores> (default 1)
+  -d, --delimiter string       use string instead of SPACE for field delimiter (default " ")
+  -f, --fields string          which fields to include. See 'warc help ls' for a description
+  -h, --help                   help for ls
+      --id stringArray         specify record ids to ls
+  -m, --mime-type strings      show only records with given mime-type
+  -o, --offset int             record offset (default -1)
+  -n, --record-count int       The maximum number of records to show
+  -t, --record-type strings    which record types to include. For more than one, repeat flag or comma separated list.
+                               Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion (defaults to all record types)
+  -r, --recursive              walk directories recursively
+  -S, --response-code string   show only records with given http response code
+      --strict                 strict parsing
+      --suffixes strings       filter files by suffixes (default [.warc,.warc.gz])
+  -s, --symlinks               follow symlinks
 ```
 
 ### Options inherited from parent commands
