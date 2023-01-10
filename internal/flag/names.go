@@ -27,6 +27,7 @@ const (
 	DefaultDate       = "default-date"
 	TmpDir            = "tmpdir"
 	DedupSizeGain     = "min-size-gain"
+	MinFreeDisk       = "min-free-disk"
 
 	LogFileNameHelp = `a file to write log output. Empty for no log file`
 	LogFileHelp     = `The kind of log output to write to file. Valid values: info, error, summary`
@@ -65,4 +66,5 @@ output file name (prefix and suffix might still change). In this mode exactly on
 	DefaultDateHelp   = `fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date`
 	TmpDirHelp        = `directory to use for temporary files`
 	DedupSizeGainHelp = `minimum bytes one must earn to perform a deduplication`
+	MinFreeDiskHelp   = `minimum free space on disk to allow WARC writing`
 )

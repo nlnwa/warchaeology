@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
@@ -41,6 +42,7 @@ type conf struct {
 	digestIndex     *DigestIndex
 	writerConf      *warcwriterconfig.WarcWriterConfig
 	minimumSizeGain int64
+	minWARCDiskFree int64
 }
 
 func NewCommand() *cobra.Command {
@@ -51,6 +53,8 @@ func NewCommand() *cobra.Command {
 		Short: "Deduplicate WARC files",
 		Long:  ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			internal.CheckFileDescriptorLimit(internal.BadgerRecommendedMaxFileDescr)
+
 			if wc, err := warcwriterconfig.NewFromViper(); err != nil {
 				return err
 			} else {
@@ -58,7 +62,8 @@ func NewCommand() *cobra.Command {
 			}
 
 			c.concurrency = viper.GetInt(flag.Concurrency)
-			c.minimumSizeGain = viper.GetInt64(flag.DedupSizeGain)
+			c.minimumSizeGain = internal.ParseSizeInBytes(viper.GetString(flag.DedupSizeGain))
+			c.minWARCDiskFree = internal.ParseSizeInBytes(viper.GetString(flag.MinFreeDisk))
 
 			recordTypes := viper.GetStringSlice(flag.RecordType)
 			for _, r := range recordTypes {
@@ -89,7 +94,8 @@ func NewCommand() *cobra.Command {
 			var err error
 
 			if c.digestIndex, err = NewDigestIndex(viper.GetBool(flag.NewIndex), cmd.Name()); err != nil {
-				return err
+				fmt.Println(err)
+				return nil
 			}
 			defer c.digestIndex.Close()
 
@@ -112,7 +118,7 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().StringSlice(flag.Suffixes, []string{".warc", ".warc.gz"}, flag.SuffixesHelp)
 	cmd.Flags().IntP(flag.Concurrency, "c", int(float32(runtime.NumCPU())*float32(1.5)), flag.ConcurrencyHelp)
 	cmd.Flags().IntP(flag.ConcurrentWriters, "C", 16, flag.ConcurrentWritersHelp)
-	cmd.Flags().Int64P(flag.FileSize, "S", 1024*1024*1024, flag.FileSizeHelp)
+	cmd.Flags().StringP(flag.FileSize, "S", "1GB", flag.FileSizeHelp)
 	cmd.Flags().BoolP(flag.Compress, "z", false, flag.CompressHelp)
 	cmd.Flags().Bool(flag.CompressionLevel, false, flag.CompressionLevelHelp)
 	cmd.Flags().StringP(flag.FilePrefix, "p", "", flag.FilePrefixHelp)
@@ -120,7 +126,8 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
 	cmd.Flags().StringP(flag.NameGenerator, "n", "default", flag.NameGeneratorHelp)
 	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
-	cmd.Flags().Int64P(flag.DedupSizeGain, "g", 1024*2, flag.DedupSizeGainHelp)
+	cmd.Flags().StringP(flag.DedupSizeGain, "g", "2KB", flag.DedupSizeGainHelp)
+	cmd.Flags().String(flag.MinFreeDisk, "256MB", flag.MinFreeDiskHelp)
 
 	if err := cmd.RegisterFlagCompletionFunc(flag.RecordType, flag.SliceCompletion{
 		"warcinfo",
@@ -191,9 +198,16 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 	}
 
 	for {
+		if internal.DiskFree(c.writerConf.OutDir) < c.minWARCDiskFree {
+			result.SetFatal(internal.NewOutOfSpaceError("cannot write WARC file, almost no space left in directory '%s'\n", c.writerConf.OutDir))
+			break
+		}
 		var currentOffset int64
 		currentOffset, writer, err = handleRecord(c, wf, fileName, result, writer)
 		if err == io.EOF {
+			break
+		}
+		if result.Fatal() != nil {
 			break
 		}
 		if err != nil {
@@ -241,7 +255,11 @@ func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, result fi
 
 		r, err := c.digestIndex.IsRevisit(digest, revisitRef)
 		if err != nil {
-			result.AddError(fmt.Errorf("error getting revisit ref: %w", err))
+			if _, ok := err.(internal.OutOfSpaceError); ok {
+				result.SetFatal(err)
+			} else {
+				result.AddError(fmt.Errorf("error getting revisit ref: %w", err))
+			}
 		}
 		if r != nil && int64(revisitRefSize(r)) < length-c.minimumSizeGain {
 			if r.Profile == "" {

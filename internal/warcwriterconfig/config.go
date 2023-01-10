@@ -19,6 +19,7 @@ package warcwriterconfig
 import (
 	"fmt"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/viper"
 	"os"
@@ -82,7 +83,7 @@ func NewFromViper() (*WarcWriterConfig, error) {
 		Compress:              viper.GetBool(flag.Compress),
 		CompressionLevel:      viper.GetInt(flag.CompressionLevel),
 		ConcurrentWriters:     viper.GetInt(flag.ConcurrentWriters),
-		MaxFileSize:           viper.GetInt64(flag.FileSize),
+		MaxFileSize:           internal.ParseSizeInBytes(viper.GetString(flag.FileSize)),
 		DefaultTime:           defaultDate,
 		OutDir:                outDir,
 		FilePrefix:            viper.GetString(flag.FilePrefix),

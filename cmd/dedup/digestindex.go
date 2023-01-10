@@ -20,11 +20,14 @@ import (
 	"fmt"
 	badger "github.com/dgraph-io/badger/v3"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/viper"
 	"os"
 	"path"
 )
+
+const minIndexDiskFree = 1 * 1024 * 1024
 
 type DigestIndex struct {
 	dir string
@@ -48,6 +51,9 @@ func NewDigestIndex(newIndex bool, subdir string) (idx *DigestIndex, err error) 
 }
 
 func (idx *DigestIndex) IsRevisit(key string, revisitRef *gowarc.RevisitRef) (*gowarc.RevisitRef, error) {
+	if internal.DiskFree(idx.dir) < minIndexDiskFree {
+		return nil, internal.NewOutOfSpaceError("almost no space left for index in directory '%s'", idx.dir)
+	}
 	var r *gowarc.RevisitRef
 	err := idx.db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(key))
