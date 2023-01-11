@@ -56,7 +56,7 @@ func DiskFree(path string) (free int64) {
 	if err != nil {
 		return
 	}
-	free = int64(fs.Bfree) * fs.Bsize
+	free = int64(fs.Bfree) * int64(fs.Bsize)
 	return
 }
 
