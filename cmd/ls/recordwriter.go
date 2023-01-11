@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal"
+	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/nlnwa/whatwg-url/url"
 	"regexp"
 	"strconv"
@@ -131,16 +132,16 @@ func createStringFn(align, length int, valueFn toStringFn) writerFn {
 		case align < 0:
 			l := length
 			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return fmt.Sprintf("%-*s", l, internal.CropString(valueFn(wr, fileName, offset), length))
+				return fmt.Sprintf("%-*s", l, utils.CropString(valueFn(wr, fileName, offset), length))
 			}
 		case align > 0:
 			l := length
 			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return fmt.Sprintf("%*s", l, internal.CropString(valueFn(wr, fileName, offset), length))
+				return fmt.Sprintf("%*s", l, utils.CropString(valueFn(wr, fileName, offset), length))
 			}
 		default:
 			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return fmt.Sprintf("%s", internal.CropString(valueFn(wr, fileName, offset), length))
+				return fmt.Sprintf("%s", utils.CropString(valueFn(wr, fileName, offset), length))
 			}
 		}
 	} else {

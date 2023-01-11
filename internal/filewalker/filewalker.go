@@ -163,6 +163,9 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 			}
 
 			stats.Merge(res.GetStats())
+			if res.Fatal() != nil {
+				fmt.Printf("ERROR: %s\n", res.Fatal())
+			}
 
 			if f.isLog(progress) {
 				fmt.Printf("  %s %s\r", string(anim[animPos]), stats.String())

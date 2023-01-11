@@ -21,18 +21,21 @@ builds:
 
 archives:
   - format: binary
-    replacements:
-      386: i386
-      amd64: x86_64
-    name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+    name_template: >-
+      {{ .Binary }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+      {{ if .Mips }}_{{ .Mips }}{{ end }}
 
 nfpms:
   - vendor: National Library of Norway
     description: All things WARC
     license: Apache 2.0
-    file_name_template: "{{ .PackageName }}_{{ .Version }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
-    replacements:
-      386: i386
+    maintainer: John Erik Halse <john.halse@nb.no>
+    file_name_template: '{{ .ConventionalFileName }}'
     formats:
       - deb
       - rpm

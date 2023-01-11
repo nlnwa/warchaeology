@@ -18,6 +18,8 @@ type Result interface {
 	Processed() int64
 	ErrorCount() int64
 	Errors() []error
+	SetFatal(error)
+	Fatal() error
 	Duplicates() int64
 	error
 }
@@ -60,6 +62,7 @@ type result struct {
 	errorCount int64
 	errors     []error
 	duplicates int64
+	fatal      error
 }
 
 func NewResult(fileName string) Result {
@@ -114,6 +117,14 @@ func (r *result) Error() string {
 		}
 	}
 	return sb.String()
+}
+
+func (r *result) SetFatal(e error) {
+	r.fatal = e
+}
+
+func (r *result) Fatal() error {
+	return r.fatal
 }
 
 func (r *result) String() string {

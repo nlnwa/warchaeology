@@ -21,10 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/filter"
 	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io"
@@ -198,7 +198,7 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 			break
 		}
 		if len(c.id) > 0 {
-			if !internal.Contains(c.id, wr.WarcHeader().Get(gowarc.WarcRecordID)) {
+			if !utils.Contains(c.id, wr.WarcHeader().Get(gowarc.WarcRecordID)) {
 				continue
 			}
 		}
