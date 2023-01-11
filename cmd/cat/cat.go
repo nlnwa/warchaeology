@@ -20,8 +20,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal"
 	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/spf13/viper"
 	"io"
 	"os"
@@ -114,7 +114,7 @@ func readFile(c *conf, fileName string) {
 
 		// Find record with id
 		if len(c.id) > 0 {
-			if !internal.Contains(c.id, wr.WarcHeader().Get(gowarc.WarcRecordID)) {
+			if !utils.Contains(c.id, wr.WarcHeader().Get(gowarc.WarcRecordID)) {
 				continue
 			}
 		}

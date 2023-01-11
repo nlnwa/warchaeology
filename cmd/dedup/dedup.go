@@ -21,9 +21,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -53,7 +53,7 @@ func NewCommand() *cobra.Command {
 		Short: "Deduplicate WARC files",
 		Long:  ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			internal.CheckFileDescriptorLimit(internal.BadgerRecommendedMaxFileDescr)
+			utils.CheckFileDescriptorLimit(utils.BadgerRecommendedMaxFileDescr)
 
 			if wc, err := warcwriterconfig.NewFromViper(); err != nil {
 				return err
@@ -62,8 +62,8 @@ func NewCommand() *cobra.Command {
 			}
 
 			c.concurrency = viper.GetInt(flag.Concurrency)
-			c.minimumSizeGain = internal.ParseSizeInBytes(viper.GetString(flag.DedupSizeGain))
-			c.minWARCDiskFree = internal.ParseSizeInBytes(viper.GetString(flag.MinFreeDisk))
+			c.minimumSizeGain = utils.ParseSizeInBytes(viper.GetString(flag.DedupSizeGain))
+			c.minWARCDiskFree = utils.ParseSizeInBytes(viper.GetString(flag.MinFreeDisk))
 
 			recordTypes := viper.GetStringSlice(flag.RecordType)
 			for _, r := range recordTypes {
@@ -198,8 +198,8 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 	}
 
 	for {
-		if internal.DiskFree(c.writerConf.OutDir) < c.minWARCDiskFree {
-			result.SetFatal(internal.NewOutOfSpaceError("cannot write WARC file, almost no space left in directory '%s'\n", c.writerConf.OutDir))
+		if utils.DiskFree(c.writerConf.OutDir) < c.minWARCDiskFree {
+			result.SetFatal(utils.NewOutOfSpaceError("cannot write WARC file, almost no space left in directory '%s'\n", c.writerConf.OutDir))
 			break
 		}
 		var currentOffset int64
@@ -255,7 +255,7 @@ func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, result fi
 
 		r, err := c.digestIndex.IsRevisit(digest, revisitRef)
 		if err != nil {
-			if _, ok := err.(internal.OutOfSpaceError); ok {
+			if _, ok := err.(utils.OutOfSpaceError); ok {
 				result.SetFatal(err)
 			} else {
 				result.AddError(fmt.Errorf("error getting revisit ref: %w", err))
