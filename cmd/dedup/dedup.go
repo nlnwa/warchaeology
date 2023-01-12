@@ -43,6 +43,7 @@ type conf struct {
 	writerConf      *warcwriterconfig.WarcWriterConfig
 	minimumSizeGain int64
 	minWARCDiskFree int64
+	repair          bool
 }
 
 func NewCommand() *cobra.Command {
@@ -64,6 +65,7 @@ func NewCommand() *cobra.Command {
 			c.concurrency = viper.GetInt(flag.Concurrency)
 			c.minimumSizeGain = utils.ParseSizeInBytes(viper.GetString(flag.DedupSizeGain))
 			c.minWARCDiskFree = utils.ParseSizeInBytes(viper.GetString(flag.MinFreeDisk))
+			c.repair = viper.GetBool(flag.Repair)
 
 			recordTypes := viper.GetStringSlice(flag.RecordType)
 			for _, r := range recordTypes {
@@ -128,6 +130,7 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
 	cmd.Flags().StringP(flag.DedupSizeGain, "g", "2KB", flag.DedupSizeGainHelp)
 	cmd.Flags().String(flag.MinFreeDisk, "256MB", flag.MinFreeDiskHelp)
+	cmd.Flags().BoolP(flag.Repair, "R", false, flag.RepairHelp)
 
 	if err := cmd.RegisterFlagCompletionFunc(flag.RecordType, flag.SliceCompletion{
 		"warcinfo",
@@ -181,7 +184,34 @@ func runE(cmd string, c *conf) error {
 func (c *conf) readFile(fileName string) filewalker.Result {
 	result := filewalker.NewResult(fileName)
 
-	wf, err := gowarc.NewWarcFileReader(fileName, 0, gowarc.WithAddMissingDigest(true), gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
+	opts := []gowarc.WarcRecordOption{
+		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)),
+	}
+	if c.repair {
+		opts = append(opts,
+			gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
+			gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),
+			gowarc.WithAddMissingDigest(true),
+			gowarc.WithFixSyntaxErrors(true),
+			gowarc.WithFixDigest(true),
+			gowarc.WithAddMissingContentLength(true),
+			gowarc.WithAddMissingRecordId(true),
+			gowarc.WithFixContentLength(true),
+		)
+	} else {
+		opts = append(opts,
+			gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
+			gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),
+			gowarc.WithAddMissingDigest(false),
+			gowarc.WithFixSyntaxErrors(false),
+			gowarc.WithFixDigest(false),
+			gowarc.WithAddMissingContentLength(false),
+			gowarc.WithAddMissingRecordId(false),
+			gowarc.WithFixContentLength(false),
+		)
+	}
+	wf, err := gowarc.NewWarcFileReader(fileName, 0, opts...)
+
 	if err != nil {
 		result.AddError(err)
 		return result

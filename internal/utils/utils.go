@@ -114,7 +114,7 @@ type OutOfSpaceError string
 
 func NewOutOfSpaceError(format string, a ...any) OutOfSpaceError {
 	var e OutOfSpaceError
-	e = OutOfSpaceError(fmt.Sprintf(format, a))
+	e = OutOfSpaceError(fmt.Sprintf(format, a...))
 	return e
 }
 

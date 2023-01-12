@@ -202,8 +202,8 @@ github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrk
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
-github.com/nlnwa/gowarc v1.0.0-beta.5 h1:m1RK0Jt+ukckit1nzycFYCTnSl5NXGfzkRQ6wL8epcY=
-github.com/nlnwa/gowarc v1.0.0-beta.5/go.mod h1:z//s7tRz7zyEz2rlcwSy4aJQdQWlxI3a4Au71YSMW/0=
+github.com/nlnwa/gowarc v1.0.0 h1:erToWdNlQp7PfVWuXkz4a1L1f8t4TpigA84goLVY658=
+github.com/nlnwa/gowarc v1.0.0/go.mod h1:z//s7tRz7zyEz2rlcwSy4aJQdQWlxI3a4Au71YSMW/0=
 github.com/nlnwa/whatwg-url v0.1.2 h1:BqqsIVG6xv71wOoMAoFDmV6OK6/2sXn7BJdOsTkBl88=
 github.com/nlnwa/whatwg-url v0.1.2/go.mod h1:b0r+dEyM/KztLMDSVY6ApcO9Fmzgq+e9+Ugq20UBYck=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
