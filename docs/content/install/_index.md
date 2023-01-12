@@ -30,3 +30,9 @@ sudo install warc_linux_x86_64 /usr/local/bin/warc
 When using .deb or .rpm packages, command completion is automatically configured.
 With other installation methods command completion scripts can be generated with
 the [`warc completion`](../cmd/warc_completion) command.
+
+## Mac
+```
+curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warc_darwin_x86_64
+sudo install warc_darwin_x86_64 /usr/local/bin/warc
+```
