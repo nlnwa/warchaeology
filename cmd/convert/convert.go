@@ -19,6 +19,7 @@ package convert
 import (
 	"github.com/nlnwa/warchaeology/cmd/convert/arc"
 	"github.com/nlnwa/warchaeology/cmd/convert/nedlib"
+	"github.com/nlnwa/warchaeology/cmd/convert/warc"
 	"github.com/spf13/cobra"
 )
 
@@ -32,6 +33,7 @@ func NewCommand() *cobra.Command {
 	// Subcommands
 	cmd.AddCommand(nedlib.NewCommand())
 	cmd.AddCommand(arc.NewCommand())
+	cmd.AddCommand(warc.NewCommand())
 
 	return cmd
 }
