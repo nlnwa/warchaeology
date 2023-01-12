@@ -6,7 +6,7 @@ require (
 	github.com/awesome-gocui/gocui v1.1.0
 	github.com/dgraph-io/badger/v3 v3.2103.4
 	github.com/klauspost/compress v1.15.12
-	github.com/nlnwa/gowarc v1.0.0-beta.5
+	github.com/nlnwa/gowarc v1.0.0
 	github.com/nlnwa/whatwg-url v0.1.2
 	github.com/shirou/gopsutil v2.21.11+incompatible
 	github.com/sirupsen/logrus v1.8.1
