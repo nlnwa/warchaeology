@@ -2,7 +2,7 @@
 	{{if .Site.Home.Content }}
 
     <div class="h1 display-2 mb-5">
-        <img src="/logo_small.png" class="align-bottom" style="width: 10rem;" alt="Mascot"> {{ .Title }}
+        <img src="{{ .Site.BaseURL }}logo_small.png" class="align-bottom" style="width: 10rem;" alt="Mascot"> {{ .Title }}
     </div>
 
 	{{.Site.Home.Content}}
