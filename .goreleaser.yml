@@ -6,6 +6,8 @@ before:
     - go mod tidy
     # you may remove this if you don't need go generate
     - go generate ./...
+    - ./script/completions.sh
+
 
 builds:
   - env:
@@ -20,19 +22,31 @@ builds:
     binary: warc
 
 archives:
-  - format: binary
+  - format: tar.gz
     name_template: >-
-      {{ .Binary }}_
+      {{ .ProjectName }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-      {{ if .Mips }}_{{ .Mips }}{{ end }}
+      {{- if .Mips }}_{{ .Mips }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    builds_info:
+      group: root
+      owner: root
+    rlcp: true
+    files:
+      - README.md
+      - LICENSE
+      - completions/*
 
 nfpms:
   - vendor: National Library of Norway
     description: All things WARC
+    homepage: https://nlnwa.github.io/warchaeology/
     license: Apache 2.0
     maintainer: John Erik Halse <john.halse@nb.no>
     file_name_template: '{{ .ConventionalFileName }}'
@@ -40,11 +54,24 @@ nfpms:
       - deb
       - rpm
     bindir: /usr/bin
-    scripts:
-      postinstall: "script/postinstall.sh"
+    section: utils
     contents:
-      - dst: /etc/bash_completion.d/warc
-        type: ghost
+      - src: ./completions/warc.bash
+        dst: /usr/share/bash-completion/completions/warc
+        file_info:
+          mode: 0644
+      - src: ./completions/warc.fish
+        dst: /usr/share/fish/vendor_completions.d/warc.fish
+        file_info:
+          mode: 0644
+      - src: ./completions/warc.zsh
+        dst:  /usr/share/zsh/vendor-completions/_warc
+        file_info:
+          mode: 0644
+      - src: ./LICENSE
+        dst: /usr/share/doc/warc/copyright
+        file_info:
+          mode: 0644
     overrides:
       rpm:
         replacements:
@@ -58,7 +85,7 @@ snapshot:
   name_template: "{{ incpatch .Version }}-next"
 
 changelog:
-  use: github
+  use: github-native
   filters:
     exclude:
       - '^docs:'
