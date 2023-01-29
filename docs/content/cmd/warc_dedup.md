@@ -1,5 +1,5 @@
 ---
-date: 2022-12-02T15:31:39+01:00
+date: 2023-01-29T20:25:03+01:00
 title: "warc dedup"
 slug: warc_dedup
 url: /cmd/warc_dedup/
@@ -20,12 +20,13 @@ warc dedup [flags]
   -c, --concurrency int          number of input files to process simultaneously. The default value is 1.5 x <number of cpu cores> (default 24)
   -C, --concurrent-writers int   maximum concurrent WARC writers. This is the number of WARC-files simultaneously written to.
                                  A consequence is that at least this many WARC files are created even if there is only one input file. (default 16)
-  -S, --file-size int            The maximum size for WARC files (default 1073741824)
+  -S, --file-size string         The maximum size for WARC files (default "1GB")
       --flush                    if true, sync WARC file to disk after writing each record
   -h, --help                     help for dedup
   -i, --index-dir string         directory to store indexes (default "/home/johnh/.cache/warc")
   -k, --keep-index               true to keep index on disk so that the next run will continue where the previous run left off
-  -g, --min-size-gain int        minimum bytes one must earn to perform a deduplication (default 2048)
+      --min-free-disk string     minimum free space on disk to allow WARC writing (default "256MB")
+  -g, --min-size-gain string     minimum bytes one must earn to perform a deduplication (default "2KB")
   -n, --name-generator string    the name generator to use. By setting this to 'identity', the input filename will also be used as
                                  output file name (prefix and suffix might still change). In this mode exactly one file is generated for every input file (default "default")
   -K, --new-index                true to start from a fresh index, deleting eventual index from last run
@@ -33,6 +34,7 @@ warc dedup [flags]
   -t, --record-type strings      record types to dedup. For more than one, repeat flag or comma separated list.
                                  Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion (default [response])
   -r, --recursive                walk directories recursively
+  -R, --repair                   try to fix errors in records
       --subdir-pattern string    a pattern to use for generating subdirectories.
                                  / in pattern separates subdirectories on all platforms
                                  {YYYY} is replaced with a 4 digit year

@@ -1,5 +1,5 @@
 ---
-date: 2022-12-02T15:31:39+01:00
+date: 2023-01-29T20:25:03+01:00
 title: "warc ls"
 slug: warc_ls
 url: /cmd/warc_ls/

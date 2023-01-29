@@ -1,5 +1,5 @@
 ---
-date: 2022-12-02T15:31:39+01:00
+date: 2023-01-29T20:25:03+01:00
 title: "warc convert"
 slug: warc_convert
 url: /cmd/warc_convert/
@@ -29,4 +29,5 @@ Convert web archives to warc files. Use subcommands for the supported formats
 * [warc](../warc/)	 - A tool for handling warc files
 * [warc convert arc](../warc_convert_arc/)	 - Convert arc file into warc file
 * [warc convert nedlib](../warc_convert_nedlib/)	 - Convert directory with files harvested with Nedlib into warc files
+* [warc convert warc](../warc_convert_warc/)	 - Convert WARC file into WARC file
 
