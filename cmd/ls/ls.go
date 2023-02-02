@@ -24,13 +24,11 @@ import (
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/filter"
 	"github.com/nlnwa/warchaeology/internal/flag"
-	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io"
 	"os"
 	"os/signal"
-	"sort"
 	"strconv"
 	"syscall"
 )
@@ -40,7 +38,6 @@ type conf struct {
 	offset      int64
 	recordCount int
 	strict      bool
-	id          []string
 	format      string
 	fields      string
 	filter      *filter.Filter
@@ -90,7 +87,6 @@ Output options:
 			if c.offset < 0 {
 				c.offset = 0
 			}
-			sort.Strings(c.id)
 
 			if !cmd.Flag(flag.LogConsole).Changed {
 				viper.Set(flag.LogConsole, []string{"summary"})
@@ -110,11 +106,10 @@ Output options:
 	cmd.Flags().Int64VarP(&c.offset, "offset", "o", -1, "record offset")
 	cmd.Flags().IntVarP(&c.recordCount, "record-count", "n", 0, "The maximum number of records to show")
 	cmd.Flags().BoolVar(&c.strict, "strict", false, "strict parsing")
-	cmd.Flags().StringArrayVar(&c.id, "id", []string{}, "specify record ids to ls")
 	cmd.Flags().StringVarP(&c.delimiter, "delimiter", "d", " ", "use string instead of SPACE for field delimiter")
 	cmd.Flags().StringVarP(&c.fields, "fields", "f", "", "which fields to include. See 'warc help ls' for a description")
-	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{}, "which record types to include. For more than one, repeat flag or comma separated list.\n"+
-		"Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion (defaults to all record types)")
+	cmd.Flags().StringArray(flag.RecordId, []string{}, flag.RecordIdHelp)
+	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{}, flag.RecordTypeHelp)
 	cmd.Flags().StringP(flag.ResponseCode, "S", "", flag.ResponseCodeHelp)
 	cmd.Flags().StringSliceP(flag.MimeType, "m", []string{}, flag.MimeTypeHelp)
 
@@ -173,41 +168,39 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 	count := 0
 	var lastOffset int64
 
+	var line string
 	for {
 		wr, currentOffset, _, err := wf.Next()
 		size := currentOffset - lastOffset
 		lastOffset = currentOffset
 
 		if err == io.EOF || (c.recordCount > 0 && count >= c.recordCount) {
-			if err := c.writer.Write(nil, "", currentOffset, size); err != nil {
-				panic(err)
+			if line != "" {
+				c.writer.Write(line, size)
+				line = ""
 			}
 			break
-		}
-
-		result.IncrRecords()
-		if !c.filter.Accept(wr) {
-			if err := c.writer.Write(nil, "", currentOffset, size); err != nil {
-				panic(err)
-			}
-			continue
 		}
 
 		if err != nil {
 			result.AddError(fmt.Errorf("error: %v, rec num: %v, offset %v", err.Error(), strconv.Itoa(count), currentOffset))
 			break
 		}
-		if len(c.id) > 0 {
-			if !utils.Contains(c.id, wr.WarcHeader().Get(gowarc.WarcRecordID)) {
-				continue
-			}
+
+		if line != "" {
+			c.writer.Write(line, size)
+			line = ""
 		}
+
+		result.IncrRecords()
+		if !c.filter.Accept(wr) {
+			continue
+		}
+
 		count++
 
 		result.IncrProcessed()
-		if err := c.writer.Write(wr, fileName, currentOffset, size); err != nil {
-			panic(err)
-		}
+		line = c.writer.FormatRecord(wr, fileName, currentOffset)
 	}
 	return result
 }
