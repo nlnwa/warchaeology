@@ -4,6 +4,7 @@ const (
 	LogFileName       = "log-file-name"
 	LogFile           = "log-file"
 	LogConsole        = "log-console"
+	RecordId          = "id"
 	RecordType        = "record-type"
 	ResponseCode      = "response-code"
 	MimeType          = "mime-type"
@@ -33,7 +34,8 @@ const (
 	LogFileNameHelp = `a file to write log output. Empty for no log file`
 	LogFileHelp     = `The kind of log output to write to file. Valid values: info, error, summary`
 	LogConsoleHelp  = `The kind of log output to write to console. Valid values: info, error, summary, progress`
-	RecordTypeHelp  = `record types to dedup. For more than one, repeat flag or comma separated list.
+	RecordIdHelp    = `filter record ID's. For more than one, repeat flag or comma separated list.`
+	RecordTypeHelp  = `filter record types. For more than one, repeat flag or comma separated list.
 Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion`
 	ResponseCodeHelp      = "show only records with given http response code"
 	MimeTypeHelp          = "show only records with given mime-type"
