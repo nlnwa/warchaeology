@@ -62,7 +62,7 @@ func NewFromViper(cmd string, paths []string, fn func(path string) Result) FileW
 		case "progress":
 			consoleType = consoleType | progress
 		default:
-			panic("Illegal config value for " + flag.LogConsole)
+			panic("Illegal config value '" + t + "' for " + flag.LogConsole)
 		}
 	}
 	for _, t := range viper.GetStringSlice(flag.LogFile) {
@@ -74,7 +74,7 @@ func NewFromViper(cmd string, paths []string, fn func(path string) Result) FileW
 		case "summary":
 			fileType = fileType | summary
 		default:
-			panic("Illegal config value for " + flag.LogConsole)
+			panic("Illegal config value '" + t + "' for " + flag.LogFile)
 		}
 	}
 	return &filewalker{
