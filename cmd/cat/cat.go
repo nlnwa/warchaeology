@@ -20,12 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal/filter"
 	"github.com/nlnwa/warchaeology/internal/flag"
-	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/spf13/viper"
 	"io"
 	"os"
-	"sort"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -36,7 +35,7 @@ type conf struct {
 	recordNum          int
 	recordCount        int
 	fileName           string
-	id                 []string
+	filter             *filter.Filter
 	showWarcHeader     bool
 	showProtocolHeader bool
 	showPayload        bool
@@ -64,7 +63,8 @@ warc cat -n4 -P file1.warc.gz | feh -`,
 			if c.offset < 0 {
 				c.offset = 0
 			}
-			sort.Strings(c.id)
+
+			c.filter = filter.NewFromViper()
 
 			if !(c.showWarcHeader || c.showProtocolHeader || c.showPayload) {
 				c.showWarcHeader = true
@@ -81,7 +81,10 @@ warc cat -n4 -P file1.warc.gz | feh -`,
 	cmd.Flags().BoolVarP(&c.showWarcHeader, "header", "w", false, "show WARC header")
 	cmd.Flags().BoolVarP(&c.showProtocolHeader, "protocol-header", "p", false, "show protocol header")
 	cmd.Flags().BoolVarP(&c.showPayload, "payload", "P", false, "show payload")
-	cmd.Flags().StringArrayVar(&c.id, "id", []string{}, "id")
+	cmd.Flags().StringArray(flag.RecordId, []string{}, flag.RecordIdHelp)
+	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{}, flag.RecordTypeHelp)
+	cmd.Flags().StringP(flag.ResponseCode, "S", "", flag.ResponseCodeHelp)
+	cmd.Flags().StringSliceP(flag.MimeType, "m", []string{}, flag.MimeTypeHelp)
 
 	return cmd
 }
@@ -112,11 +115,8 @@ func readFile(c *conf, fileName string) {
 			break
 		}
 
-		// Find record with id
-		if len(c.id) > 0 {
-			if !utils.Contains(c.id, wr.WarcHeader().Get(gowarc.WarcRecordID)) {
-				continue
-			}
+		if !c.filter.Accept(wr) {
+			continue
 		}
 
 		// Find record number

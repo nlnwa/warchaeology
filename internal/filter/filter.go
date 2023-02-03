@@ -20,6 +20,7 @@ package filter
 import (
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/spf13/viper"
 	"math"
 	"strconv"
@@ -27,6 +28,7 @@ import (
 )
 
 type Filter struct {
+	ids         []string
 	RecordTypes gowarc.RecordType
 	fromStatus  int
 	toStatus    int
@@ -35,6 +37,12 @@ type Filter struct {
 
 func NewFromViper() *Filter {
 	f := &Filter{}
+
+	// Parse record ID's flag
+	f.ids = viper.GetStringSlice(flag.RecordId)
+	for i := 0; i < len(f.ids); i++ {
+		f.ids[i] = strings.Trim(f.ids[i], "<>")
+	}
 
 	// Parse record types flag
 	recordTypes := viper.GetStringSlice(flag.RecordType)
@@ -102,6 +110,13 @@ func NewFromViper() *Filter {
 }
 
 func (f *Filter) Accept(wr gowarc.WarcRecord) bool {
+	// Check record ID's
+	if len(f.ids) > 0 {
+		if !utils.Contains(f.ids, wr.RecordId()) {
+			return false
+		}
+	}
+
 	// Check Record type
 	if f.RecordTypes != 0 && wr.Type()&f.RecordTypes == 0 {
 		return false
@@ -112,8 +127,6 @@ func (f *Filter) Accept(wr gowarc.WarcRecord) bool {
 		if v.HttpStatusCode() < f.fromStatus || v.HttpStatusCode() >= f.toStatus {
 			return false
 		}
-	} else {
-		return false
 	}
 
 	// Check document mime-type

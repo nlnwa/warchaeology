@@ -75,30 +75,31 @@ func NewRecordWriter(format, separator string) *RecordWriter {
 	return rw
 }
 
-func (rw *RecordWriter) Write(wr gowarc.WarcRecord, fileName string, offset, size int64) error {
-	if rw.line != "" {
-		var v []interface{}
-		for _, sf := range rw.sizeFields {
-			if sf.length > 0 && sf.align != 0 {
-				v = append(v, sf.length)
-			}
-			v = append(v, size)
+// FormatRecord writes the configured fields for the record to a string. Size is written with a place holder
+// since it is not available until the next record is read.
+func (rw *RecordWriter) FormatRecord(wr gowarc.WarcRecord, fileName string, offset int64) string {
+	s := &strings.Builder{}
+	for i, t := range rw.fields {
+		if i > 0 {
+			s.WriteString(rw.sep)
 		}
-		fmt.Printf(rw.line, v...)
-		fmt.Println()
-		rw.line = ""
+		s.WriteString(t.fn(wr, fileName, offset))
 	}
-	if wr != nil {
-		s := &strings.Builder{}
-		for i, t := range rw.fields {
-			if i > 0 {
-				s.WriteString(rw.sep)
-			}
-			s.WriteString(t.fn(wr, fileName, offset))
+	return s.String()
+}
+
+// Write takes a string produced by FormatRecord, replaces eventual size place holders with actual values and
+// writes it to stdout.
+func (rw *RecordWriter) Write(line string, size int64) {
+	var v []interface{}
+	for _, sf := range rw.sizeFields {
+		if sf.length > 0 && sf.align != 0 {
+			v = append(v, sf.length)
 		}
-		rw.line = s.String()
+		v = append(v, size)
 	}
-	return nil
+	fmt.Printf(line, v...)
+	fmt.Println()
 }
 
 func createInt64Fn(align, length int, valueFn toInt64Fn) writerFn {

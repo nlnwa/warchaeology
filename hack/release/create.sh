@@ -54,5 +54,7 @@ add_tag "v${1}"
 # print follow-up instructions
 echo ""
 echo "Created commit for v${1}, you should now:"
+echo "Push the generated docs on the main branch"
+echo " - git push"
+echo "Push the generated tag. Github actions will then create a release"
 echo " - git push ${UPSTREAM} v${1}"
-echo " - Create a GitHub release from the pushed tag v${1}"
