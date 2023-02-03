@@ -1,5 +1,5 @@
 ---
-date: 2023-01-30T10:17:46+01:00
+date: 2023-02-03T12:57:12+01:00
 title: "warc ls"
 slug: warc_ls
 url: /cmd/warc_ls/
@@ -15,7 +15,6 @@ List information about records in one or more warc files.
 Output options:
 
     --delimiter accepts a string to be used as the output field delimiter.
-    --format specifies one of the predefined output formats (only cdxj is supported at the moment).
     --fields specifies which fields to include in output. Field specification letters are mostly the same as the fields in
            the CDX file specification (https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2015/).
            The following fields are supported:
@@ -46,14 +45,19 @@ warc ls <files/dirs> [flags]
   -d, --delimiter string       use string instead of SPACE for field delimiter (default " ")
   -f, --fields string          which fields to include. See 'warc help ls' for a description
   -h, --help                   help for ls
-      --id stringArray         specify record ids to ls
-  -m, --mime-type strings      show only records with given mime-type
+      --id stringArray         filter record ID's. For more than one, repeat flag or comma separated list.
+  -m, --mime-type strings      filter records with given mime-types. For more than one, repeat flag or comma separated list.
   -o, --offset int             record offset (default -1)
   -n, --record-count int       The maximum number of records to show
-  -t, --record-type strings    which record types to include. For more than one, repeat flag or comma separated list.
-                               Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion (defaults to all record types)
+  -t, --record-type strings    filter record types. For more than one, repeat flag or comma separated list.
+                               Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion
   -r, --recursive              walk directories recursively
-  -S, --response-code string   show only records with given http response code
+  -S, --response-code string   filter records with given http response codes. Format is 'from-to' where from is inclusive and to is exclusive.
+                               Examples:
+                               '200': only records with 200 response
+                               '200-300': all records with response code between 200(inclusive) and 300(exclusive)
+                               '-400': all response codes below 400
+                               '500-': all response codes from 500 and above
       --strict                 strict parsing
       --suffixes strings       filter files by suffixes (default [.warc,.warc.gz])
   -s, --symlinks               follow symlinks
@@ -63,8 +67,8 @@ warc ls <files/dirs> [flags]
 
 ```
       --config string          config file. If not set, /etc/warc/, $HOME/.warc/ and current working dir will be searched for file config.yaml
-      --log-console strings    The kind of log output to write to console. Valid values: info, error, summary, progress (default [progress,summary])
-      --log-file strings       The kind of log output to write to file. Valid values: info, error, summary (default [info,error,summary])
+      --log-console strings    the kind of log output to write to console. Valid values: info, error, summary, progress (default [progress,summary])
+      --log-file strings       the kind of log output to write to file. Valid values: info, error, summary (default [info,error,summary])
   -L, --log-file-name string   a file to write log output. Empty for no log file
       --tmpdir string          directory to use for temporary files (default "/tmp")
 ```
