@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
+	"github.com/nlnwa/warchaeology/internal/filter"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
@@ -31,12 +32,11 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strings"
 	"syscall"
 )
 
 type conf struct {
-	recordTypes     gowarc.RecordType
+	filter          *filter.Filter
 	files           []string
 	concurrency     int
 	digestIndex     *DigestIndex
@@ -52,7 +52,10 @@ func NewCommand() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "dedup",
 		Short: "Deduplicate WARC files",
-		Long:  ``,
+		Long: `Deduplicate WARC files.
+
+NOTE: The filtering options only decides which records are candidates for deduplication.
+The remaining records are written as is.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			utils.CheckFileDescriptorLimit(utils.BadgerRecommendedMaxFileDescr)
 
@@ -67,28 +70,6 @@ func NewCommand() *cobra.Command {
 			c.minWARCDiskFree = utils.ParseSizeInBytes(viper.GetString(flag.MinFreeDisk))
 			c.repair = viper.GetBool(flag.Repair)
 
-			recordTypes := viper.GetStringSlice(flag.RecordType)
-			for _, r := range recordTypes {
-				switch strings.ToLower(r) {
-				case "warcinfo":
-					c.recordTypes = c.recordTypes | gowarc.Warcinfo
-				case "request":
-					c.recordTypes = c.recordTypes | gowarc.Request
-				case "response":
-					c.recordTypes = c.recordTypes | gowarc.Response
-				case "metadata":
-					c.recordTypes = c.recordTypes | gowarc.Metadata
-				case "revisit":
-					c.recordTypes = c.recordTypes | gowarc.Revisit
-				case "resource":
-					c.recordTypes = c.recordTypes | gowarc.Resource
-				case "continuation":
-					c.recordTypes = c.recordTypes | gowarc.Continuation
-				case "conversion":
-					c.recordTypes = c.recordTypes | gowarc.Conversion
-				}
-			}
-
 			if len(args) == 0 {
 				return errors.New("missing file or directory name")
 			}
@@ -101,6 +82,8 @@ func NewCommand() *cobra.Command {
 			}
 			defer c.digestIndex.Close()
 
+			c.filter = filter.NewFromViper()
+
 			return runE(cmd.Name(), c)
 		},
 		ValidArgsFunction: flag.SuffixCompletionFn,
@@ -111,7 +94,10 @@ func NewCommand() *cobra.Command {
 		panic(err)
 	}
 
+	cmd.Flags().StringArray(flag.RecordId, []string{}, flag.RecordIdHelp)
 	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{"response"}, flag.RecordTypeHelp)
+	cmd.Flags().StringP(flag.ResponseCode, "e", "", flag.ResponseCodeHelp)
+	cmd.Flags().StringSliceP(flag.MimeType, "m", []string{}, flag.MimeTypeHelp)
 	cmd.Flags().BoolP(flag.KeepIndex, "k", false, flag.KeepIndexHelp)
 	cmd.Flags().BoolP(flag.NewIndex, "K", false, flag.NewIndexHelp)
 	cmd.Flags().StringP(flag.IndexDir, "i", cacheDir+"/warc", flag.IndexDirHelp)
@@ -202,10 +188,10 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 		opts = append(opts,
 			gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
 			gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),
-			gowarc.WithAddMissingDigest(false),
+			gowarc.WithAddMissingDigest(true),
 			gowarc.WithFixSyntaxErrors(false),
 			gowarc.WithFixDigest(false),
-			gowarc.WithAddMissingContentLength(false),
+			gowarc.WithAddMissingContentLength(true),
 			gowarc.WithAddMissingRecordId(false),
 			gowarc.WithFixContentLength(false),
 		)
@@ -275,7 +261,7 @@ func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, result fi
 		}
 	}
 
-	if wr.Type()&c.recordTypes != 0 {
+	if c.filter.Accept(wr) {
 		result.IncrProcessed()
 
 		length := payloadLength(wr)
