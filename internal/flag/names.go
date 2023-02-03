@@ -32,13 +32,18 @@ const (
 	Repair            = "repair"
 
 	LogFileNameHelp = `a file to write log output. Empty for no log file`
-	LogFileHelp     = `The kind of log output to write to file. Valid values: info, error, summary`
-	LogConsoleHelp  = `The kind of log output to write to console. Valid values: info, error, summary, progress`
+	LogFileHelp     = `the kind of log output to write to file. Valid values: info, error, summary`
+	LogConsoleHelp  = `the kind of log output to write to console. Valid values: info, error, summary, progress`
 	RecordIdHelp    = `filter record ID's. For more than one, repeat flag or comma separated list.`
 	RecordTypeHelp  = `filter record types. For more than one, repeat flag or comma separated list.
 Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion`
-	ResponseCodeHelp      = "show only records with given http response code"
-	MimeTypeHelp          = "show only records with given mime-type"
+	ResponseCodeHelp = `filter records with given http response codes. Format is 'from-to' where from is inclusive and to is exclusive.
+Examples:
+'200': only records with 200 response
+'200-300': all records with response code between 200(inclusive) and 300(exclusive)
+'-400': all response codes below 400
+'500-': all response codes from 500 and above`
+	MimeTypeHelp          = "filter records with given mime-types. For more than one, repeat flag or comma separated list."
 	WarcDirHelp           = `output directory for generated warc files. Directory must exist.`
 	NewIndexHelp          = `true to start from a fresh index, deleting eventual index from last run`
 	KeepIndexHelp         = `true to keep index on disk so that the next run will continue where the previous run left off`

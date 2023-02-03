@@ -56,7 +56,6 @@ func NewCommand() *cobra.Command {
 Output options:
 
     --delimiter accepts a string to be used as the output field delimiter.
-    --format specifies one of the predefined output formats (only cdxj is supported at the moment).
     --fields specifies which fields to include in output. Field specification letters are mostly the same as the fields in
            the CDX file specification (https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2015/).
            The following fields are supported:
