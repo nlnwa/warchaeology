@@ -27,6 +27,7 @@ const (
 	WarcVersion       = "warc-version"
 	DefaultDate       = "default-date"
 	TmpDir            = "tmpdir"
+	BufferMaxMem      = "max-buffer-mem"
 	DedupSizeGain     = "min-size-gain"
 	MinFreeDisk       = "min-free-disk"
 	Repair            = "repair"
@@ -73,6 +74,7 @@ output file name (prefix and suffix might still change). In this mode exactly on
 	WarcVersionHelp   = `the WARC version to use for created files`
 	DefaultDateHelp   = `fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date`
 	TmpDirHelp        = `directory to use for temporary files`
+	BufferMaxMemHelp  = "the maximum bytes of memory allowed for each buffer before overflowing to disk"
 	DedupSizeGainHelp = `minimum bytes one must earn to perform a deduplication`
 	MinFreeDiskHelp   = `minimum free space on disk to allow WARC writing`
 	RepairHelp        = `try to fix errors in records`

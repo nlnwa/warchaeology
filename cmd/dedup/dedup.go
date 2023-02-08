@@ -172,6 +172,7 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 
 	opts := []gowarc.WarcRecordOption{
 		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)),
+		gowarc.WithBufferMaxMemBytes(utils.ParseSizeInBytes(viper.GetString(flag.BufferMaxMem))),
 	}
 	if c.repair {
 		opts = append(opts,
