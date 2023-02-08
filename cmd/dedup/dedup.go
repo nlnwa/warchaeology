@@ -241,18 +241,22 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 // the writer, it must be opened in this function. These parameters are used for giving readFile access to the writer.
 func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, result filewalker.Result, writer *gowarc.WarcFileWriter) (offset int64, writerOut *gowarc.WarcFileWriter, err error) {
 	writerOut = writer
-	wr, currentOffset, validation, e := wf.Next()
+	wr, currentOffset, validation, err := wf.Next()
+	if wr != nil {
+		defer func() {
+			_ = wr.Close()
+		}()
+	}
+
 	offset = currentOffset
-	result.IncrRecords()
-	if e != nil {
-		err = e
+	if err != nil {
 		return
 	}
+
+	result.IncrRecords()
 	if !validation.Valid() {
 		result.AddError(fmt.Errorf("info: found problem rec num: %d, offset %d: %w", result.Records(), currentOffset, validation))
 	}
-
-	defer func() { _ = wr.Close() }()
 
 	if writer == nil {
 		writer = c.writerConf.GetWarcWriter(fileName, wr.WarcHeader().Get(gowarc.WarcDate))
