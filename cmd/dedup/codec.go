@@ -2,6 +2,7 @@ package dedup
 
 import (
 	"github.com/nlnwa/gowarc"
+	"strings"
 	"time"
 )
 
@@ -35,7 +36,7 @@ func UnmarshalRevisitRef(data []byte) (*gowarc.RevisitRef, error) {
 }
 
 func MarshalRevisitRef(r *gowarc.RevisitRef) (data []byte, err error) {
-	id := r.TargetRecordId[10 : len(r.TargetRecordId)-1]
+	id := strings.Trim(r.TargetRecordId, "<>")[9:]
 	uri := r.TargetUri
 	d, err := time.Parse(time.RFC3339, r.TargetDate)
 	if err != nil {
