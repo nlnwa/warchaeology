@@ -28,7 +28,6 @@ import (
 	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"os"
 	"time"
@@ -56,28 +55,6 @@ func NewCommand() *cobra.Command {
 				}
 			}
 
-			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				// Hack to let bool flags toggle on or off
-				if flag.Value.Type() == "bool" {
-					fv, err := cmd.Flags().GetBool(flag.Name)
-					if err != nil {
-						panic(err)
-					}
-					vv := viper.GetBool(flag.Name)
-					if fv {
-						vv = !vv
-					}
-					if vv {
-						err = cmd.Flags().Set(flag.Name, "true")
-					} else {
-						err = cmd.Flags().Set(flag.Name, "false")
-					}
-					if err != nil {
-						panic(err)
-					}
-				}
-			})
-
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
 				panic(err)
 			}
@@ -98,12 +75,12 @@ func NewCommand() *cobra.Command {
 	cmd.PersistentFlags().StringSlice(flag.LogConsole, []string{"progress", "summary"}, flag.LogConsoleHelp)
 	cmd.PersistentFlags().String(flag.TmpDir, os.TempDir(), flag.TmpDirHelp)
 	cmd.PersistentFlags().String(flag.BufferMaxMem, "1MB", flag.BufferMaxMemHelp)
-	cmd.RegisterFlagCompletionFunc(flag.LogFile, flag.SliceCompletion{
+	_ = cmd.RegisterFlagCompletionFunc(flag.LogFile, flag.SliceCompletion{
 		"info\tShow stats for each file",
 		"error\tPrint errors",
 		"summary\tCreate a summary after completion",
 	}.CompletionFn)
-	cmd.RegisterFlagCompletionFunc(flag.LogConsole, flag.SliceCompletion{
+	_ = cmd.RegisterFlagCompletionFunc(flag.LogConsole, flag.SliceCompletion{
 		"info\tShow stats for each file",
 		"error\tPrint errors",
 		"summary\tCreate a summary after completion",
