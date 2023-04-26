@@ -17,30 +17,21 @@
 package cmd
 
 import (
-	"github.com/klauspost/compress/gzip"
 	"github.com/nlnwa/warchaeology/cmd/cat"
 	"github.com/nlnwa/warchaeology/cmd/console"
 	"github.com/nlnwa/warchaeology/cmd/convert"
 	"github.com/nlnwa/warchaeology/cmd/dedup"
 	"github.com/nlnwa/warchaeology/cmd/ls"
 	"github.com/nlnwa/warchaeology/cmd/validate"
+	"github.com/nlnwa/warchaeology/internal/config"
 	"github.com/nlnwa/warchaeology/internal/flag"
-	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
-	"time"
 )
-
-type conf struct {
-	cfgFile  string
-	logLevel string
-}
 
 // NewCommand returns a new cobra.Command implementing the root command for warc
 func NewCommand() *cobra.Command {
-	c := &conf{}
 	cmd := &cobra.Command{
 		Use:   "warc",
 		Short: "A tool for handling warc files",
@@ -63,13 +54,7 @@ func NewCommand() *cobra.Command {
 		},
 	}
 
-	cobra.OnInitialize(func() { c.initConfig() })
-
 	// Flags
-	cmd.PersistentFlags().StringVar(&c.cfgFile, "config", "", "config file. If not set, /etc/warc/, $HOME/.warc/ and current working dir will be searched for file config.yaml")
-	if err := viper.BindPFlag("config", cmd.PersistentFlags().Lookup("config")); err != nil {
-		panic(err)
-	}
 	cmd.PersistentFlags().StringP(flag.LogFileName, "L", "", flag.LogFileNameHelp)
 	cmd.PersistentFlags().StringSlice(flag.LogFile, []string{"info", "error", "summary"}, flag.LogFileHelp)
 	cmd.PersistentFlags().StringSlice(flag.LogConsole, []string{"progress", "summary"}, flag.LogConsoleHelp)
@@ -96,37 +81,6 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(dedup.NewCommand())
 	cmd.AddCommand(completionCmd)
 
+	config.InitConfig(cmd)
 	return cmd
-}
-
-// initConfig reads in config file and ENV variables if set.
-func (c *conf) initConfig() {
-	viper.SetTypeByDefaultValue(true)
-	viper.SetDefault(flag.WarcVersion, "1.1")
-	viper.SetDefault(flag.CompressionLevel, gzip.DefaultCompression)
-	viper.SetDefault(flag.DefaultDate, time.Now().Format(warcwriterconfig.DefaultDateFormat))
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	if viper.IsSet("config") {
-		// Use config file from the flag.
-		viper.SetConfigFile(viper.GetString("config"))
-	} else {
-		// Search config in home directory with name ".warc" (without extension).
-		viper.SetConfigName("config")      // name of config file (without extension)
-		viper.SetConfigType("yaml")        // REQUIRED if the config file does not have the extension in the name
-		viper.AddConfigPath("/etc/warc/")  // path to look for the config file in
-		viper.AddConfigPath("$HOME/.warc") // call multiple times to add many search paths
-		viper.AddConfigPath(".")           // optionally look for config in the working directory
-	}
-
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			// Config file not found; ignore error
-			return
-		} else {
-			// Config file was found but another error was produced
-			log.Fatalf("error reading config file: %v", err)
-		}
-	}
 }
