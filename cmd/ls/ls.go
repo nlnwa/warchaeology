@@ -79,6 +79,13 @@ Output options:
 				return errors.New("missing file or directory")
 			}
 			c.files = args
+			c.delimiter = viper.GetString(flag.Delimiter)
+			c.concurrency = viper.GetInt(flag.Concurrency)
+			c.offset = viper.GetInt64(flag.Offset)
+			c.recordCount = viper.GetInt(flag.RecordCount)
+			c.strict = viper.GetBool(flag.Strict)
+			c.fields = viper.GetString(flag.Fields)
+
 			if c.offset >= 0 && c.recordCount == 0 {
 				c.recordCount = 1
 				// TODO: check that input is exactly one file when using offset
@@ -101,12 +108,12 @@ Output options:
 	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)
 	cmd.Flags().BoolP(flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
 	cmd.Flags().StringSlice(flag.Suffixes, []string{".warc", ".warc.gz"}, flag.SuffixesHelp)
-	cmd.Flags().IntVarP(&c.concurrency, flag.Concurrency, "c", 1, flag.ConcurrencyHelp)
-	cmd.Flags().Int64VarP(&c.offset, "offset", "o", -1, "record offset")
-	cmd.Flags().IntVarP(&c.recordCount, "record-count", "n", 0, "The maximum number of records to show")
-	cmd.Flags().BoolVar(&c.strict, "strict", false, "strict parsing")
-	cmd.Flags().StringVarP(&c.delimiter, "delimiter", "d", " ", "use string instead of SPACE for field delimiter")
-	cmd.Flags().StringVarP(&c.fields, "fields", "f", "", "which fields to include. See 'warc help ls' for a description")
+	cmd.Flags().IntP(flag.Concurrency, "c", 1, flag.ConcurrencyHelp)
+	cmd.Flags().Int64P(flag.Offset, "o", -1, flag.OffsetHelp)
+	cmd.Flags().IntP(flag.RecordCount, "n", 0, flag.RecordCountHelp)
+	cmd.Flags().Bool(flag.Strict, false, flag.StrictHelp)
+	cmd.Flags().StringP(flag.Delimiter, "d", " ", flag.DelimiterHelp)
+	cmd.Flags().StringP(flag.Fields, "f", "", flag.FieldsHelp)
 	cmd.Flags().StringArray(flag.RecordId, []string{}, flag.RecordIdHelp)
 	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{}, flag.RecordTypeHelp)
 	cmd.Flags().StringP(flag.ResponseCode, "S", "", flag.ResponseCodeHelp)

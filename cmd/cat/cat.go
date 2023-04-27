@@ -57,6 +57,13 @@ warc cat -n4 -P file1.warc.gz | feh -`,
 				return errors.New("missing file name")
 			}
 			c.fileName = args[0]
+			c.offset = viper.GetInt64(flag.Offset)
+			c.recordCount = viper.GetInt(flag.RecordCount)
+			c.recordNum = viper.GetInt(flag.RecordNum)
+			c.showWarcHeader = viper.GetBool(flag.ShowWarcHeader)
+			c.showProtocolHeader = viper.GetBool(flag.ShowProtocolHeader)
+			c.showPayload = viper.GetBool(flag.ShowPayload)
+
 			if (c.offset >= 0 || c.recordNum >= 0) && c.recordCount == 0 {
 				c.recordCount = 1
 			}
@@ -75,12 +82,12 @@ warc cat -n4 -P file1.warc.gz | feh -`,
 		},
 	}
 
-	cmd.Flags().Int64VarP(&c.offset, "offset", "o", -1, "print record at offset bytes")
-	cmd.Flags().IntVarP(&c.recordNum, "num", "n", -1, "print the n'th record. This is applied after records are filtered out by other options")
-	cmd.Flags().IntVarP(&c.recordCount, "record-count", "c", 0, "The maximum number of records to show. Defaults to show all records except if -o or -n option is set, then default is one.")
-	cmd.Flags().BoolVarP(&c.showWarcHeader, "header", "w", false, "show WARC header")
-	cmd.Flags().BoolVarP(&c.showProtocolHeader, "protocol-header", "p", false, "show protocol header")
-	cmd.Flags().BoolVarP(&c.showPayload, "payload", "P", false, "show payload")
+	cmd.Flags().Int64P(flag.Offset, "o", -1, flag.OffsetHelp)
+	cmd.Flags().IntP(flag.RecordNum, "n", -1, flag.RecordNumHelp)
+	cmd.Flags().IntP(flag.RecordCount, "c", 0, flag.RecordCountHelp+" Defaults to show all records except if -o or -n option is set, then default is one.")
+	cmd.Flags().BoolP(flag.ShowWarcHeader, "w", false, flag.ShowWarcHeaderHelp)
+	cmd.Flags().BoolP(flag.ShowProtocolHeader, "p", false, flag.ShowProtocolHeaderHelp)
+	cmd.Flags().BoolP(flag.ShowPayload, "P", false, flag.ShowPayloadHelp)
 	cmd.Flags().StringArray(flag.RecordId, []string{}, flag.RecordIdHelp)
 	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{}, flag.RecordTypeHelp)
 	cmd.Flags().StringP(flag.ResponseCode, "S", "", flag.ResponseCodeHelp)

@@ -26,7 +26,6 @@ import (
 	"github.com/nlnwa/warchaeology/internal/config"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"os"
 )
 
@@ -36,22 +35,6 @@ func NewCommand() *cobra.Command {
 		Use:   "warc",
 		Short: "A tool for handling warc files",
 		Long:  ``,
-
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			// Overwrite config values if set in command specific key
-			cv := viper.Sub(cmd.Name())
-			if cv != nil {
-				for _, k := range cv.AllKeys() {
-					viper.Set(k, cv.Get(k))
-				}
-			}
-
-			if err := viper.BindPFlags(cmd.Flags()); err != nil {
-				panic(err)
-			}
-
-			return nil
-		},
 	}
 
 	// Flags
