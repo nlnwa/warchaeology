@@ -56,6 +56,8 @@ func loadConfig(cmd *cobra.Command) {
 	viper.SetDefault(flag.CompressionLevel, gzip.DefaultCompression)
 	viper.SetDefault(flag.DefaultDate, time.Now().Format(warcwriterconfig.DefaultDateFormat))
 
+	viper.SetEnvPrefix("WARC")
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv() // read in environment variables that match
 
 	if viper.IsSet("config") {
