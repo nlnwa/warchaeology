@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/nlnwa/warchaeology/internal/workerpool"
 	"github.com/spf13/viper"
 	"io/fs"
@@ -51,18 +52,20 @@ func New(paths []string, recursive, followSymlinks bool, suffixes []string, conc
 func NewFromViper(cmd string, paths []string, fn func(path string) Result) FileWalker {
 	var consoleType logType
 	var fileType logType
-	for _, t := range viper.GetStringSlice(flag.LogConsole) {
-		switch strings.ToLower(t) {
-		case "info":
-			consoleType = consoleType | info
-		case "error":
-			consoleType = consoleType | err
-		case "summary":
-			consoleType = consoleType | summary
-		case "progress":
-			consoleType = consoleType | progress
-		default:
-			panic("Illegal config value '" + t + "' for " + flag.LogConsole)
+	if utils.StdoutIsTerminal() {
+		for _, t := range viper.GetStringSlice(flag.LogConsole) {
+			switch strings.ToLower(t) {
+			case "info":
+				consoleType = consoleType | info
+			case "error":
+				consoleType = consoleType | err
+			case "summary":
+				consoleType = consoleType | summary
+			case "progress":
+				consoleType = consoleType | progress
+			default:
+				panic("Illegal config value '" + t + "' for " + flag.LogConsole)
+			}
 		}
 	}
 	for _, t := range viper.GetStringSlice(flag.LogFile) {

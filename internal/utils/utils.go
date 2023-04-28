@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/spf13/cast"
+	"os"
 	"strings"
 	"unicode"
 )
@@ -120,4 +121,13 @@ func NewOutOfSpaceError(format string, a ...any) OutOfSpaceError {
 
 func (o OutOfSpaceError) Error() string {
 	return string(o)
+}
+
+func StdoutIsTerminal() bool {
+	o, _ := os.Stdout.Stat()
+	if (o.Mode() & os.ModeCharDevice) == os.ModeCharDevice {
+		return true
+	} else { //It is not the terminal
+		return false
+	}
 }
