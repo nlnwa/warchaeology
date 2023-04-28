@@ -58,12 +58,6 @@ func NewCommand() *cobra.Command {
 					payload := &gowarc.WarcFields{}
 					payload.Set("software", cmdversion.SoftwareVersion())
 					payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", wc.WarcVersion.Minor(), wc.WarcVersion.Minor()))
-					//payload.Set("collection", ww.collectionConfig.GetMeta().GetName())
-					//payload.Set("description", ww.collectionConfig.GetMeta().GetDescription())
-					//if ww.subCollection != config.Collection_UNDEFINED {
-					//	payload.Set("subCollection", ww.subCollection.String())
-					//}
-					//payload.Set("isPartOf", ww.CollectionName())
 					h, e := os.Hostname()
 					if e != nil {
 						return e

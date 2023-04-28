@@ -33,11 +33,7 @@ import (
 )
 
 type conf struct {
-	files          []string
-	recursive      bool
-	followSymlinks bool
-	suffixes       []string
-	concurrency    int
+	files []string
 }
 
 func NewCommand() *cobra.Command {
@@ -56,10 +52,10 @@ func NewCommand() *cobra.Command {
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
-	cmd.Flags().BoolVarP(&c.recursive, flag.Recursive, "r", false, flag.RecursiveHelp)
-	cmd.Flags().BoolVarP(&c.followSymlinks, flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
-	cmd.Flags().StringSliceVar(&c.suffixes, flag.Suffixes, []string{".warc", ".warc.gz"}, flag.SuffixesHelp)
-	cmd.Flags().IntVarP(&c.concurrency, flag.Concurrency, "c", int(float32(runtime.NumCPU())*float32(1.5)), flag.ConcurrencyHelp)
+	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)
+	cmd.Flags().BoolP(flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
+	cmd.Flags().StringSlice(flag.Suffixes, []string{".warc", ".warc.gz"}, flag.SuffixesHelp)
+	cmd.Flags().IntP(flag.Concurrency, "c", int(float32(runtime.NumCPU())*float32(1.5)), flag.ConcurrencyHelp)
 
 	return cmd
 }
