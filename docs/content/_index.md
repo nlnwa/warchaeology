@@ -1,6 +1,6 @@
 ---
 title: Warchaeology
-weight: 1
+weight: 10
 ---
 
 {{< lead >}}
@@ -13,7 +13,7 @@ Warchaeology is a collection of tools for inspecting, manipulating and validatin
     Validate that WARC-files conforms to specification.
   {{< /featureitem >}}
   {{< featureitem icon="fas fa-search" title="Inspection" >}}
-    Navigate WARC-files with terminal console.
+    Navigate WARC-files with terminal console or extract content from WARC-files.
   {{< /featureitem >}}
   {{< featureitem icon="fas fa-magic" title="Conversion" >}}
     Convert webarchives into WARC-format.

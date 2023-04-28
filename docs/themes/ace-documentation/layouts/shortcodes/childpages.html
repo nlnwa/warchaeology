@@ -11,7 +11,7 @@
 {{- $cpage := (.Scratch.Get "current") }}
 
 
-<ul class="docs-children list-unstyled">
+<ul class="docs-children">
 	{{- .Scratch.Set "pages" $cpage.Pages }}
     {{- if $cpage.Sections}}
 	    {{- .Scratch.Set "pages" ($cpage.Pages | union $cpage.Sections) }}
@@ -27,7 +27,7 @@
 
 {{ define "childs" }}
 		{{- range .menu }}
-			<li class="h2 py-1">
+			<li class="py-1">
 				<a href="{{.RelPermalink}}"> {{ .Title }} </a>
 			</li>
 		{{ end }}

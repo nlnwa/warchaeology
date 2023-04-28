@@ -1,6 +1,6 @@
 ---
 title: Contributing
-weight: 3
+weight: 50
 ---
 
 ## Getting Started
