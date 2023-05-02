@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"github.com/nlnwa/warchaeology/cmd/aart"
 	"github.com/nlnwa/warchaeology/cmd/cat"
 	"github.com/nlnwa/warchaeology/cmd/console"
 	"github.com/nlnwa/warchaeology/cmd/convert"
@@ -63,6 +64,7 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(convert.NewCommand())
 	cmd.AddCommand(dedup.NewCommand())
 	cmd.AddCommand(completionCmd)
+	cmd.AddCommand(aart.NewCommand())
 
 	config.InitConfig(cmd)
 	return cmd
