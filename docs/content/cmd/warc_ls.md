@@ -1,5 +1,5 @@
 ---
-date: 2023-03-06T12:35:33+01:00
+date: 2023-05-02T10:06:41+02:00
 title: "warc ls"
 slug: warc_ls
 url: /cmd/warc_ls/
@@ -66,7 +66,7 @@ warc ls <files/dirs> [flags]
 ### Options inherited from parent commands
 
 ```
-      --config string           config file. If not set, /etc/warc/, $HOME/.warc/ and current working dir will be searched for file config.yaml
+      --config string           config file. If not set, /etc/xdg/warc, /home/johnh/.config/warc and the current directory will be searched for a file named 'config.yaml'
       --log-console strings     the kind of log output to write to console. Valid values: info, error, summary, progress (default [progress,summary])
       --log-file strings        the kind of log output to write to file. Valid values: info, error, summary (default [info,error,summary])
   -L, --log-file-name string    a file to write log output. Empty for no log file

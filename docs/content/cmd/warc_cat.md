@@ -1,5 +1,5 @@
 ---
-date: 2023-03-06T12:35:33+01:00
+date: 2023-05-02T10:06:41+02:00
 title: "warc cat"
 slug: warc_cat
 url: /cmd/warc_cat/
@@ -29,11 +29,11 @@ warc cat -n4 -P file1.warc.gz | feh -
   -h, --help                   help for cat
       --id stringArray         filter record ID's. For more than one, repeat flag or comma separated list.
   -m, --mime-type strings      filter records with given mime-types. For more than one, repeat flag or comma separated list.
-  -n, --num int                print the n'th record. This is applied after records are filtered out by other options (default -1)
-  -o, --offset int             print record at offset bytes (default -1)
+  -n, --num int                print the n'th record (zero based). This is applied after records are filtered out by other options (default -1)
+  -o, --offset int             record offset (default -1)
   -P, --payload                show payload
   -p, --protocol-header        show protocol header
-  -c, --record-count int       The maximum number of records to show. Defaults to show all records except if -o or -n option is set, then default is one.
+  -c, --record-count int       The maximum number of records to show Defaults to show all records except if -o or -n option is set, then default is one.
   -t, --record-type strings    filter record types. For more than one, repeat flag or comma separated list.
                                Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion
   -S, --response-code string   filter records with given http response codes. Format is 'from-to' where from is inclusive and to is exclusive.
@@ -47,7 +47,7 @@ warc cat -n4 -P file1.warc.gz | feh -
 ### Options inherited from parent commands
 
 ```
-      --config string           config file. If not set, /etc/warc/, $HOME/.warc/ and current working dir will be searched for file config.yaml
+      --config string           config file. If not set, /etc/xdg/warc, /home/johnh/.config/warc and the current directory will be searched for a file named 'config.yaml'
       --log-console strings     the kind of log output to write to console. Valid values: info, error, summary, progress (default [progress,summary])
       --log-file strings        the kind of log output to write to file. Valid values: info, error, summary (default [info,error,summary])
   -L, --log-file-name string    a file to write log output. Empty for no log file
