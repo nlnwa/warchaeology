@@ -251,8 +251,5 @@ type State struct {
 	dir       string   // Initial dir from command line
 	file      string
 	records   *ListWidget
-	header    string
-	content   string
-	errors    string
 	filter    *recordFilter
 }

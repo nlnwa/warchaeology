@@ -114,9 +114,7 @@ func safeMul(a, b int64) int64 {
 type OutOfSpaceError string
 
 func NewOutOfSpaceError(format string, a ...any) OutOfSpaceError {
-	var e OutOfSpaceError
-	e = OutOfSpaceError(fmt.Sprintf(format, a...))
-	return e
+	return OutOfSpaceError(fmt.Sprintf(format, a...))
 }
 
 func (o OutOfSpaceError) Error() string {

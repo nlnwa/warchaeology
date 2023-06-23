@@ -155,7 +155,7 @@ func (r *result) UnmarshalBinary(data []byte) error {
 	v, n = binary.Varint(data[read:])
 	r.duplicates = v
 	read += n
-	v, n = binary.Varint(data[read:])
+	v, _ = binary.Varint(data[read:])
 	r.errorCount = v
 
 	return nil

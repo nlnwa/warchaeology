@@ -24,5 +24,5 @@ import (
 
 func TestEmptyCommandPrompt(t *testing.T) {
 	shell := cmd.NewCommand()
-	shell.Execute()
+	_ = shell.Execute()
 }

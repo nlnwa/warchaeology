@@ -46,7 +46,7 @@ func (w *ShortcutHelpWidget) Layout(g *gocui.Gui) error {
 		v.Editor = gocui.EditorFunc(func(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 			state.modalView = ""
 			g.Cursor = false
-			g.DeleteView(shortcutHelpWidgetName)
+			_ = g.DeleteView(shortcutHelpWidgetName)
 		})
 		v.Title = shortcutHelpWidgetName
 		v.WriteString("f: find in current window\n\nFilters:\ne: error\ni: warcinfo\nq: request\nr: response\nm: metadata\nv: revisit\ns: resource\nc: continuation\nn: conversion")

@@ -38,7 +38,6 @@ type conf struct {
 	offset      int64
 	recordCount int
 	strict      bool
-	format      string
 	fields      string
 	filter      *filter.Filter
 	delimiter   string
@@ -183,7 +182,6 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 		if err == io.EOF || (c.recordCount > 0 && count >= c.recordCount) {
 			if line != "" {
 				c.writer.Write(line, size)
-				line = ""
 			}
 			break
 		}
