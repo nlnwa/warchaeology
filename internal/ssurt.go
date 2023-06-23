@@ -64,8 +64,10 @@ func SsurtUrl(u *url.Url, includeScheme bool) (string, error) {
 	return result.String(), nil
 }
 
+var surtParser = url.NewParser(url.WithSkipEqualsForEmptySearchParamsValue())
+
 func SsurtString(u string, includeScheme bool) (string, error) {
-	u2, err := url.Parse(u)
+	u2, err := surtParser.Parse(u)
 	if err != nil {
 		return "", err
 	}
