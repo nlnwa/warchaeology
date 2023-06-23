@@ -94,9 +94,9 @@ func (w *RecordWidget) Layout(g *gocui.Gui) error {
 		v.Title = "Errors"
 	}
 
-	w.addKeybindings(g, w.headerView)
-	w.addKeybindings(g, w.contentView)
-	w.addKeybindings(g, w.errorView)
+	_ = w.addKeybindings(g, w.headerView)
+	_ = w.addKeybindings(g, w.contentView)
+	_ = w.addKeybindings(g, w.errorView)
 
 	return nil
 }

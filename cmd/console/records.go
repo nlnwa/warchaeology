@@ -71,7 +71,7 @@ func populateRecords(g *gocui.Gui, ctx context.Context, finishedCb func(), widge
 			if err != nil {
 				goto end
 			}
-			rec.ValidateDigest(validate)
+			_ = rec.ValidateDigest(validate)
 
 			wr := record{
 				id:         rec.WarcHeader().Get(gowarc.WarcRecordID),

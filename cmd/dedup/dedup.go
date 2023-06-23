@@ -344,9 +344,6 @@ func payloadLength(wr gowarc.WarcRecord) int64 {
 	case gowarc.ProtocolHeaderBlock:
 		length, _ = wr.ContentLength()
 		length -= int64(len(v.ProtocolHeaderBytes()))
-	case gowarc.HttpResponseBlock:
-		length, _ = wr.ContentLength()
-		length -= int64(len(v.ProtocolHeaderBytes()))
 	case gowarc.WarcFieldsBlock:
 		length = v.Size()
 	}

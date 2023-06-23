@@ -223,7 +223,7 @@ func (s *SearchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mod
 		// If not here the esc key will act like the KeySpace
 		fallthrough
 	case gocui.KeyEnter:
-		s.g.DeleteView(v.Name())
+		_ = s.g.DeleteView(v.Name())
 		state.modalView = ""
 		s.g.Cursor = false
 	default:
@@ -245,20 +245,20 @@ func (w *ListWidget) currentView(g *gocui.Gui, v *gocui.View) error {
 	_, oy := v.Origin()
 	_, cy := v.Cursor()
 	newSelect := cy + oy
-	w.selectLine(g, v, newSelect)
+	_ = w.selectLine(g, v, newSelect)
 	return nil
 }
 
 func (w *ListWidget) cursorDown(g *gocui.Gui, v *gocui.View) error {
 	if v != nil {
-		w.selectLine(g, v, w.selected+1)
+		_ = w.selectLine(g, v, w.selected+1)
 	}
 	return nil
 }
 
 func (w *ListWidget) cursorUp(g *gocui.Gui, v *gocui.View) error {
 	if v != nil {
-		w.selectLine(g, v, w.selected-1)
+		_ = w.selectLine(g, v, w.selected-1)
 	}
 	return nil
 }
@@ -378,7 +378,7 @@ func (w *ListWidget) upd(g *gocui.Gui, ctx context.Context, rec []interface{}) {
 					w.filteredRecords = append(w.filteredRecords, r)
 					fmt.Fprintf(v, "%s\n", r)
 					if len(w.filteredRecords) == 1 {
-						w.selectLine(g, v, 0)
+						_ = w.selectLine(g, v, 0)
 						w.selectFunc(g, w)
 					}
 				}

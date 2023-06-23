@@ -30,8 +30,6 @@ import (
 type RecordWriter struct {
 	sep        string
 	fields     []*field
-	off        int64
-	line       string
 	sizeFields []*field
 }
 
@@ -51,7 +49,7 @@ func NewRecordWriter(format, separator string) *RecordWriter {
 		sep: separator,
 	}
 
-	re := regexp.MustCompile("([abBeghikmMNrsSTV])([+-]?)(\\d*)")
+	re := regexp.MustCompile(`([abBeghikmMNrsSTV])([+-]?)(\d*)`)
 	m := re.FindAllStringSubmatch(format, -1)
 	for _, sm := range m {
 		t := &field{name: sm[1][0]}
@@ -142,12 +140,12 @@ func createStringFn(align, length int, valueFn toStringFn) writerFn {
 			}
 		default:
 			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return fmt.Sprintf("%s", utils.CropString(valueFn(wr, fileName, offset), length))
+				return utils.CropString(valueFn(wr, fileName, offset), length)
 			}
 		}
 	} else {
 		return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			return fmt.Sprintf("%s", valueFn(wr, fileName, offset))
+			return valueFn(wr, fileName, offset)
 		}
 	}
 }

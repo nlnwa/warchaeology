@@ -48,23 +48,23 @@ func (r *recordFilter) mouseToggleFilter(g *gocui.Gui, v *gocui.View) error {
 
 	switch strings.ToLower(word) {
 	case "error":
-		r.toggleErrorFilter(g, v)
+		_ = r.toggleErrorFilter(g, v)
 	case "warcinfo":
-		r.toggleRecordTypeFilter(g, gowarc.Warcinfo)
+		_ = r.toggleRecordTypeFilter(g, gowarc.Warcinfo)
 	case "request":
-		r.toggleRecordTypeFilter(g, gowarc.Request)
+		_ = r.toggleRecordTypeFilter(g, gowarc.Request)
 	case "response":
-		r.toggleRecordTypeFilter(g, gowarc.Response)
+		_ = r.toggleRecordTypeFilter(g, gowarc.Response)
 	case "metadata":
-		r.toggleRecordTypeFilter(g, gowarc.Metadata)
+		_ = r.toggleRecordTypeFilter(g, gowarc.Metadata)
 	case "revisit":
-		r.toggleRecordTypeFilter(g, gowarc.Revisit)
+		_ = r.toggleRecordTypeFilter(g, gowarc.Revisit)
 	case "resource":
-		r.toggleRecordTypeFilter(g, gowarc.Resource)
+		_ = r.toggleRecordTypeFilter(g, gowarc.Resource)
 	case "continuation":
-		r.toggleRecordTypeFilter(g, gowarc.Continuation)
+		_ = r.toggleRecordTypeFilter(g, gowarc.Continuation)
 	case "conversion":
-		r.toggleRecordTypeFilter(g, gowarc.Conversion)
+		_ = r.toggleRecordTypeFilter(g, gowarc.Conversion)
 	}
 
 	return nil
