@@ -70,7 +70,7 @@ func TestCommand(t *testing.T) {
 		{
 			name:    "root_env",
 			cmdLine: []string{"root"},
-			env:     []env{{"K5", "v5env"}},
+			env:     []env{{"WARC_K5", "v5env"}},
 			expected: config{
 				"v1f1l1",
 				"v2f2l1",
@@ -104,7 +104,7 @@ func TestCommand(t *testing.T) {
 		{
 			name:    "root_file_env",
 			cmdLine: []string{"root", "--config", "custom_config.yaml"},
-			env:     []env{{"K5", "v5env"}},
+			env:     []env{{"WARC_K5", "v5env"}},
 			expected: config{
 				"v1flagdefault",
 				"v2flagdefault",
@@ -116,7 +116,7 @@ func TestCommand(t *testing.T) {
 		{
 			name:    "root_env_flag",
 			cmdLine: []string{"root", "--k5", "v5flag"},
-			env:     []env{{"K5", "v5env"}},
+			env:     []env{{"WARC_K5", "v5env"}},
 			expected: config{
 				"v1f1l1",
 				"v2f2l1",
@@ -150,7 +150,7 @@ func TestCommand(t *testing.T) {
 		{
 			name:    "root_env_help",
 			cmdLine: []string{"root", "-h"},
-			env:     []env{{"K5", "v5env"}},
+			env:     []env{{"WARC_K5", "v5env"}},
 			expected: config{
 				"v1f1l1",
 				"v2f2l1",
