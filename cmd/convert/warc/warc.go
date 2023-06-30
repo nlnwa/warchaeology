@@ -132,6 +132,7 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 			gowarc.WithAddMissingContentLength(true),
 			gowarc.WithAddMissingRecordId(true),
 			gowarc.WithFixContentLength(true),
+			gowarc.WithFixWarcFieldsBlockErrors(true),
 		)
 	} else {
 		opts = append(opts,
