@@ -1,5 +1,5 @@
 ---
-date: 2023-05-02T10:06:41+02:00
+date: 2023-06-30T15:18:26+02:00
 title: "warc completion"
 slug: warc_completion
 url: /cmd/warc_completion/
