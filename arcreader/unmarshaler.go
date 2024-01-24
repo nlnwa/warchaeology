@@ -34,7 +34,6 @@ type unmarshaler struct {
 	opts       []gowarc.WarcRecordOption
 	LastOffset int64
 	version    int
-	warcInfoID string
 	gz         *gzip.Reader
 }
 
@@ -185,7 +184,7 @@ func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRe
 	switch u.version {
 	case 1:
 		recordType, url, _, date, contentType, length, err = u.parseUrlRecordV1(l1)
-		if err != nil {
+		if err != nil || recordType != gowarc.Warcinfo {
 			return nil, nil, err
 		}
 	default:
@@ -199,13 +198,15 @@ func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRe
 	read += len(l3)
 	remaining := length - int64(read)
 
-	rb := gowarc.NewRecordBuilder(0, u.opts...)
-	rb.SetRecordType(recordType)
-	rb.AddWarcHeader(gowarc.WarcFilename, strings.TrimPrefix(url, "filedesc://"))
+	rb := gowarc.NewRecordBuilder(gowarc.Metadata, u.opts...)
+	rb.AddWarcHeader(gowarc.WarcTargetURI, url)
 	rb.AddWarcHeader(gowarc.ContentType, contentType)
-
 	rb.AddWarcHeaderTime(gowarc.WarcDate, date)
-	rb.AddWarcHeaderInt64(gowarc.ContentLength, remaining)
+
+	if _, err = rb.WriteString(l1 + l2 + l3); err != nil {
+		_ = rb.Close()
+		return nil, nil, err
+	}
 
 	c2 := NewLimitedCountingReader(r, remaining)
 	_, err = rb.ReadFrom(c2)
@@ -218,9 +219,7 @@ func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRe
 	}
 
 	wr, validation, err := rb.Build()
-	if wr.Type() == gowarc.Warcinfo {
-		u.warcInfoID = wr.WarcHeader().Get(gowarc.WarcRecordID)
-	}
+
 	return wr, validation, err
 }
 
@@ -248,7 +247,6 @@ func (u *unmarshaler) parseRecord(r *bufio.Reader, l1 string) (gowarc.WarcRecord
 	rb.AddWarcHeaderTime(gowarc.WarcDate, date)
 	rb.AddWarcHeaderInt64(gowarc.ContentLength, length)
 	rb.AddWarcHeader(gowarc.WarcIPAddress, ip)
-	rb.AddWarcHeader(gowarc.WarcWarcinfoID, u.warcInfoID)
 
 	c2 := NewLimitedCountingReader(r, length)
 	_, err = rb.ReadFrom(c2)
@@ -286,7 +284,7 @@ func (u *unmarshaler) parseUrlRecordV1(l string) (gowarc.RecordType, string, str
 
 	switch {
 	case strings.HasPrefix(url, "http"):
-		contentType = "application/http; msgtype=response"
+		contentType = "application/http;msgtype=response"
 	case strings.HasPrefix(url, "dns:"):
 		contentType = "text/dns"
 		recordType = gowarc.Resource

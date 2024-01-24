@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/arcreader"
+	"github.com/nlnwa/warchaeology/internal/cmdversion"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
@@ -48,11 +49,31 @@ func NewCommand() *cobra.Command {
 		Short: "Convert arc file into warc file",
 		Long:  ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if wc, err := warcwriterconfig.NewFromViper(); err != nil {
+			wc, err := warcwriterconfig.NewFromViper()
+			if err != nil {
 				return err
-			} else {
-				c.writerConf = wc
 			}
+
+			wc.OneToOneWriter = true
+
+			if wc.OneToOneWriter {
+				wc.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
+					payload := &gowarc.WarcFields{}
+					payload.Set("software", cmdversion.SoftwareVersion()+" https://github.com/nlnwa/warchaeology")
+					payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", wc.WarcVersion.Minor(), wc.WarcVersion.Minor()))
+					payload.Set("description", "Converted from ARC")
+					h, e := os.Hostname()
+					if e != nil {
+						return e
+					}
+					payload.Set("host", h)
+
+					_, err := recordBuilder.WriteString(payload.String())
+					return err
+				}
+			}
+
+			c.writerConf = wc
 			c.concurrency = viper.GetInt(flag.Concurrency)
 
 			if len(args) == 0 {
@@ -80,13 +101,18 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().Int64P(flag.FileSize, "S", 1024*1024*1024, flag.FileSizeHelp)
 	cmd.Flags().BoolP(flag.Compress, "z", false, flag.CompressHelp)
 	cmd.Flags().Bool(flag.CompressionLevel, false, flag.CompressionLevelHelp)
-	cmd.Flags().StringP(flag.FilePrefix, "p", "", flag.FilePrefixHelp)
+	cmd.Flags().StringP(flag.FilePrefix, "p", "from_arc_", flag.FilePrefixHelp)
 	cmd.Flags().StringP(flag.WarcDir, "w", ".", flag.WarcDirHelp)
 	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
-	cmd.Flags().StringP(flag.NameGenerator, "n", "default", flag.NameGeneratorHelp)
+	cmd.Flags().StringP(flag.NameGenerator, "n", "identity", flag.NameGeneratorHelp)
 	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
 	cmd.Flags().String(flag.WarcVersion, "1.1", flag.WarcVersionHelp)
 	cmd.Flags().StringP(flag.DefaultDate, "t", time.Now().Format(warcwriterconfig.DefaultDateFormat), flag.DefaultDateHelp)
+
+	if err := cmd.RegisterFlagCompletionFunc(flag.NameGenerator,
+		cobra.FixedCompletions([]string{"default", "identity"}, cobra.ShellCompDirectiveNoFileComp)); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -122,13 +148,6 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 	defer func() { _ = a.Close() }()
 
 	var writer *gowarc.WarcFileWriter
-	if c.writerConf.WarcFileNameGenerator == "identity" {
-		defer func() {
-			if writer != nil {
-				_ = writer.Close()
-			}
-		}()
-	}
 
 	for {
 		var currentOffset int64
@@ -139,6 +158,10 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 		if err != nil {
 			result.AddError(fmt.Errorf("error: %v, rec num: %d, offset %d", err.Error(), result.Records(), currentOffset))
 		}
+	}
+
+	if writer != nil {
+		_ = writer.Close()
 	}
 
 	return result
@@ -152,25 +175,28 @@ func handleRecord(c *conf, wf *arcreader.ArcFileReader, fileName string, result 
 	writerOut = writer
 
 	wr, currentOffset, validation, e := wf.Next()
-	offset = currentOffset
-	result.IncrRecords()
-	result.IncrProcessed()
 	defer func() {
 		if wr != nil {
 			_ = wr.Close()
 		}
 	}()
+
+	offset = currentOffset
+	result.IncrRecords()
+	result.IncrProcessed()
 	if e != nil {
 		err = e
 		return
 	}
 	if !validation.Valid() {
+		fmt.Println(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), currentOffset, validation))
 		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), currentOffset, validation))
 	}
 
 	if writer == nil {
+		fmt.Println("Opening writer for", fileName)
 		writer = c.writerConf.GetWarcWriter(fileName, wr.WarcHeader().Get(gowarc.WarcDate))
-		if c.writerConf.WarcFileNameGenerator == "identity" {
+		if c.writerConf.OneToOneWriter {
 			writerOut = writer
 		}
 	}
