@@ -45,6 +45,7 @@ type WarcWriterConfig struct {
 	writers               map[string]*gowarc.WarcFileWriter
 	WarcInfoFunc          func(recordBuilder gowarc.WarcRecordBuilder) error
 	writersGuard          sync.Mutex
+	OneToOneWriter        bool
 }
 
 func NewFromViper() (*WarcWriterConfig, error) {
@@ -100,61 +101,36 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) *gowarc.
 	var lookupKey string
 	var dir string
 
-	switch w.WarcFileNameGenerator {
-	case "identity":
+	if w.OneToOneWriter {
 		// Only one writer with unrestricted size to allow for one to one mapping
 		w.ConcurrentWriters = 1
 		w.MaxFileSize = 0
+	}
 
-		n := NewIdentityNamer(fromFileName)
-		n.Prefix = w.FilePrefix
-		s, err := parseSubdirPattern(w.SubDirPattern, warcDate)
-		if err != nil {
-			panic(err)
-		}
-		if s != "" {
-			n.Directory = w.OutDir + "/" + s
-		} else {
-			n.Directory = w.OutDir
-		}
-		if err := os.MkdirAll(n.Directory, 0777); err != nil {
+	s, err := parseSubdirPattern(w.SubDirPattern, warcDate)
+	if err != nil {
+		panic(err)
+	}
+	if s != "" {
+		dir = w.OutDir + "/" + s
+	} else {
+		dir = w.OutDir
+	}
+	lookupKey = s
+
+	switch w.WarcFileNameGenerator {
+	case "identity":
+		namer = NewIdentityNamer(fromFileName, w.FilePrefix, dir)
+	default:
+		namer = NewDefaultNamer(fromFileName, w.FilePrefix, dir)
+	}
+
+	if w.OneToOneWriter {
+		if err := os.MkdirAll(dir, 0777); err != nil {
 			panic(err)
 		}
 
 		return gowarc.NewWarcFileWriter(
-			gowarc.WithMaxConcurrentWriters(w.ConcurrentWriters),
-			gowarc.WithCompression(w.Compress),
-			gowarc.WithCompressionLevel(w.CompressionLevel),
-			gowarc.WithMaxFileSize(w.MaxFileSize),
-			gowarc.WithRecordOptions(gowarc.WithVersion(w.WarcVersion)),
-			gowarc.WithFileNameGenerator(n),
-			gowarc.WithFlush(w.Flush),
-			gowarc.WithWarcInfoFunc(w.WarcInfoFunc),
-			gowarc.WithRecordOptions(gowarc.WithVersion(w.WarcVersion), gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir))),
-		)
-	default:
-		n := &gowarc.PatternNameGenerator{Prefix: w.FilePrefix}
-		s, err := parseSubdirPattern(w.SubDirPattern, warcDate)
-		if err != nil {
-			panic(err)
-		}
-		if s != "" {
-			n.Directory = w.OutDir + "/" + s
-		} else {
-			n.Directory = w.OutDir
-		}
-		namer = n
-		lookupKey = s
-		dir = n.Directory
-	}
-
-	w.writersGuard.Lock()
-	defer w.writersGuard.Unlock()
-
-	if ww, ok := w.writers[lookupKey]; ok {
-		return ww
-	} else {
-		ww = gowarc.NewWarcFileWriter(
 			gowarc.WithMaxConcurrentWriters(w.ConcurrentWriters),
 			gowarc.WithCompression(w.Compress),
 			gowarc.WithCompressionLevel(w.CompressionLevel),
@@ -165,11 +141,30 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) *gowarc.
 			gowarc.WithWarcInfoFunc(w.WarcInfoFunc),
 			gowarc.WithRecordOptions(gowarc.WithVersion(w.WarcVersion), gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir))),
 		)
-		w.writers[lookupKey] = ww
-		if err := os.MkdirAll(dir, 0777); err != nil {
-			panic(err)
+	} else {
+		w.writersGuard.Lock()
+		defer w.writersGuard.Unlock()
+
+		if ww, ok := w.writers[lookupKey]; ok {
+			return ww
+		} else {
+			ww = gowarc.NewWarcFileWriter(
+				gowarc.WithMaxConcurrentWriters(w.ConcurrentWriters),
+				gowarc.WithCompression(w.Compress),
+				gowarc.WithCompressionLevel(w.CompressionLevel),
+				gowarc.WithMaxFileSize(w.MaxFileSize),
+				gowarc.WithRecordOptions(gowarc.WithVersion(w.WarcVersion)),
+				gowarc.WithFileNameGenerator(namer),
+				gowarc.WithFlush(w.Flush),
+				gowarc.WithWarcInfoFunc(w.WarcInfoFunc),
+				gowarc.WithRecordOptions(gowarc.WithVersion(w.WarcVersion), gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir))),
+			)
+			w.writers[lookupKey] = ww
+			if err := os.MkdirAll(dir, 0777); err != nil {
+				panic(err)
+			}
+			return ww
 		}
-		return ww
 	}
 }
 

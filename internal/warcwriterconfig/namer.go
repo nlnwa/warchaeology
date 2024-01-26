@@ -4,22 +4,34 @@ import (
 	"github.com/nlnwa/gowarc"
 	"path"
 	"strings"
+	"sync"
 	"time"
 )
 
-type IdentityNamer struct {
-	gowarc.PatternNameGenerator
-}
-
-func NewIdentityNamer(fromFileName string) *IdentityNamer {
+func NewIdentityNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGenerator {
 	fromFileName = path.Base(fromFileName)
 	fromFileName = strings.TrimSuffix(fromFileName, ".gz")
 	fromFileName = strings.TrimSuffix(fromFileName, ".arc")
 	fromFileName = strings.TrimSuffix(fromFileName, ".warc")
 
-	i := &IdentityNamer{}
-	i.Pattern = "%{prefix}s" + fromFileName + ".%{ext}s"
-	return i
+	return &gowarc.PatternNameGenerator{
+		Pattern:   "%{prefix}s" + fromFileName + ".%{ext}s",
+		Prefix:    filePrefix,
+		Directory: dir,
+	}
+}
+
+var once sync.Once
+var defaultNamer gowarc.WarcFileNameGenerator
+
+func NewDefaultNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGenerator {
+	once.Do(func() {
+		defaultNamer = &gowarc.PatternNameGenerator{
+			Prefix:    filePrefix,
+			Directory: dir,
+		}
+	})
+	return defaultNamer
 }
 
 func parseSubdirPattern(dirPattern string, recordDate string) (string, error) {
