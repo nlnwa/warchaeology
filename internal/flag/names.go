@@ -40,6 +40,8 @@ const (
 	DedupSizeGain      = "min-size-gain"
 	MinFreeDisk        = "min-free-disk"
 	Repair             = "repair"
+	SrcFilesystem      = "source-filesystem"
+	SrcFileList        = "source-file-list"
 
 	LogFileNameHelp = `a file to write log output. Empty for no log file`
 	LogFileHelp     = `the kind of log output to write to file. Valid values: info, error, summary`
@@ -96,4 +98,6 @@ output file name (prefix and suffix might still change). In this mode exactly on
 	DedupSizeGainHelp = `minimum bytes one must earn to perform a deduplication`
 	MinFreeDiskHelp   = `minimum free space on disk to allow WARC writing`
 	RepairHelp        = `try to fix errors in records`
+	SrcFilesystemHelp = `the source filesystem to use for input files. Default is to use OS file system. Legal values: ftp://user/pass@host:port`
+	SrcFileListHelp   = `a file containing a list of files to process, one file per line`
 )

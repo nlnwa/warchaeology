@@ -44,7 +44,7 @@ func (r *recordFilter) mouseToggleFilter(g *gocui.Gui, v *gocui.View) error {
 	} else {
 		nr = nr + x
 	}
-	word := string(str[nl:nr])
+	word := str[nl:nr]
 
 	switch strings.ToLower(word) {
 	case "error":

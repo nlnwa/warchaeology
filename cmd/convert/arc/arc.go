@@ -26,6 +26,7 @@ import (
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io"
@@ -76,7 +77,7 @@ func NewCommand() *cobra.Command {
 			c.writerConf = wc
 			c.concurrency = viper.GetInt(flag.Concurrency)
 
-			if len(args) == 0 {
+			if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
 				return errors.New("missing file or directory name")
 			}
 			c.files = args
@@ -108,6 +109,7 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
 	cmd.Flags().String(flag.WarcVersion, "1.1", flag.WarcVersionHelp)
 	cmd.Flags().StringP(flag.DefaultDate, "t", time.Now().Format(warcwriterconfig.DefaultDateFormat), flag.DefaultDateHelp)
+	cmd.Flags().String(flag.SrcFilesystem, "", flag.SrcFilesystemHelp)
 
 	if err := cmd.RegisterFlagCompletionFunc(flag.NameGenerator,
 		cobra.FixedCompletions([]string{"default", "identity"}, cobra.ShellCompDirectiveNoFileComp)); err != nil {
@@ -133,10 +135,10 @@ func runE(cmd string, c *conf) error {
 	return fileWalker.Walk(ctx, stats)
 }
 
-func (c *conf) readFile(fileName string) filewalker.Result {
+func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 	result := filewalker.NewResult(fileName)
 
-	a, err := arcreader.NewArcFileReader(fileName, 0,
+	a, err := arcreader.NewArcFileReader(fs, fileName, 0,
 		gowarc.WithVersion(c.writerConf.WarcVersion),
 		gowarc.WithAddMissingDigest(true),
 		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)),

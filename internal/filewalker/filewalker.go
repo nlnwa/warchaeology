@@ -1,11 +1,15 @@
 package filewalker
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/ftpfs"
 	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/nlnwa/warchaeology/internal/workerpool"
+	"github.com/nlnwa/whatwg-url/url"
+	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 	"io/fs"
 	"os"
@@ -30,26 +34,37 @@ const (
 
 type filewalker struct {
 	cmd             string
+	fs              afero.Fs
 	paths           []string
 	recursive       bool
 	followSymlinks  bool
 	suffixes        []string
 	concurrency     int
-	processor       func(path string) Result
-	fn              func(path string)
+	processor       func(fs afero.Fs, path string) Result
+	fn              func(fs afero.Fs, path string)
 	logFileName     string
 	logFile         *os.File
 	logfileTypes    logType
 	logConsoleTypes logType
-	processedPaths  map[string]bool
+	processedPaths  StringSet
 	fileIndex       *FileIndex
 }
 
-func New(paths []string, recursive, followSymlinks bool, suffixes []string, concurrency int, fn func(path string) Result) FileWalker {
-	return &filewalker{paths: paths, recursive: recursive, followSymlinks: followSymlinks, suffixes: suffixes, concurrency: concurrency, processor: fn, processedPaths: map[string]bool{}}
+func New(paths []string, recursive, followSymlinks bool, suffixes []string, concurrency int,
+	fn func(fs afero.Fs, path string) Result) FileWalker {
+	return &filewalker{
+		fs:             resolveFs(),
+		paths:          paths,
+		recursive:      recursive,
+		followSymlinks: followSymlinks,
+		suffixes:       suffixes,
+		concurrency:    concurrency,
+		processor:      fn,
+		processedPaths: NewStringSet(),
+	}
 }
 
-func NewFromViper(cmd string, paths []string, fn func(path string) Result) FileWalker {
+func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) Result) FileWalker {
 	var consoleType logType
 	var fileType logType
 	if utils.StdoutIsTerminal() {
@@ -82,6 +97,7 @@ func NewFromViper(cmd string, paths []string, fn func(path string) Result) FileW
 	}
 	return &filewalker{
 		cmd:             cmd,
+		fs:              resolveFs(),
 		paths:           paths,
 		recursive:       viper.GetBool(flag.Recursive),
 		followSymlinks:  viper.GetBool(flag.FollowSymlinks),
@@ -91,8 +107,29 @@ func NewFromViper(cmd string, paths []string, fn func(path string) Result) FileW
 		logFileName:     viper.GetString(flag.LogFileName),
 		logfileTypes:    fileType,
 		logConsoleTypes: consoleType,
-		processedPaths:  map[string]bool{},
+		processedPaths:  NewStringSet(),
 	}
+}
+
+func resolveFs() afero.Fs {
+	fsDef := viper.GetString(flag.SrcFilesystem)
+	if fsDef == "" {
+		return afero.NewOsFs()
+	}
+
+	u, err := url.Parse(fsDef)
+	if err != nil {
+		panic(err)
+	}
+
+	//ftp://user:password@host:port/path
+	if u.Protocol() == "ftp:" {
+		hostPort := fmt.Sprintf("%s:%d", u.Host(), u.DecodedPort())
+		return ftpfs.New(hostPort, u.Username(), u.Password(), int32(viper.GetInt(flag.Concurrency)))
+	}
+
+	panic("Unsupported filesystem: " + fsDef)
+	return nil
 }
 
 func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
@@ -118,7 +155,7 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 
 	wp := workerpool.New(ctx, f.concurrency)
 	resultChan := make(chan Result, 32)
-	f.fn = func(path string) {
+	f.fn = func(fs afero.Fs, path string) {
 		wp.Submit(func() {
 			if f.fileIndex != nil {
 				if r := f.fileIndex.GetFileStats(path); r != nil {
@@ -127,7 +164,7 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 				}
 			}
 
-			r := f.processor(path)
+			r := f.processor(fs, path)
 
 			if f.fileIndex != nil {
 				f.fileIndex.SaveFileStats(path, r)
@@ -179,38 +216,71 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 			}
 		}
 	}()
-
 	for _, p := range f.paths {
-		if !f.processedPaths[p] {
+		if !f.processedPaths.Contains(p) {
 			if err := f.walkDir(ctx, p, p); err != nil {
 				return err
 			}
+		}
+	}
+	srcFileList := viper.GetString(flag.SrcFileList)
+	if srcFileList != "" {
+		sfl, err := os.Open(srcFileList) //open the file
+		if err != nil {
+			fmt.Println("Error opening file:", err)
+			return nil
+		}
+		defer sfl.Close()
+
+		scanner := bufio.NewScanner(sfl) //scan the contents of a file and print line by line
+		for scanner.Scan() {
+			p := scanner.Text()
+			if !f.processedPaths.Contains(p) {
+				if err := f.walkDir(ctx, p, p); err != nil {
+					return err
+				}
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			fmt.Println("Error reading from file:", err) //print error if scanning is not done properly
 		}
 	}
 	return nil
 }
 
 func (f *filewalker) walkDir(ctx context.Context, root, dirName string) error {
-	return filepath.WalkDir(dirName, func(path string, d fs.DirEntry, err error) error {
+	return afero.Walk(f.fs, dirName, func(path string, d fs.FileInfo, err error) error {
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, "Error:", err)
-			return filepath.SkipDir
+			return nil
 		}
 		if d.IsDir() {
-			f.processedPaths[path] = true
+			f.processedPaths.Add(path)
 			if !f.recursive && root != path {
 				return filepath.SkipDir
 			}
-		} else if !d.IsDir() && !d.Type().IsRegular() {
+		} else if !d.IsDir() && !d.Mode().IsRegular() {
 			if f.followSymlinks {
-				s, _ := filepath.EvalSymlinks(path)
-				if f.processedPaths[s] {
-					return nil
+				if lr, ok := f.fs.(afero.LinkReader); ok {
+					s, err := lr.ReadlinkIfPossible(path)
+					if err != nil {
+						_, _ = fmt.Fprintln(os.Stderr, "Error:", err)
+						return filepath.SkipDir
+					}
+					s = filepath.Join(filepath.Dir(path), s)
+					if f.processedPaths.Contains(s) {
+						return nil
+					}
+					return f.walkDir(ctx, root, s)
+				} else {
+					_, _ = fmt.Fprintln(os.Stderr, "Error: Symlinks not supported by filesystem")
+					return filepath.SkipDir
 				}
-				return f.walkDir(ctx, root, s)
 			}
-		} else if f.hasSuffix(path) {
-			f.fn(path)
+		} else if f.hasSuffix(path) && !f.processedPaths.Contains(path) {
+			f.processedPaths.Add(path)
+			f.fn(f.fs, path)
 		}
 
 		select {
@@ -270,5 +340,5 @@ func (f *filewalker) logError(res Result, recNum int) {
 	}
 }
 
-var anim string = `-\|/`
+var anim = `-\|/`
 var animPos int
