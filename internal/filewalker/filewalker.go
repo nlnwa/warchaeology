@@ -129,7 +129,6 @@ func resolveFs() afero.Fs {
 	}
 
 	panic("Unsupported filesystem: " + fsDef)
-	return nil
 }
 
 func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
