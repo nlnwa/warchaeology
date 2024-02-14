@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/ftpfs"
+	"github.com/nlnwa/warchaeology/internal/hooks"
 	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/nlnwa/warchaeology/internal/workerpool"
 	"github.com/nlnwa/whatwg-url/url"
@@ -33,21 +34,22 @@ const (
 )
 
 type filewalker struct {
-	cmd             string
-	fs              afero.Fs
-	paths           []string
-	recursive       bool
-	followSymlinks  bool
-	suffixes        []string
-	concurrency     int
-	processor       func(fs afero.Fs, path string) Result
-	fn              func(fs afero.Fs, path string)
-	logFileName     string
-	logFile         *os.File
-	logfileTypes    logType
-	logConsoleTypes logType
-	processedPaths  StringSet
-	fileIndex       *FileIndex
+	cmd                string
+	fs                 afero.Fs
+	paths              []string
+	recursive          bool
+	followSymlinks     bool
+	suffixes           []string
+	concurrency        int
+	processor          func(fs afero.Fs, path string) Result
+	logFileName        string
+	logFile            *os.File
+	logfileTypes       logType
+	logConsoleTypes    logType
+	processedPaths     StringSet
+	fileIndex          *FileIndex
+	openInputFileHook  hooks.OpenInputFileHook
+	closeInputFileHook hooks.CloseInputFileHook
 }
 
 func New(paths []string, recursive, followSymlinks bool, suffixes []string, concurrency int,
@@ -95,19 +97,36 @@ func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) 
 			panic("Illegal config value '" + t + "' for " + flag.LogFile)
 		}
 	}
+	var beforeProcessFile hooks.OpenInputFileHook
+	var afterProcessFile hooks.CloseInputFileHook
+	var err error
+	if hook := viper.GetString(flag.OpenInputFileHook); hook != "" {
+		beforeProcessFile, err = hooks.NewOpenInputFileHook(cmd, hook)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if hook := viper.GetString(flag.CloseInputFileHook); hook != "" {
+		afterProcessFile, err = hooks.NewCloseInputFileHook(cmd, hook)
+		if err != nil {
+			panic(err)
+		}
+	}
 	return &filewalker{
-		cmd:             cmd,
-		fs:              resolveFs(),
-		paths:           paths,
-		recursive:       viper.GetBool(flag.Recursive),
-		followSymlinks:  viper.GetBool(flag.FollowSymlinks),
-		suffixes:        viper.GetStringSlice(flag.Suffixes),
-		concurrency:     viper.GetInt(flag.Concurrency),
-		processor:       fn,
-		logFileName:     viper.GetString(flag.LogFileName),
-		logfileTypes:    fileType,
-		logConsoleTypes: consoleType,
-		processedPaths:  NewStringSet(),
+		cmd:                cmd,
+		fs:                 resolveFs(),
+		paths:              paths,
+		recursive:          viper.GetBool(flag.Recursive),
+		followSymlinks:     viper.GetBool(flag.FollowSymlinks),
+		suffixes:           viper.GetStringSlice(flag.Suffixes),
+		concurrency:        viper.GetInt(flag.Concurrency),
+		processor:          fn,
+		logFileName:        viper.GetString(flag.LogFileName),
+		logfileTypes:       fileType,
+		logConsoleTypes:    consoleType,
+		processedPaths:     NewStringSet(),
+		openInputFileHook:  beforeProcessFile,
+		closeInputFileHook: afterProcessFile,
 	}
 }
 
@@ -154,7 +173,7 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 
 	wp := workerpool.New(ctx, f.concurrency)
 	resultChan := make(chan Result, 32)
-	f.fn = func(fs afero.Fs, path string) {
+	fn := func(fs afero.Fs, path string) {
 		wp.Submit(func() {
 			if f.fileIndex != nil {
 				if r := f.fileIndex.GetFileStats(path); r != nil {
@@ -163,7 +182,18 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 				}
 			}
 
+			// run openInputFileHook hook
+			if err := f.openInputFileHook.Run(path); err != nil {
+				panic(err)
+			}
+
+			// Process file
 			r := f.processor(fs, path)
+
+			// run closeInputFileHook hook
+			if err := f.closeInputFileHook.Run(path, r.ErrorCount()); err != nil {
+				panic(err)
+			}
 
 			if f.fileIndex != nil {
 				f.fileIndex.SaveFileStats(path, r)
@@ -217,7 +247,7 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 	}()
 	for _, p := range f.paths {
 		if !f.processedPaths.Contains(p) {
-			if err := f.walkDir(ctx, p, p); err != nil {
+			if err := f.walkDir(ctx, p, p, fn); err != nil {
 				return err
 			}
 		}
@@ -229,13 +259,15 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 			fmt.Println("Error opening file:", err)
 			return nil
 		}
-		defer sfl.Close()
+		defer func(sfl *os.File) {
+			_ = sfl.Close()
+		}(sfl)
 
 		scanner := bufio.NewScanner(sfl) //scan the contents of a file and print line by line
 		for scanner.Scan() {
 			p := scanner.Text()
 			if !f.processedPaths.Contains(p) {
-				if err := f.walkDir(ctx, p, p); err != nil {
+				if err := f.walkDir(ctx, p, p, fn); err != nil {
 					return err
 				}
 			}
@@ -248,7 +280,7 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 	return nil
 }
 
-func (f *filewalker) walkDir(ctx context.Context, root, dirName string) error {
+func (f *filewalker) walkDir(ctx context.Context, root, dirName string, fn func(fs afero.Fs, path string)) error {
 	return afero.Walk(f.fs, dirName, func(path string, d fs.FileInfo, err error) error {
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, "Error:", err)
@@ -271,7 +303,7 @@ func (f *filewalker) walkDir(ctx context.Context, root, dirName string) error {
 					if f.processedPaths.Contains(s) {
 						return nil
 					}
-					return f.walkDir(ctx, root, s)
+					return f.walkDir(ctx, root, s, fn)
 				} else {
 					_, _ = fmt.Fprintln(os.Stderr, "Error: Symlinks not supported by filesystem")
 					return filepath.SkipDir
@@ -279,7 +311,7 @@ func (f *filewalker) walkDir(ctx context.Context, root, dirName string) error {
 			}
 		} else if f.hasSuffix(path) && !f.processedPaths.Contains(path) {
 			f.processedPaths.Add(path)
-			f.fn(f.fs, path)
+			fn(f.fs, path)
 		}
 
 		select {

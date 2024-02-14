@@ -52,7 +52,7 @@ func NewCommand() *cobra.Command {
 			// Nedlib data has a structure which do not allow for identity transformation of filenames
 			viper.Set(flag.NameGenerator, "default")
 
-			if wc, err := warcwriterconfig.NewFromViper(); err != nil {
+			if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
 				return err
 			} else {
 				wc.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
@@ -104,6 +104,10 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().String(flag.WarcVersion, "1.1", flag.WarcVersionHelp)
 	cmd.Flags().StringP(flag.DefaultDate, "t", time.Now().Format(warcwriterconfig.DefaultDateFormat), flag.DefaultDateHelp)
 	cmd.Flags().String(flag.SrcFilesystem, "", flag.SrcFilesystemHelp)
+	cmd.Flags().String(flag.OpenInputFileHook, "", flag.OpenInputFileHookHelp)
+	cmd.Flags().String(flag.CloseInputFileHook, "", flag.CloseInputFileHookHelp)
+	cmd.Flags().String(flag.OpenOutputFileHook, "", flag.OpenOutputFileHookHelp)
+	cmd.Flags().String(flag.CloseOutputFileHook, "", flag.CloseOutputFileHookHelp)
 
 	return cmd
 }
