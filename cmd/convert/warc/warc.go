@@ -53,7 +53,7 @@ func NewCommand() *cobra.Command {
 		Long: `The WARC to WARC converter can be used to reorganize, convert or repair WARC-records.
 This is an experimental feature.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if wc, err := warcwriterconfig.NewFromViper(); err != nil {
+			if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
 				return err
 			} else {
 				c.writerConf = wc
@@ -97,6 +97,10 @@ This is an experimental feature.`,
 	cmd.Flags().String(flag.MinFreeDisk, "256MB", flag.MinFreeDiskHelp)
 	cmd.Flags().BoolP(flag.Repair, "R", false, flag.RepairHelp)
 	cmd.Flags().String(flag.SrcFilesystem, "", flag.SrcFilesystemHelp)
+	cmd.Flags().String(flag.OpenInputFileHook, "", flag.OpenInputFileHookHelp)
+	cmd.Flags().String(flag.CloseInputFileHook, "", flag.CloseInputFileHookHelp)
+	cmd.Flags().String(flag.OpenOutputFileHook, "", flag.OpenOutputFileHookHelp)
+	cmd.Flags().String(flag.CloseOutputFileHook, "", flag.CloseOutputFileHookHelp)
 
 	return cmd
 }

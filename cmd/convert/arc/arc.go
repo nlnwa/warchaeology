@@ -50,7 +50,7 @@ func NewCommand() *cobra.Command {
 		Short: "Convert arc file into warc file",
 		Long:  ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			wc, err := warcwriterconfig.NewFromViper()
+			wc, err := warcwriterconfig.NewFromViper(cmd.Name())
 			if err != nil {
 				return err
 			}
@@ -110,6 +110,10 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().String(flag.WarcVersion, "1.1", flag.WarcVersionHelp)
 	cmd.Flags().StringP(flag.DefaultDate, "t", time.Now().Format(warcwriterconfig.DefaultDateFormat), flag.DefaultDateHelp)
 	cmd.Flags().String(flag.SrcFilesystem, "", flag.SrcFilesystemHelp)
+	cmd.Flags().String(flag.OpenInputFileHook, "", flag.OpenInputFileHookHelp)
+	cmd.Flags().String(flag.CloseInputFileHook, "", flag.CloseInputFileHookHelp)
+	cmd.Flags().String(flag.OpenOutputFileHook, "", flag.OpenOutputFileHookHelp)
+	cmd.Flags().String(flag.CloseOutputFileHook, "", flag.CloseOutputFileHookHelp)
 
 	if err := cmd.RegisterFlagCompletionFunc(flag.NameGenerator,
 		cobra.FixedCompletions([]string{"default", "identity"}, cobra.ShellCompDirectiveNoFileComp)); err != nil {
@@ -196,7 +200,6 @@ func handleRecord(c *conf, wf *arcreader.ArcFileReader, fileName string, result 
 	}
 
 	if writer == nil {
-		fmt.Println("Opening writer for", fileName)
 		writer = c.writerConf.GetWarcWriter(fileName, wr.WarcHeader().Get(gowarc.WarcDate))
 		if c.writerConf.OneToOneWriter {
 			writerOut = writer

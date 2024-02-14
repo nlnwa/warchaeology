@@ -1,0 +1,218 @@
+/*
+ * Copyright 2024 National Library of Norway.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package hooks
+
+import (
+	"github.com/stretchr/testify/assert"
+	"slices"
+	"strings"
+	"testing"
+)
+
+func TestOpenInputFileHook(t *testing.T) {
+	tests := []struct {
+		name     string
+		command  string
+		hook     string
+		fileName string
+		want     []string
+		wantErr  bool
+	}{
+		{"ok", "test", "./test_hook.sh", "test.warc.gz", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, false},
+		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, err := NewOpenInputFileHook(tt.command, tt.hook)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			} else {
+				assert.NoError(t, err)
+			}
+
+			out, err := h.Output(tt.fileName)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			env := strings.Split(strings.TrimSpace(string(out)), "\n")
+			slices.Sort(env)
+
+			if !slices.Equal(env, tt.want) {
+				t.Errorf("OpenInputFileHook.Run() = %v, want %v", env, tt.want)
+			}
+		})
+	}
+}
+
+func TestCloseInputFileHook(t *testing.T) {
+	tests := []struct {
+		name       string
+		command    string
+		hook       string
+		fileName   string
+		errorCount int64
+		want       []string
+		wantErr    bool
+	}{
+		{"no error", "test", "./test_hook.sh", "test.warc.gz", 0, []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseInputFile"}, false},
+		{"error", "test", "./test_hook.sh", "test.warc.gz", 2, []string{"WARC_COMMAND=test", "WARC_ERROR_COUNT=2", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseInputFile"}, false},
+		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", 0, nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, err := NewCloseInputFileHook(tt.command, tt.hook)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			} else {
+				assert.NoError(t, err)
+			}
+
+			out, err := h.Output(tt.fileName, tt.errorCount)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			env := strings.Split(strings.TrimSpace(string(out)), "\n")
+			slices.Sort(env)
+
+			if !slices.Equal(env, tt.want) {
+				t.Errorf("CloseInputFileHook.Run() = %v, want %v", env, tt.want)
+			}
+		})
+	}
+}
+
+func TestOpenOutputFileHook(t *testing.T) {
+	tests := []struct {
+		name        string
+		command     string
+		hook        string
+		fileName    string
+		srcFileName string
+		want        []string
+		wantErr     bool
+	}{
+		{"no srcFile", "test", "./test_hook.sh", "test.warc.gz", "", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenOutputFile"}, false},
+		{"srcFile", "test", "./test_hook.sh", "test.warc.gz", "TestSource", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenOutputFile", "WARC_SRC_FILE_NAME=TestSource"}, false},
+		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", "", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, err := NewOpenOutputFileHook(tt.command, tt.hook)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			} else {
+				assert.NoError(t, err)
+			}
+
+			h = h.WithSrcFileName(tt.srcFileName)
+			out, err := h.Output(tt.fileName)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			env := strings.Split(strings.TrimSpace(string(out)), "\n")
+			slices.Sort(env)
+
+			if !slices.Equal(env, tt.want) {
+				t.Errorf("OpenOutputFileHook.Run() = %v, want %v", env, tt.want)
+			}
+		})
+	}
+}
+
+func TestCloseOutputFileHook(t *testing.T) {
+	tests := []struct {
+		name        string
+		command     string
+		hook        string
+		fileName    string
+		size        int64
+		warcInfoId  string
+		srcFileName string
+		want        []string
+		wantErr     bool
+	}{
+		{"no extras", "test", "./test_hook.sh", "test.warc.gz",
+			1234, "", "",
+			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_SIZE=1234"},
+			false},
+		{"warcInfoId", "test", "./test_hook.sh", "test.warc.gz",
+			1234, "TestId", "",
+			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_INFO_ID=TestId", "WARC_SIZE=1234"},
+			false},
+		{"srcFile", "test", "./test_hook.sh", "test.warc.gz",
+			1234, "", "TestSource",
+			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_SIZE=1234", "WARC_SRC_FILE_NAME=TestSource"},
+			false},
+		{"warcInfoId + srcFile", "test", "./test_hook.sh", "test.warc.gz",
+			1234, "TestId", "TestSource",
+			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_INFO_ID=TestId", "WARC_SIZE=1234", "WARC_SRC_FILE_NAME=TestSource"},
+			false},
+		{"unknown hook", "test", "test_hook.sh", "test.warc.gz",
+			0, "", "", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, err := NewCloseOutputFileHook(tt.command, tt.hook)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			} else {
+				assert.NoError(t, err)
+			}
+
+			h = h.WithSrcFileName(tt.srcFileName)
+			out, err := h.Output(tt.fileName, tt.size, tt.warcInfoId)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			env := strings.Split(strings.TrimSpace(string(out)), "\n")
+			slices.Sort(env)
+
+			if !slices.Equal(env, tt.want) {
+				t.Errorf("CloseOutputFileHook.Run() = %v, want %v", env, tt.want)
+			}
+		})
+	}
+}
+
+func Test_checkExists(t *testing.T) {
+	tests := []struct {
+		name          string
+		command       string
+		wantExistence bool
+	}{
+		{"test_hook.sh", "test_hook.sh", false},
+		{"./test_hook.sh", "./test_hook.sh", true},
+		{"ls", "ls", true},
+		{"foo", "foo", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if checkExists(tt.command) != tt.wantExistence {
+				t.Errorf("checkExists() = %v, want %v", checkExists(tt.command), tt.wantExistence)
+			}
+		})
+	}
+}

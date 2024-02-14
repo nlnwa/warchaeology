@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/hooks"
 	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/spf13/viper"
 	"os"
@@ -46,9 +47,11 @@ type WarcWriterConfig struct {
 	WarcInfoFunc          func(recordBuilder gowarc.WarcRecordBuilder) error
 	writersGuard          sync.Mutex
 	OneToOneWriter        bool
+	openOutputFileHook    hooks.OpenOutputFileHook
+	closeOutputFileHook   hooks.CloseOutputFileHook
 }
 
-func NewFromViper() (*WarcWriterConfig, error) {
+func NewFromViper(cmd string) (*WarcWriterConfig, error) {
 	var err error
 	var outDir string
 	if outDir, err = filepath.Abs(viper.GetString(flag.WarcDir)); err != nil {
@@ -80,6 +83,16 @@ func NewFromViper() (*WarcWriterConfig, error) {
 		defaultDate = t.Add(12 * time.Hour)
 	}
 
+	openOutputFileHook, err := hooks.NewOpenOutputFileHook(cmd, viper.GetString(flag.OpenOutputFileHook))
+	if err != nil {
+		return nil, err
+	}
+
+	closeOutputFileHook, err := hooks.NewCloseOutputFileHook(cmd, viper.GetString(flag.CloseOutputFileHook))
+	if err != nil {
+		return nil, err
+	}
+
 	return &WarcWriterConfig{
 		Compress:              viper.GetBool(flag.Compress),
 		CompressionLevel:      viper.GetInt(flag.CompressionLevel),
@@ -92,6 +105,8 @@ func NewFromViper() (*WarcWriterConfig, error) {
 		WarcFileNameGenerator: viper.GetString(flag.NameGenerator),
 		Flush:                 viper.GetBool(flag.Flush),
 		WarcVersion:           version,
+		openOutputFileHook:    openOutputFileHook,
+		closeOutputFileHook:   closeOutputFileHook,
 		writers:               map[string]*gowarc.WarcFileWriter{},
 	}, nil
 }
@@ -139,6 +154,8 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) *gowarc.
 			gowarc.WithFileNameGenerator(namer),
 			gowarc.WithFlush(w.Flush),
 			gowarc.WithWarcInfoFunc(w.WarcInfoFunc),
+			gowarc.WithBeforeFileCreationHook(w.openOutputFileHook.WithSrcFileName(fromFileName).Run),
+			gowarc.WithAfterFileCreationHook(w.closeOutputFileHook.WithSrcFileName(fromFileName).Run),
 			gowarc.WithRecordOptions(gowarc.WithVersion(w.WarcVersion), gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir))),
 		)
 	} else {
@@ -172,7 +189,7 @@ func (w *WarcWriterConfig) Close() {
 	for _, writer := range w.writers {
 		err := writer.Close()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error closing WARC writer: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stderr, "Error closing WARC writer: %v\n", err)
 		}
 	}
 }

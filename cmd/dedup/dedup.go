@@ -60,7 +60,7 @@ The remaining records are written as is.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			utils.CheckFileDescriptorLimit(utils.BadgerRecommendedMaxFileDescr)
 
-			if wc, err := warcwriterconfig.NewFromViper(); err != nil {
+			if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
 				return err
 			} else {
 				c.writerConf = wc
@@ -119,6 +119,10 @@ The remaining records are written as is.`,
 	cmd.Flags().String(flag.MinFreeDisk, "256MB", flag.MinFreeDiskHelp)
 	cmd.Flags().BoolP(flag.Repair, "R", false, flag.RepairHelp)
 	cmd.Flags().String(flag.SrcFilesystem, "", flag.SrcFilesystemHelp)
+	cmd.Flags().String(flag.OpenInputFileHook, "", flag.OpenInputFileHookHelp)
+	cmd.Flags().String(flag.CloseInputFileHook, "", flag.CloseInputFileHookHelp)
+	cmd.Flags().String(flag.OpenOutputFileHook, "", flag.OpenOutputFileHookHelp)
+	cmd.Flags().String(flag.CloseOutputFileHook, "", flag.CloseOutputFileHookHelp)
 
 	if err := cmd.RegisterFlagCompletionFunc(flag.RecordType, flag.SliceCompletion{
 		"warcinfo",
