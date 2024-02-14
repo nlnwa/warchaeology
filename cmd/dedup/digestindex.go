@@ -18,7 +18,7 @@ package dedup
 
 import (
 	"fmt"
-	badger "github.com/dgraph-io/badger/v3"
+	"github.com/dgraph-io/badger/v3"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/utils"

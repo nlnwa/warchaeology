@@ -19,11 +19,11 @@ package arcreader
 import (
 	"bufio"
 	"github.com/nlnwa/gowarc"
-	"os"
+	"github.com/spf13/afero"
 )
 
 type ArcFileReader struct {
-	file           *os.File
+	file           afero.File
 	initialOffset  int64
 	offset         int64
 	warcReader     gowarc.Unmarshaler
@@ -32,8 +32,8 @@ type ArcFileReader struct {
 	currentRecord  gowarc.WarcRecord
 }
 
-func NewArcFileReader(filename string, offset int64, opts ...gowarc.WarcRecordOption) (*ArcFileReader, error) {
-	file, err := os.Open(filename) // For read access.
+func NewArcFileReader(fs afero.Fs, filename string, offset int64, opts ...gowarc.WarcRecordOption) (*ArcFileReader, error) {
+	file, err := fs.Open(filename) // For read access.
 	if err != nil {
 		return nil, err
 	}

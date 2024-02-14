@@ -20,22 +20,24 @@ import (
 	"bufio"
 	"bytes"
 	"github.com/nlnwa/gowarc"
+	"github.com/spf13/afero"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
 
 type NedlibReader struct {
+	fs           afero.Fs
 	metaFilename string
 	defaultTime  time.Time
 	opts         []gowarc.WarcRecordOption
 	done         bool
 }
 
-func NewNedlibReader(metaFilename string, defaultTime time.Time, opts ...gowarc.WarcRecordOption) (*NedlibReader, error) {
+func NewNedlibReader(fs afero.Fs, metaFilename string, defaultTime time.Time, opts ...gowarc.WarcRecordOption) (*NedlibReader, error) {
 	n := &NedlibReader{
+		fs:           fs,
 		metaFilename: metaFilename,
 		defaultTime:  defaultTime,
 		opts:         opts,
@@ -50,7 +52,7 @@ func (n *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Validation, err
 	}
 	defer func() { n.done = true }()
 
-	f, err := os.Open(n.metaFilename)
+	f, err := n.fs.Open(n.metaFilename)
 	if err != nil {
 		return nil, 0, validation, err
 	}
@@ -84,8 +86,6 @@ func (n *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Validation, err
 				rb.AddWarcHeader(gowarc.WarcTargetURI, header.Get(i))
 			case "Arc-Length":
 				header.Set(gowarc.ContentLength, header.Get(i))
-				//} else {
-				//	fmt.Printf("H: %v = %v\n", i, header.Get(i))
 			}
 			header.Del(i)
 		}
@@ -101,7 +101,7 @@ func (n *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Validation, err
 		return nil, 0, validation, err
 	}
 
-	p, err := os.Open(strings.TrimSuffix(n.metaFilename, ".meta"))
+	p, err := n.fs.Open(strings.TrimSuffix(n.metaFilename, ".meta"))
 	if err != nil {
 		return nil, 0, validation, err
 	}

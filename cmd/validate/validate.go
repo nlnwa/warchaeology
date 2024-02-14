@@ -23,6 +23,7 @@ import (
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io"
@@ -43,7 +44,7 @@ func NewCommand() *cobra.Command {
 		Short: "Validate warc files",
 		Long:  ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
+			if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
 				return errors.New("missing file or directory name")
 			}
 			c.files = args
@@ -52,10 +53,20 @@ func NewCommand() *cobra.Command {
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		panic(err)
+	}
+
 	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)
 	cmd.Flags().BoolP(flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
 	cmd.Flags().StringSlice(flag.Suffixes, []string{".warc", ".warc.gz"}, flag.SuffixesHelp)
 	cmd.Flags().IntP(flag.Concurrency, "c", int(float32(runtime.NumCPU())*float32(1.5)), flag.ConcurrencyHelp)
+	cmd.Flags().String(flag.SrcFilesystem, "", flag.SrcFilesystemHelp)
+	cmd.Flags().String(flag.SrcFileList, "", flag.SrcFileListHelp)
+	cmd.Flags().BoolP(flag.KeepIndex, "k", false, flag.KeepIndexHelp)
+	cmd.Flags().BoolP(flag.NewIndex, "K", false, flag.NewIndexHelp)
+	cmd.Flags().StringP(flag.IndexDir, "i", cacheDir+"/warc", flag.IndexDirHelp)
 
 	return cmd
 }
@@ -75,10 +86,15 @@ func runE(cmd string, c *conf) error {
 	return fileWalker.Walk(ctx, stats)
 }
 
-func validateFile(file string) filewalker.Result {
+func validateFile(fs afero.Fs, file string) filewalker.Result {
 	result := filewalker.NewResult(file)
 
-	wf, err := gowarc.NewWarcFileReader(file, 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
+	f, err := fs.Open(file)
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = f.Close() }()
+	wf, err := gowarc.NewWarcFileReaderFromStream(f, 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
 		result.AddError(err)
 		return result

@@ -25,7 +25,6 @@ import (
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/viper"
 	"io"
-	"io/ioutil"
 )
 
 type RecordWidget struct {
@@ -222,7 +221,7 @@ func (w *RecordWidget) poopulateContent(g *gocui.Gui, rec gowarc.WarcRecord) {
 	if err != nil {
 		panic(err)
 	}
-	content, err := ioutil.ReadAll(rr)
+	content, err := io.ReadAll(rr)
 	if err != nil {
 		panic(err)
 	}

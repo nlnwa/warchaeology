@@ -26,6 +26,7 @@ import (
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io"
@@ -61,7 +62,7 @@ This is an experimental feature.`,
 			c.minWARCDiskFree = utils.ParseSizeInBytes(viper.GetString(flag.MinFreeDisk))
 			c.repair = viper.GetBool(flag.Repair)
 
-			if len(args) == 0 {
+			if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
 				return errors.New("missing file or directory name")
 			}
 			c.files = args
@@ -95,6 +96,7 @@ This is an experimental feature.`,
 	cmd.Flags().StringP(flag.DefaultDate, "t", time.Now().Format(warcwriterconfig.DefaultDateFormat), flag.DefaultDateHelp)
 	cmd.Flags().String(flag.MinFreeDisk, "256MB", flag.MinFreeDiskHelp)
 	cmd.Flags().BoolP(flag.Repair, "R", false, flag.RepairHelp)
+	cmd.Flags().String(flag.SrcFilesystem, "", flag.SrcFilesystemHelp)
 
 	return cmd
 }
@@ -115,7 +117,7 @@ func runE(cmd string, c *conf) error {
 	return fileWalker.Walk(ctx, stats)
 }
 
-func (c *conf) readFile(fileName string) filewalker.Result {
+func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 	result := filewalker.NewResult(fileName)
 
 	opts := []gowarc.WarcRecordOption{
@@ -146,7 +148,13 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 			gowarc.WithFixContentLength(false),
 		)
 	}
-	a, err := gowarc.NewWarcFileReader(fileName, 0, opts...)
+
+	f, err := fs.Open(fileName)
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = f.Close() }()
+	a, err := gowarc.NewWarcFileReaderFromStream(f, 0, opts...)
 	if err != nil {
 		result.AddError(err)
 		return result

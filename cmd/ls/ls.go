@@ -24,6 +24,7 @@ import (
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/filter"
 	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io"
@@ -74,8 +75,8 @@ Output options:
            A number after the field letter restricts the field length. By adding a + or - sign before the number the field is
            padded to have the exact length. + is right aligned and - is left aligned.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return errors.New("missing file or directory")
+			if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
+				return errors.New("missing file or directory name")
 			}
 			c.files = args
 			c.delimiter = viper.GetString(flag.Delimiter)
@@ -117,6 +118,8 @@ Output options:
 	cmd.Flags().StringSliceP(flag.RecordType, "t", []string{}, flag.RecordTypeHelp)
 	cmd.Flags().StringP(flag.ResponseCode, "S", "", flag.ResponseCodeHelp)
 	cmd.Flags().StringSliceP(flag.MimeType, "m", []string{}, flag.MimeTypeHelp)
+	cmd.Flags().String(flag.SrcFilesystem, "", flag.SrcFilesystemHelp)
+	cmd.Flags().String(flag.SrcFileList, "", flag.SrcFileListHelp)
 
 	if err := cmd.RegisterFlagCompletionFunc(flag.RecordType, flag.SliceCompletion{
 		"warcinfo",
@@ -149,7 +152,7 @@ func runE(cmd string, c *conf) error {
 	return fileWalker.Walk(ctx, res)
 }
 
-func (c *conf) readFile(fileName string) filewalker.Result {
+func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 	result := filewalker.NewResult(fileName)
 
 	var opts []gowarc.WarcRecordOption
@@ -159,7 +162,13 @@ func (c *conf) readFile(fileName string) filewalker.Result {
 	} else {
 		opts = append(opts, gowarc.WithSyntaxErrorPolicy(gowarc.ErrIgnore), gowarc.WithSpecViolationPolicy(gowarc.ErrIgnore), gowarc.WithUnknownRecordTypePolicy(gowarc.ErrIgnore))
 	}
-	wf, err := gowarc.NewWarcFileReader(fileName, c.offset, opts...)
+
+	f, err := fs.Open(fileName)
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = f.Close() }()
+	wf, err := gowarc.NewWarcFileReaderFromStream(f, c.offset, opts...)
 	defer func() { _ = wf.Close() }()
 	if err != nil {
 		panic(err)
