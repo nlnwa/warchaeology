@@ -57,8 +57,9 @@ func NewCommand() *cobra.Command {
 			} else {
 				wc.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
 					payload := &gowarc.WarcFields{}
-					payload.Set("software", cmdversion.SoftwareVersion())
+					payload.Set("software", cmdversion.SoftwareVersion()+" https://github.com/nlnwa/warchaeology")
 					payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", wc.WarcVersion.Minor(), wc.WarcVersion.Minor()))
+					payload.Set("description", "Converted from Nedlib")
 					h, e := os.Hostname()
 					if e != nil {
 						return e
@@ -97,7 +98,7 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().Int64P(flag.FileSize, "S", 1024*1024*1024, flag.FileSizeHelp)
 	cmd.Flags().BoolP(flag.Compress, "z", false, flag.CompressHelp)
 	cmd.Flags().Bool(flag.CompressionLevel, false, flag.CompressionLevelHelp)
-	cmd.Flags().StringP(flag.FilePrefix, "p", "", flag.FilePrefixHelp)
+	cmd.Flags().StringP(flag.FilePrefix, "p", "from_nedlib_", flag.FilePrefixHelp)
 	cmd.Flags().StringP(flag.WarcDir, "w", ".", flag.WarcDirHelp)
 	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
 	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
@@ -124,7 +125,10 @@ func runE(cmd string, c *conf) error {
 
 	defer c.writerConf.Close()
 
-	fileWalker := filewalker.NewFromViper(cmd, c.files, c.readFile)
+	fileWalker, err := filewalker.NewFromViper(cmd, c.files, c.readFile)
+	if err != nil {
+		return err
+	}
 	stats := filewalker.NewStats()
 	return fileWalker.Walk(ctx, stats)
 }
