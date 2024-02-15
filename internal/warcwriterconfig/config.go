@@ -136,6 +136,8 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) *gowarc.
 	switch w.WarcFileNameGenerator {
 	case "identity":
 		namer = NewIdentityNamer(fromFileName, w.FilePrefix, dir)
+	case "nedlib":
+		namer = NewNedlibNamer(fromFileName, w.FilePrefix, dir)
 	default:
 		namer = NewDefaultNamer(fromFileName, w.FilePrefix, dir)
 	}
