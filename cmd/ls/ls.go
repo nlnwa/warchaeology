@@ -147,7 +147,10 @@ func runE(cmd string, c *conf) error {
 		cancel()
 	}()
 
-	fileWalker := filewalker.NewFromViper(cmd, c.files, c.readFile)
+	fileWalker, err := filewalker.NewFromViper(cmd, c.files, c.readFile)
+	if err != nil {
+		return err
+	}
 	res := filewalker.NewStats()
 	return fileWalker.Walk(ctx, res)
 }

@@ -66,7 +66,7 @@ func New(paths []string, recursive, followSymlinks bool, suffixes []string, conc
 	}
 }
 
-func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) Result) FileWalker {
+func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) Result) (FileWalker, error) {
 	var consoleType logType
 	var fileType logType
 	if utils.StdoutIsTerminal() {
@@ -94,7 +94,7 @@ func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) 
 		case "summary":
 			fileType = fileType | summary
 		default:
-			panic("Illegal config value '" + t + "' for " + flag.LogFile)
+			return nil, fmt.Errorf("illegal config value '%s' for %s", t, flag.LogFile)
 		}
 	}
 	var beforeProcessFile hooks.OpenInputFileHook
@@ -103,13 +103,13 @@ func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) 
 	if hook := viper.GetString(flag.OpenInputFileHook); hook != "" {
 		beforeProcessFile, err = hooks.NewOpenInputFileHook(cmd, hook)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 	if hook := viper.GetString(flag.CloseInputFileHook); hook != "" {
 		afterProcessFile, err = hooks.NewCloseInputFileHook(cmd, hook)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 	return &filewalker{
@@ -127,7 +127,7 @@ func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) 
 		processedPaths:     NewStringSet(),
 		openInputFileHook:  beforeProcessFile,
 		closeInputFileHook: afterProcessFile,
-	}
+	}, nil
 }
 
 func resolveFs() afero.Fs {

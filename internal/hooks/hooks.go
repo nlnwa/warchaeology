@@ -19,13 +19,10 @@ package hooks
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 )
-
-var ErrCommandNotFound = errors.New("command not found")
 
 const (
 	EnvCommand     = "WARC_COMMAND"
@@ -50,7 +47,7 @@ type OpenInputFileHook struct {
 // returns an OpenInputFileHook or ErrCommandNotFound if the hook command is not found
 func NewOpenInputFileHook(cmd, hook string) (OpenInputFileHook, error) {
 	if !checkExists(hook) {
-		return OpenInputFileHook{}, ErrCommandNotFound
+		return OpenInputFileHook{}, ErrCommandNotFound{"OpenInputFile", hook}
 	}
 
 	h := OpenInputFileHook{
@@ -61,6 +58,9 @@ func NewOpenInputFileHook(cmd, hook string) (OpenInputFileHook, error) {
 }
 
 func (h OpenInputFileHook) Run(fileName string) error {
+	if h.hook == "" {
+		return nil
+	}
 	b, err := h.Output(fileName)
 	if b = bytes.TrimSpace(b); len(b) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, string(b))
@@ -94,7 +94,7 @@ type CloseInputFileHook struct {
 // returns a CloseInputFileHook or ErrCommandNotFound if the hook command is not found
 func NewCloseInputFileHook(cmd, hook string) (CloseInputFileHook, error) {
 	if !checkExists(hook) {
-		return CloseInputFileHook{}, ErrCommandNotFound
+		return CloseInputFileHook{}, ErrCommandNotFound{"CloseInputFile", hook}
 	}
 
 	h := CloseInputFileHook{
@@ -110,6 +110,9 @@ func (h CloseInputFileHook) WithHash(hash string) CloseInputFileHook {
 }
 
 func (h CloseInputFileHook) Run(fileName string, errorCount int64) error {
+	if h.hook == "" {
+		return nil
+	}
 	b, err := h.Output(fileName, errorCount)
 	if b = bytes.TrimSpace(b); len(b) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, string(b))
@@ -149,7 +152,7 @@ type OpenOutputFileHook struct {
 // returns an OpenOutputFileHook or ErrCommandNotFound if the hook command is not found
 func NewOpenOutputFileHook(cmd, hook string) (OpenOutputFileHook, error) {
 	if !checkExists(hook) {
-		return OpenOutputFileHook{}, ErrCommandNotFound
+		return OpenOutputFileHook{}, ErrCommandNotFound{"OpenOutputFile", hook}
 	}
 
 	h := OpenOutputFileHook{
@@ -165,6 +168,9 @@ func (h OpenOutputFileHook) WithSrcFileName(srcFileName string) OpenOutputFileHo
 }
 
 func (h OpenOutputFileHook) Run(fileName string) error {
+	if h.hook == "" {
+		return nil
+	}
 	b, err := h.Output(fileName)
 	if b = bytes.TrimSpace(b); len(b) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, string(b))
@@ -202,7 +208,7 @@ type CloseOutputFileHook struct {
 // returns a CloseOutputFileHook or ErrCommandNotFound if the hook command is not found
 func NewCloseOutputFileHook(cmd, hook string) (CloseOutputFileHook, error) {
 	if !checkExists(hook) {
-		return CloseOutputFileHook{}, ErrCommandNotFound
+		return CloseOutputFileHook{}, ErrCommandNotFound{"CloseOutputFile", hook}
 	}
 
 	h := CloseOutputFileHook{
@@ -223,6 +229,9 @@ func (h CloseOutputFileHook) WithHash(hash string) CloseOutputFileHook {
 }
 
 func (h CloseOutputFileHook) Run(fileName string, size int64, warcInfoId string) error {
+	if h.hook == "" {
+		return nil
+	}
 	b, err := h.Output(fileName, size, warcInfoId)
 	if b = bytes.TrimSpace(b); len(b) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, string(b))
@@ -254,6 +263,18 @@ func (h CloseOutputFileHook) Output(fileName string, size int64, warcInfoId stri
 }
 
 func checkExists(command string) bool {
+	if command == "" {
+		return true
+	}
 	_, err := exec.LookPath(command)
 	return err == nil
+}
+
+type ErrCommandNotFound struct {
+	hookType string
+	command  string
+}
+
+func (e ErrCommandNotFound) Error() string {
+	return fmt.Sprintf("executable file '%s' not found in $PATH for %sHook", e.command, e.hookType)
 }
