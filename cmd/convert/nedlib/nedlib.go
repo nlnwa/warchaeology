@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal"
 	"github.com/nlnwa/warchaeology/internal/cmdversion"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/flag"
@@ -49,8 +50,10 @@ func NewCommand() *cobra.Command {
 		Short: "Convert directory with files harvested with Nedlib into warc files",
 		Long:  ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Nedlib data has a structure which do not allow for identity transformation of filenames
-			viper.Set(flag.NameGenerator, "default")
+			// The Nedlib data structure does not support direct filename transformations.
+			// Instead, we employ a custom generator that treats the input filename as a date.
+			// When we request a new warcwriter, we submit a synthetic fromFilename based on the date of the first record.
+			viper.Set(flag.NameGenerator, "nedlib")
 
 			if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
 				return err
@@ -172,7 +175,12 @@ func handleRecord(c *conf, wf *nedlibreader.NedlibReader, fileName string, resul
 
 	defer func() { _ = wr.Close() }()
 
-	writer := c.writerConf.GetWarcWriter(fileName, wr.WarcHeader().Get(gowarc.WarcDate))
+	syntheticFileName, err := internal.To14(wr.WarcHeader().Get(gowarc.WarcDate))
+	if err != nil {
+		panic(err)
+	}
+
+	writer := c.writerConf.GetWarcWriter(syntheticFileName, wr.WarcHeader().Get(gowarc.WarcDate))
 
 	if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
 		fmt.Printf("Offset: %d\n", currentOffset)
