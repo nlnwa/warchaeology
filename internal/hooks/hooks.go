@@ -27,7 +27,7 @@ import (
 const (
 	EnvCommand     = "WARC_COMMAND"
 	EnvFileName    = "WARC_FILE_NAME"
-	EnvError       = "WARC_ERROR_COUNT"
+	EnvErrorCount  = "WARC_ERROR_COUNT"
 	EnvWarcInfoId  = "WARC_INFO_ID"
 	EnvFileSize    = "WARC_SIZE"
 	EnvHash        = "WARC_HASH"
@@ -62,7 +62,7 @@ func (h OpenInputFileHook) Run(fileName string) error {
 		return nil
 	}
 	b, err := h.Output(fileName)
-	if b = bytes.TrimSpace(b); len(b) > 0 {
+	if len(b) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, string(b))
 	}
 	return err
@@ -75,10 +75,20 @@ func (h OpenInputFileHook) Output(fileName string) ([]byte, error) {
 
 	c := exec.Command(h.hook)
 	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
-	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
 	c.Env = append(c.Environ(), EnvHookType+"=OpenInputFile")
+	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
 
-	return c.CombinedOutput()
+	b, err := c.CombinedOutput()
+	b = bytes.TrimSpace(b)
+	if e, ok := err.(*exec.ExitError); ok {
+		switch e.ExitCode() {
+		case 1:
+			return nil, fmt.Errorf("%s", b)
+		case 10:
+			return nil, ErrSkipFile
+		}
+	}
+	return b, err
 }
 
 type CloseInputFileHook struct {
@@ -114,7 +124,7 @@ func (h CloseInputFileHook) Run(fileName string, errorCount int64) error {
 		return nil
 	}
 	b, err := h.Output(fileName, errorCount)
-	if b = bytes.TrimSpace(b); len(b) > 0 {
+	if len(b) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, string(b))
 	}
 	return err
@@ -127,16 +137,24 @@ func (h CloseInputFileHook) Output(fileName string, errorCount int64) ([]byte, e
 
 	c := exec.Command(h.hook)
 	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
+	c.Env = append(c.Environ(), EnvHookType+"=CloseInputFile")
 	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
 	if errorCount > 0 {
-		c.Env = append(c.Environ(), fmt.Sprintf("%s=%d", EnvError, errorCount))
+		c.Env = append(c.Environ(), fmt.Sprintf("%s=%d", EnvErrorCount, errorCount))
 	}
 	if h.hash != "" {
 		c.Env = append(c.Environ(), EnvHash+"="+h.hash)
 	}
-	c.Env = append(c.Environ(), EnvHookType+"=CloseInputFile")
 
-	return c.CombinedOutput()
+	b, err := c.CombinedOutput()
+	b = bytes.TrimSpace(b)
+	if e, ok := err.(*exec.ExitError); ok {
+		switch e.ExitCode() {
+		case 1:
+			return nil, fmt.Errorf("%s", b)
+		}
+	}
+	return b, err
 }
 
 type OpenOutputFileHook struct {
@@ -172,7 +190,7 @@ func (h OpenOutputFileHook) Run(fileName string) error {
 		return nil
 	}
 	b, err := h.Output(fileName)
-	if b = bytes.TrimSpace(b); len(b) > 0 {
+	if len(b) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, string(b))
 	}
 	return err
@@ -185,13 +203,21 @@ func (h OpenOutputFileHook) Output(fileName string) ([]byte, error) {
 
 	c := exec.Command(h.hook)
 	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
+	c.Env = append(c.Environ(), EnvHookType+"=OpenOutputFile")
 	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
 	if h.srcFileName != "" {
 		c.Env = append(c.Environ(), EnvSrcFileName+"="+h.srcFileName)
 	}
-	c.Env = append(c.Environ(), EnvHookType+"=OpenOutputFile")
 
-	return c.CombinedOutput()
+	b, err := c.CombinedOutput()
+	b = bytes.TrimSpace(b)
+	if e, ok := err.(*exec.ExitError); ok {
+		switch e.ExitCode() {
+		case 1:
+			return nil, fmt.Errorf("%s", b)
+		}
+	}
+	return b, err
 }
 
 type CloseOutputFileHook struct {
@@ -233,7 +259,7 @@ func (h CloseOutputFileHook) Run(fileName string, size int64, warcInfoId string)
 		return nil
 	}
 	b, err := h.Output(fileName, size, warcInfoId)
-	if b = bytes.TrimSpace(b); len(b) > 0 {
+	if len(b) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, string(b))
 	}
 	return err
@@ -246,6 +272,7 @@ func (h CloseOutputFileHook) Output(fileName string, size int64, warcInfoId stri
 
 	c := exec.Command(h.hook)
 	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
+	c.Env = append(c.Environ(), EnvHookType+"=CloseOutputFile")
 	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
 	c.Env = append(c.Environ(), fmt.Sprintf("%s=%d", EnvFileSize, size))
 	if warcInfoId != "" {
@@ -257,9 +284,16 @@ func (h CloseOutputFileHook) Output(fileName string, size int64, warcInfoId stri
 	if h.hash != "" {
 		c.Env = append(c.Environ(), EnvHash+"="+h.hash)
 	}
-	c.Env = append(c.Environ(), EnvHookType+"=CloseOutputFile")
 
-	return c.CombinedOutput()
+	b, err := c.CombinedOutput()
+	b = bytes.TrimSpace(b)
+	if e, ok := err.(*exec.ExitError); ok {
+		switch e.ExitCode() {
+		case 1:
+			return nil, fmt.Errorf("%s", b)
+		}
+	}
+	return b, err
 }
 
 func checkExists(command string) bool {
@@ -278,3 +312,5 @@ type ErrCommandNotFound struct {
 func (e ErrCommandNotFound) Error() string {
 	return fmt.Sprintf("executable file '%s' not found in $PATH for %sHook", e.command, e.hookType)
 }
+
+var ErrSkipFile = fmt.Errorf("skip file")
