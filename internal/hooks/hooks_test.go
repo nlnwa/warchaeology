@@ -19,6 +19,7 @@ package hooks
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"slices"
 	"strings"
 	"testing"
@@ -31,24 +32,35 @@ func TestOpenInputFileHook(t *testing.T) {
 		hook     string
 		fileName string
 		want     []string
-		wantErr  bool
+		wantErr  string
 	}{
-		{"ok", "test", "./test_hook.sh", "test.warc.gz", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, false},
-		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", nil, true},
+		{"ok", "test", "./test_hook.sh", "test.warc.gz", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, ""},
+		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", nil, "executable file 'test_hook.sh' not found in $PATH for OpenInputFileHook"},
+		{"exit status error", "test general error", "./test_hook.sh", "test.warc.gz", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
+		{"exit status skip", "test skip file", "./test_hook.sh", "test.warc.gz", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, ErrSkipFile.Error()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h, err := NewOpenInputFileHook(tt.command, tt.hook)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
+			if err != nil {
+				if tt.wantErr != "" {
+					require.Error(t, err)
+					assert.Equal(t, tt.wantErr, err.Error())
+					return
+				} else {
+					assert.NoError(t, err)
+				}
 			} else {
 				assert.NoError(t, err)
 			}
 
 			out, err := h.Output(tt.fileName)
-			if err != nil {
-				t.Fatal(err)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Equal(t, tt.wantErr, err.Error())
+				return
+			} else {
+				assert.NoError(t, err)
 			}
 
 			env := strings.Split(strings.TrimSpace(string(out)), "\n")
@@ -69,25 +81,35 @@ func TestCloseInputFileHook(t *testing.T) {
 		fileName   string
 		errorCount int64
 		want       []string
-		wantErr    bool
+		wantErr    string
 	}{
-		{"no error", "test", "./test_hook.sh", "test.warc.gz", 0, []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseInputFile"}, false},
-		{"error", "test", "./test_hook.sh", "test.warc.gz", 2, []string{"WARC_COMMAND=test", "WARC_ERROR_COUNT=2", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseInputFile"}, false},
-		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", 0, nil, true},
+		{"no error", "test", "./test_hook.sh", "test.warc.gz", 0, []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseInputFile"}, ""},
+		{"error", "test", "./test_hook.sh", "test.warc.gz", 2, []string{"WARC_COMMAND=test", "WARC_ERROR_COUNT=2", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseInputFile"}, ""},
+		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", 0, nil, "executable file 'test_hook.sh' not found in $PATH for CloseInputFileHook"},
+		{"exit status error", "test general error", "./test_hook.sh", "test.warc.gz", 0, []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h, err := NewCloseInputFileHook(tt.command, tt.hook)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
+			if err != nil {
+				if tt.wantErr != "" {
+					require.Error(t, err)
+					assert.Equal(t, tt.wantErr, err.Error())
+					return
+				} else {
+					assert.NoError(t, err)
+				}
 			} else {
 				assert.NoError(t, err)
 			}
 
 			out, err := h.Output(tt.fileName, tt.errorCount)
-			if err != nil {
-				t.Fatal(err)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Equal(t, tt.wantErr, err.Error())
+				return
+			} else {
+				assert.NoError(t, err)
 			}
 
 			env := strings.Split(strings.TrimSpace(string(out)), "\n")
@@ -108,26 +130,36 @@ func TestOpenOutputFileHook(t *testing.T) {
 		fileName    string
 		srcFileName string
 		want        []string
-		wantErr     bool
+		wantErr     string
 	}{
-		{"no srcFile", "test", "./test_hook.sh", "test.warc.gz", "", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenOutputFile"}, false},
-		{"srcFile", "test", "./test_hook.sh", "test.warc.gz", "TestSource", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenOutputFile", "WARC_SRC_FILE_NAME=TestSource"}, false},
-		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", "", nil, true},
+		{"no srcFile", "test", "./test_hook.sh", "test.warc.gz", "", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenOutputFile"}, ""},
+		{"srcFile", "test", "./test_hook.sh", "test.warc.gz", "TestSource", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenOutputFile", "WARC_SRC_FILE_NAME=TestSource"}, ""},
+		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", "", nil, "executable file 'test_hook.sh' not found in $PATH for OpenOutputFileHook"},
+		{"exit status error", "test general error", "./test_hook.sh", "test.warc.gz", "", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h, err := NewOpenOutputFileHook(tt.command, tt.hook)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
+			if err != nil {
+				if tt.wantErr != "" {
+					require.Error(t, err)
+					assert.Equal(t, tt.wantErr, err.Error())
+					return
+				} else {
+					assert.NoError(t, err)
+				}
 			} else {
 				assert.NoError(t, err)
 			}
 
 			h = h.WithSrcFileName(tt.srcFileName)
 			out, err := h.Output(tt.fileName)
-			if err != nil {
-				t.Fatal(err)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Equal(t, tt.wantErr, err.Error())
+				return
+			} else {
+				assert.NoError(t, err)
 			}
 
 			env := strings.Split(strings.TrimSpace(string(out)), "\n")
@@ -150,41 +182,52 @@ func TestCloseOutputFileHook(t *testing.T) {
 		warcInfoId  string
 		srcFileName string
 		want        []string
-		wantErr     bool
+		wantErr     string
 	}{
 		{"no extras", "test", "./test_hook.sh", "test.warc.gz",
 			1234, "", "",
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_SIZE=1234"},
-			false},
+			""},
 		{"warcInfoId", "test", "./test_hook.sh", "test.warc.gz",
 			1234, "TestId", "",
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_INFO_ID=TestId", "WARC_SIZE=1234"},
-			false},
+			""},
 		{"srcFile", "test", "./test_hook.sh", "test.warc.gz",
 			1234, "", "TestSource",
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_SIZE=1234", "WARC_SRC_FILE_NAME=TestSource"},
-			false},
+			""},
 		{"warcInfoId + srcFile", "test", "./test_hook.sh", "test.warc.gz",
 			1234, "TestId", "TestSource",
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_INFO_ID=TestId", "WARC_SIZE=1234", "WARC_SRC_FILE_NAME=TestSource"},
-			false},
+			""},
 		{"unknown hook", "test", "test_hook.sh", "test.warc.gz",
-			0, "", "", nil, true},
+			0, "", "", nil, "executable file 'test_hook.sh' not found in $PATH for CloseOutputFileHook"},
+		{"exit status error", "test general error", "./test_hook.sh", "test.warc.gz",
+			0, "", "", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h, err := NewCloseOutputFileHook(tt.command, tt.hook)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
+			if err != nil {
+				if tt.wantErr != "" {
+					require.Error(t, err)
+					assert.Equal(t, tt.wantErr, err.Error())
+					return
+				} else {
+					assert.NoError(t, err)
+				}
 			} else {
 				assert.NoError(t, err)
 			}
 
 			h = h.WithSrcFileName(tt.srcFileName)
 			out, err := h.Output(tt.fileName, tt.size, tt.warcInfoId)
-			if err != nil {
-				t.Fatal(err)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Equal(t, tt.wantErr, err.Error())
+				return
+			} else {
+				assert.NoError(t, err)
 			}
 
 			env := strings.Split(strings.TrimSpace(string(out)), "\n")
