@@ -95,15 +95,19 @@ WARC files in different subdirectories. If NameGenerator is 'identity' only the 
 of each file's date is used to keep the file as one.`
 	NameGeneratorHelp = `the name generator to use. By setting this to 'identity', the input filename will also be used as
 output file name (prefix and suffix might still change). In this mode exactly one file is generated for every input file`
-	FlushHelp             = `if true, sync WARC file to disk after writing each record`
-	WarcVersionHelp       = `the WARC version to use for created files`
-	DefaultDateHelp       = `fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date`
-	TmpDirHelp            = `directory to use for temporary files`
-	BufferMaxMemHelp      = "the maximum bytes of memory allowed for each buffer before overflowing to disk"
-	DedupSizeGainHelp     = `minimum bytes one must earn to perform a deduplication`
-	MinFreeDiskHelp       = `minimum free space on disk to allow WARC writing`
-	RepairHelp            = `try to fix errors in records`
-	SrcFilesystemHelp     = `the source filesystem to use for input files. Default is to use OS file system. Legal values: ftp://user/pass@host:port`
+	FlushHelp         = `if true, sync WARC file to disk after writing each record`
+	WarcVersionHelp   = `the WARC version to use for created files`
+	DefaultDateHelp   = `fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date`
+	TmpDirHelp        = `directory to use for temporary files`
+	BufferMaxMemHelp  = "the maximum bytes of memory allowed for each buffer before overflowing to disk"
+	DedupSizeGainHelp = `minimum bytes one must earn to perform a deduplication`
+	MinFreeDiskHelp   = `minimum free space on disk to allow WARC writing`
+	RepairHelp        = `try to fix errors in records`
+	SrcFilesystemHelp = `the source filesystem to use for input files. Default is to use OS file system. Legal values:
+  ftp://user/pass@host:port
+  tar://path/to/archive.tar
+  tgz://path/to/archive.tar.gz
+`
 	SrcFileListHelp       = `a file containing a list of files to process, one file per line`
 	OpenInputFileHookHelp = `a command to run before opening each input file. The command has access to data as environment variables.
 WARC_COMMAND contains the subcommand name

@@ -1,9 +1,11 @@
 package filewalker
 
 import (
+	"archive/tar"
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/klauspost/compress/gzip"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/ftpfs"
 	"github.com/nlnwa/warchaeology/internal/hooks"
@@ -11,6 +13,7 @@ import (
 	"github.com/nlnwa/warchaeology/internal/workerpool"
 	"github.com/nlnwa/whatwg-url/url"
 	"github.com/spf13/afero"
+	"github.com/spf13/afero/tarfs"
 	"github.com/spf13/viper"
 	"io/fs"
 	"os"
@@ -145,6 +148,32 @@ func resolveFs() afero.Fs {
 	if u.Protocol() == "ftp:" {
 		hostPort := fmt.Sprintf("%s:%d", u.Host(), u.DecodedPort())
 		return ftpfs.New(hostPort, u.Username(), u.Password(), int32(viper.GetInt(flag.Concurrency)))
+	}
+
+	// tar://path/to/archive.tar
+	if u.Protocol() == "tar:" {
+		f := u.Hostname() + u.Pathname()
+		r, err := afero.NewOsFs().Open(f)
+		if err != nil {
+			panic(err)
+		}
+		tr := tar.NewReader(r)
+		return tarfs.New(tr)
+	}
+
+	// tgz://path/to/archive.tar.gz
+	if u.Protocol() == "tgz:" {
+		f := u.Hostname() + u.Pathname()
+		r, err := afero.NewOsFs().Open(f)
+		if err != nil {
+			panic(err)
+		}
+		gr, err := gzip.NewReader(r)
+		if err != nil {
+			panic(err)
+		}
+		tr := tar.NewReader(gr)
+		return tarfs.New(tr)
 	}
 
 	panic("Unsupported filesystem: " + fsDef)
