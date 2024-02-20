@@ -130,6 +130,7 @@ WARC_FILE_NAME contains the file name of the output file
 WARC_SIZE contains the size of the output file
 WARC_INFO_ID contains the ID of the output file's WARCInfo-record if created
 WARC_SRC_FILE_NAME contains the file name of the input file if the output file is generated from an input file
-WARC_HASH contains the hash of the output file if computed`
+WARC_HASH contains the hash of the output file if computed
+WARC_ERROR_COUNT contains the number of errors found if the file was validated and the validation failed`
 	CalculateHashHelp = `calculate hash of output file. The hash is made available to the close output file hook as WARC_HASH. Valid values: md5, sha1, sha256, sha512`
 )

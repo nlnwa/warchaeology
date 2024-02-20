@@ -32,9 +32,9 @@ It can also be used to skip the file if it does not meet certain criteria.
 To use this hook, specify the path to the executable file using the `--open-input-file-hook` flag when running the tool.
 
 #### Environment Variables
-1. `WARC_COMMAND`: Contains the subcommand name.
-2. `WARC_HOOK_TYPE`: Contains the hook type: OpenInputFile.
-3. `WARC_FILE_NAME`: Contains the file name of the input file.
+* `WARC_COMMAND`: Contains the subcommand name.
+* `WARC_HOOK_TYPE`: Contains the hook type: OpenInputFile.
+* `WARC_FILE_NAME`: Contains the file name of the input file.
 
 #### Exit codes
      1: The hook should exit with a status of 1 in case of an error.
@@ -48,11 +48,11 @@ This hook can be used to perform any cleanup or post-processing tasks.
 To use this hook, specify the path to the executable file using the `--close-input-file-hook` flag when running the tool.
 
 #### Environment Variables
-1. `WARC_COMMAND`: Contains the subcommand name.
-2. `WARC_HOOK_TYPE`: Contains the hook type: CloseInputFile.
-3. `WARC_FILE_NAME`: Contains the file name of the input file.
-4. `WARC_ERROR_COUNT`: Contains the number of errors encountered while reading the input file.
-5. `WARC_HASH`: Contains the hash of the input file if it was computed.
+* `WARC_COMMAND`: Contains the subcommand name.
+* `WARC_HOOK_TYPE`: Contains the hook type: CloseInputFile.
+* `WARC_FILE_NAME`: Contains the file name of the input file.
+* `WARC_ERROR_COUNT`: Contains the number of errors found if the file was validated and the validation failed.
+* `WARC_HASH`: Contains the hash of the input file if it was computed.
 
 #### Exit codes
      1: The hook should exit with a status of 1 in case of an error.
@@ -65,10 +65,10 @@ This hook can be used to perform any necessary setup or validation before the fi
 To use this hook, specify the path to the executable file using the `--open-output-file-hook` flag when running the tool.
 
 #### Environment Variables
-1. `WARC_COMMAND`: Contains the subcommand name.
-2. `WARC_HOOK_TYPE`: Contains the hook type: OpenOutputFile.
-3. `WARC_FILE_NAME`: Contains the file name of the output file.
-4. `WARC_SRC_FILE_NAME`: Contains the file name of the input file from which the output file is being created.
+* `WARC_COMMAND`: Contains the subcommand name.
+* `WARC_HOOK_TYPE`: Contains the hook type: OpenOutputFile.
+* `WARC_FILE_NAME`: Contains the file name of the output file.
+* `WARC_SRC_FILE_NAME`: Contains the file name of the input file from which the output file is being created.
 
 #### Exit codes
      1: The hook should exit with a status of 1 in case of an error.
@@ -81,10 +81,11 @@ This hook can be used to perform any cleanup or post-processing tasks.
 To use this hook, specify the path to the executable file using the `--close-output-file-hook` flag when running the tool.
 
 #### Environment Variables
-1. `WARC_COMMAND`: Contains the subcommand name.
-2. `WARC_HOOK_TYPE`: Contains the hook type: CloseOutputFile.
-3. `WARC_FILE_NAME`: Contains the file name of the output file.
-4. `WARC_SRC_FILE_NAME`: Contains the file name of the input file from which the output file was created.
-5. `WARC_SIZE`: Contains the size of the output file in bytes.
-6. `WARC_HASH`: Contains the hash of the output file if it was computed.
-7. `WARC_INFO_ID`: Contains the ID of the WarcInfo-record in the output file if it exists.
+* `WARC_COMMAND`: Contains the subcommand name.
+* `WARC_HOOK_TYPE`: Contains the hook type: CloseOutputFile.
+* `WARC_FILE_NAME`: Contains the file name of the output file.
+* `WARC_SRC_FILE_NAME`: Contains the file name of the input file from which the output file was created.
+* `WARC_SIZE`: Contains the size of the output file in bytes.
+* `WARC_HASH`: Contains the hash of the output file if it was computed.
+* `WARC_INFO_ID`: Contains the ID of the WarcInfo-record in the output file if it exists.
+* `WARC_ERROR_COUNT`: contains the number of errors found if the file was validated and the validation failed.
