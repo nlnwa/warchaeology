@@ -29,7 +29,7 @@ The `OpenInputFileHook` is an executable file that runs before an input file is 
 This hook can be used to perform any necessary setup or validation before the file is accessed by the tool.
 It can also be used to skip the file if it does not meet certain criteria.
 
-To use this hook, specify the path to the executable file using the `--OpenInputFileHook` flag when running the tool.
+To use this hook, specify the path to the executable file using the `--open-input-file-hook` flag when running the tool.
 
 #### Environment Variables
 1. `WARC_COMMAND`: Contains the subcommand name.
@@ -45,7 +45,7 @@ To use this hook, specify the path to the executable file using the `--OpenInput
 The `CloseInputFileHook` is an executable file that runs after an input file has been fully read and has been closed.
 This hook can be used to perform any cleanup or post-processing tasks.
 
-To use this hook, specify the path to the executable file using the `--CloseInputFileHook` flag when running the tool.
+To use this hook, specify the path to the executable file using the `--close-input-file-hook` flag when running the tool.
 
 #### Environment Variables
 1. `WARC_COMMAND`: Contains the subcommand name.
@@ -62,7 +62,7 @@ To use this hook, specify the path to the executable file using the `--CloseInpu
 The `OpenOutputFileHook` is an executable file that runs before an output file is opened for writing.
 This hook can be used to perform any necessary setup or validation before the file is accessed by the tool.
 
-To use this hook, specify the path to the executable file using the `--OpenOutputFileHook` flag when running the tool.
+To use this hook, specify the path to the executable file using the `--open-output-file-hook` flag when running the tool.
 
 #### Environment Variables
 1. `WARC_COMMAND`: Contains the subcommand name.
@@ -78,7 +78,7 @@ To use this hook, specify the path to the executable file using the `--OpenOutpu
 The `CloseOutputFileHook` is an executable file that runs after an output file has been fully written to and has been closed.
 This hook can be used to perform any cleanup or post-processing tasks.
 
-To use this hook, specify the path to the executable file using the `--CloseOutputFileHook` flag when running the tool.
+To use this hook, specify the path to the executable file using the `--close-output-file-hook` flag when running the tool.
 
 #### Environment Variables
 1. `WARC_COMMAND`: Contains the subcommand name.
