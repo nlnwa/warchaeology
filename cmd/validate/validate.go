@@ -131,7 +131,7 @@ func validateFile(fs afero.Fs, file string) filewalker.Result {
 	}
 
 	defer func() {
-		_ = r.Close(&warcInfoId)
+		_ = r.Close(&warcInfoId, result)
 	}()
 
 	wf, err := gowarc.NewWarcFileReaderFromStream(r, 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
@@ -211,7 +211,7 @@ func newTeeReader(fs afero.Fs, file string) (*teeReader, error) {
 	return t, nil
 }
 
-func (t *teeReader) Close(warcInfoId *string) (err error) {
+func (t *teeReader) Close(warcInfoId *string, result filewalker.Result) (err error) {
 	if t.r != nil {
 		_ = t.r.Close()
 		t.r = nil
@@ -222,6 +222,7 @@ func (t *teeReader) Close(warcInfoId *string) (err error) {
 		if err := config.closeOutputFileHook.
 			WithSrcFileName(t.rName).
 			WithHash(t.Hash()).
+			WithErrorCount(result.ErrorCount()).
 			Run(t.wName, t.Size(), *warcInfoId); err != nil {
 			panic(err)
 		}

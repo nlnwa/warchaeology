@@ -181,29 +181,34 @@ func TestCloseOutputFileHook(t *testing.T) {
 		size        int64
 		warcInfoId  string
 		srcFileName string
+		errorCount  int64
 		want        []string
 		wantErr     string
 	}{
 		{"no extras", "test", "./test_hook.sh", "test.warc.gz",
-			1234, "", "",
+			1234, "", "", 0,
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_SIZE=1234"},
 			""},
+		{"error", "test", "./test_hook.sh", "test.warc.gz",
+			1234, "", "", 2,
+			[]string{"WARC_COMMAND=test", "WARC_ERROR_COUNT=2", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_SIZE=1234"},
+			""},
 		{"warcInfoId", "test", "./test_hook.sh", "test.warc.gz",
-			1234, "TestId", "",
+			1234, "TestId", "", 0,
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_INFO_ID=TestId", "WARC_SIZE=1234"},
 			""},
 		{"srcFile", "test", "./test_hook.sh", "test.warc.gz",
-			1234, "", "TestSource",
+			1234, "", "TestSource", 0,
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_SIZE=1234", "WARC_SRC_FILE_NAME=TestSource"},
 			""},
 		{"warcInfoId + srcFile", "test", "./test_hook.sh", "test.warc.gz",
-			1234, "TestId", "TestSource",
+			1234, "TestId", "TestSource", 0,
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_INFO_ID=TestId", "WARC_SIZE=1234", "WARC_SRC_FILE_NAME=TestSource"},
 			""},
 		{"unknown hook", "test", "test_hook.sh", "test.warc.gz",
-			0, "", "", nil, "executable file 'test_hook.sh' not found in $PATH for CloseOutputFileHook"},
+			0, "", "", 0, nil, "executable file 'test_hook.sh' not found in $PATH for CloseOutputFileHook"},
 		{"exit status error", "test general error", "./test_hook.sh", "test.warc.gz",
-			0, "", "", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
+			0, "", "", 0, []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -220,7 +225,7 @@ func TestCloseOutputFileHook(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			h = h.WithSrcFileName(tt.srcFileName)
+			h = h.WithSrcFileName(tt.srcFileName).WithErrorCount(tt.errorCount)
 			out, err := h.Output(tt.fileName, tt.size, tt.warcInfoId)
 			if tt.wantErr != "" {
 				require.Error(t, err)
