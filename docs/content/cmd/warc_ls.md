@@ -1,5 +1,5 @@
 ---
-date: 2023-06-30T15:18:26+02:00
+date: 2024-02-21T15:43:33+01:00
 title: "warc ls"
 slug: warc_ls
 url: /cmd/warc_ls/
@@ -41,26 +41,32 @@ warc ls <files/dirs> [flags]
 ### Options
 
 ```
-  -c, --concurrency int        number of input files to process simultaneously. The default value is 1.5 x <number of cpu cores> (default 1)
-  -d, --delimiter string       use string instead of SPACE for field delimiter (default " ")
-  -f, --fields string          which fields to include. See 'warc help ls' for a description
-  -h, --help                   help for ls
-      --id stringArray         filter record ID's. For more than one, repeat flag or comma separated list.
-  -m, --mime-type strings      filter records with given mime-types. For more than one, repeat flag or comma separated list.
-  -o, --offset int             record offset (default -1)
-  -n, --record-count int       The maximum number of records to show
-  -t, --record-type strings    filter record types. For more than one, repeat flag or comma separated list.
-                               Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion
-  -r, --recursive              walk directories recursively
-  -S, --response-code string   filter records with given http response codes. Format is 'from-to' where from is inclusive and to is exclusive.
-                               Examples:
-                               '200': only records with 200 response
-                               '200-300': all records with response code between 200(inclusive) and 300(exclusive)
-                               '-400': all response codes below 400
-                               '500-': all response codes from 500 and above
-      --strict                 strict parsing
-      --suffixes strings       filter files by suffixes (default [.warc,.warc.gz])
-  -s, --symlinks               follow symlinks
+  -c, --concurrency int            number of input files to process simultaneously. The default value is 1.5 x <number of cpu cores> (default 1)
+  -d, --delimiter string           use string instead of SPACE for field delimiter (default " ")
+  -f, --fields string              which fields to include. See 'warc help ls' for a description
+  -h, --help                       help for ls
+      --id stringArray             filter record ID's. For more than one, repeat flag or comma separated list.
+  -m, --mime-type strings          filter records with given mime-types. For more than one, repeat flag or comma separated list.
+  -o, --offset int                 record offset (default -1)
+  -n, --record-count int           The maximum number of records to show
+  -t, --record-type strings        filter record types. For more than one, repeat flag or comma separated list.
+                                   Legal values: warcinfo,request,response,metadata,revisit,resource,continuation,conversion
+  -r, --recursive                  walk directories recursively
+  -S, --response-code string       filter records with given http response codes. Format is 'from-to' where from is inclusive and to is exclusive.
+                                   Examples:
+                                   '200': only records with 200 response
+                                   '200-300': all records with response code between 200(inclusive) and 300(exclusive)
+                                   '-400': all response codes below 400
+                                   '500-': all response codes from 500 and above
+      --source-file-list string    a file containing a list of files to process, one file per line
+      --source-filesystem string   the source filesystem to use for input files. Default is to use OS file system. Legal values:
+                                     ftp://user/pass@host:port
+                                     tar://path/to/archive.tar
+                                     tgz://path/to/archive.tar.gz
+                                   
+      --strict                     strict parsing
+      --suffixes strings           filter files by suffixes (default [.warc,.warc.gz])
+  -s, --symlinks                   follow symlinks
 ```
 
 ### Options inherited from parent commands
