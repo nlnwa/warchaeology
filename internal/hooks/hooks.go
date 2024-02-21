@@ -225,6 +225,7 @@ type CloseOutputFileHook struct {
 	hook        string
 	srcFileName string
 	hash        string
+	errorCount  int64
 }
 
 // NewCloseOutputFileHook creates a new CloseOutputFileHook
@@ -251,6 +252,11 @@ func (h CloseOutputFileHook) WithSrcFileName(srcFileName string) CloseOutputFile
 
 func (h CloseOutputFileHook) WithHash(hash string) CloseOutputFileHook {
 	h.hash = hash
+	return h
+}
+
+func (h CloseOutputFileHook) WithErrorCount(errorCount int64) CloseOutputFileHook {
+	h.errorCount = errorCount
 	return h
 }
 
@@ -283,6 +289,9 @@ func (h CloseOutputFileHook) Output(fileName string, size int64, warcInfoId stri
 	}
 	if h.hash != "" {
 		c.Env = append(c.Environ(), EnvHash+"="+h.hash)
+	}
+	if h.errorCount > 0 {
+		c.Env = append(c.Environ(), fmt.Sprintf("%s=%d", EnvErrorCount, h.errorCount))
 	}
 
 	b, err := c.CombinedOutput()
