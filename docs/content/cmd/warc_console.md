@@ -1,5 +1,5 @@
 ---
-date: 2024-02-21T15:43:33+01:00
+date: 2024-02-22T10:56:13+01:00
 title: "warc console"
 slug: warc_console
 url: /cmd/warc_console/
