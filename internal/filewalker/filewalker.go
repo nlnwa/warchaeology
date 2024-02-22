@@ -213,6 +213,10 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 
 			// run openInputFileHook hook
 			if err := f.openInputFileHook.Run(path); err != nil {
+				if err == hooks.ErrSkipFile {
+					fmt.Printf("Skipping file: %s\n", path)
+					return
+				}
 				panic(err)
 			}
 
