@@ -21,12 +21,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/nfnt/resize"
-	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/filter"
-	"github.com/nlnwa/warchaeology/internal/flag"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"image"
 	"image/color"
 	_ "image/gif"
@@ -35,6 +29,13 @@ import (
 	"io"
 	"os"
 	"strconv"
+
+	"github.com/nfnt/resize"
+	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal/filter"
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type conf struct {

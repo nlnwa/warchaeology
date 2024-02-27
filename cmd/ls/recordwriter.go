@@ -18,13 +18,14 @@ package ls
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal"
 	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/nlnwa/whatwg-url/url"
-	"regexp"
-	"strconv"
-	"strings"
 )
 
 type RecordWriter struct {

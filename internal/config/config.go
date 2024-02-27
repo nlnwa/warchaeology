@@ -19,6 +19,10 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/kirsle/configdir"
 	"github.com/klauspost/compress/gzip"
 	"github.com/nlnwa/warchaeology/internal/flag"
@@ -27,9 +31,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"os"
-	"strings"
-	"time"
 )
 
 func InitConfig(cmd *cobra.Command) {

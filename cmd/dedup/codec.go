@@ -1,9 +1,10 @@
 package dedup
 
 import (
-	"github.com/nlnwa/gowarc"
 	"strings"
 	"time"
+
+	"github.com/nlnwa/gowarc"
 )
 
 const (

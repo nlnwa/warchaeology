@@ -18,8 +18,9 @@
 package flag
 
 import (
-	"github.com/spf13/cobra"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 // SuffixCompletionFn can be added set for commands which want to restrict file completion to suffixes set by flag

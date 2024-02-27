@@ -19,14 +19,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/nlnwa/warchaeology/cmd"
-	"github.com/spf13/cobra/doc"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/nlnwa/warchaeology/cmd"
+	"github.com/spf13/cobra/doc"
 )
 
 func main() {

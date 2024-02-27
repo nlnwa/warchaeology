@@ -18,8 +18,9 @@
 package main_test
 
 import (
-	"github.com/nlnwa/warchaeology/cmd"
 	"testing"
+
+	"github.com/nlnwa/warchaeology/cmd"
 )
 
 func TestEmptyCommandPrompt(t *testing.T) {

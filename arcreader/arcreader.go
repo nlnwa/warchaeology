@@ -18,6 +18,7 @@ package arcreader
 
 import (
 	"bufio"
+
 	"github.com/nlnwa/gowarc"
 	"github.com/spf13/afero"
 )

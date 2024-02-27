@@ -18,15 +18,16 @@ package console
 
 import (
 	"errors"
-	"github.com/awesome-gocui/gocui"
-	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/flag"
-	"github.com/spf13/cobra"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"time"
+
+	"github.com/awesome-gocui/gocui"
+	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/spf13/cobra"
 )
 
 func NewCommand() *cobra.Command {

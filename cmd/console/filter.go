@@ -2,9 +2,10 @@ package console
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/awesome-gocui/gocui"
 	"github.com/nlnwa/gowarc"
-	"strings"
 )
 
 type recordFilter struct {

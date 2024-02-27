@@ -3,14 +3,15 @@ package console
 import (
 	"context"
 	"fmt"
-	"github.com/awesome-gocui/gocui"
-	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/flag"
-	"github.com/spf13/viper"
 	"io"
 	"io/fs"
 	"os"
 	"strings"
+
+	"github.com/awesome-gocui/gocui"
+	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/spf13/viper"
 )
 
 type record struct {

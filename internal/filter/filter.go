@@ -18,13 +18,14 @@
 package filter
 
 import (
+	"math"
+	"strconv"
+	"strings"
+
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/spf13/viper"
-	"math"
-	"strconv"
-	"strings"
 )
 
 type Filter struct {

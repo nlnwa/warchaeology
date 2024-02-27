@@ -1,11 +1,12 @@
 package warcwriterconfig
 
 import (
-	"github.com/nlnwa/gowarc"
 	"path"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nlnwa/gowarc"
 )
 
 func NewIdentityNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGenerator {

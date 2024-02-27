@@ -19,11 +19,12 @@ package utils
 
 import (
 	"fmt"
-	"github.com/shirou/gopsutil/disk"
-	"github.com/spf13/cast"
 	"os"
 	"strings"
 	"unicode"
+
+	"github.com/shirou/gopsutil/disk"
+	"github.com/spf13/cast"
 )
 
 const BadgerRecommendedMaxFileDescr = 65535
