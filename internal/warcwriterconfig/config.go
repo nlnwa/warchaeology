@@ -18,15 +18,16 @@ package warcwriterconfig
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/hooks"
 	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/spf13/viper"
-	"os"
-	"path/filepath"
-	"sync"
-	"time"
 )
 
 const DefaultDateFormat = "2006-1-2"

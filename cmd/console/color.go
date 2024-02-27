@@ -2,6 +2,7 @@ package console
 
 import (
 	"fmt"
+
 	"github.com/awesome-gocui/gocui"
 )
 

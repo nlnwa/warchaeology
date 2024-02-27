@@ -18,11 +18,12 @@
 package ftpfs
 
 import (
-	"github.com/jackc/puddle"
-	"github.com/jlaffaye/ftp"
 	"io"
 	"os"
 	"syscall"
+
+	"github.com/jackc/puddle"
+	"github.com/jlaffaye/ftp"
 )
 
 type File struct {

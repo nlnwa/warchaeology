@@ -2,11 +2,12 @@ package filewalker
 
 import (
 	"encoding"
+	"os"
+	"path"
+
 	"github.com/dgraph-io/badger/v3"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/viper"
-	"os"
-	"path"
 )
 
 type FileIndex struct {

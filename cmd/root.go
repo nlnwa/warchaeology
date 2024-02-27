@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/nlnwa/warchaeology/cmd/aart"
 	"github.com/nlnwa/warchaeology/cmd/cat"
 	"github.com/nlnwa/warchaeology/cmd/console"
@@ -27,7 +29,6 @@ import (
 	"github.com/nlnwa/warchaeology/internal/config"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // NewCommand returns a new cobra.Command implementing the root command for warc

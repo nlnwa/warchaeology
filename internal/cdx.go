@@ -17,8 +17,9 @@
 package internal
 
 import (
-	"github.com/nlnwa/gowarc"
 	"strconv"
+
+	"github.com/nlnwa/gowarc"
 )
 
 type Cdx struct {

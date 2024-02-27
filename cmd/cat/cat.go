@@ -19,13 +19,14 @@ package cat
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"strconv"
+
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/filter"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/viper"
-	"io"
-	"os"
-	"strconv"
 
 	"github.com/spf13/cobra"
 )

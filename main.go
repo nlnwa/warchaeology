@@ -18,9 +18,10 @@ limitations under the License.
 package main
 
 import (
+	"runtime"
+
 	"github.com/nlnwa/warchaeology/cmd"
 	"github.com/nlnwa/warchaeology/internal/cmdversion"
-	"runtime"
 )
 
 // Overridden by ldflags

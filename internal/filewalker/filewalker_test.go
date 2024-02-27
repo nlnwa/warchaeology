@@ -2,10 +2,11 @@ package filewalker_test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestFilewalker_Walk(t *testing.T) {

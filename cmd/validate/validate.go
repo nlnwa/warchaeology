@@ -25,13 +25,6 @@ import (
 	_ "crypto/sha512"
 	"errors"
 	"fmt"
-	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/filewalker"
-	"github.com/nlnwa/warchaeology/internal/flag"
-	"github.com/nlnwa/warchaeology/internal/hooks"
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"hash"
 	"io"
 	"os"
@@ -39,6 +32,14 @@ import (
 	"path"
 	"runtime"
 	"syscall"
+
+	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal/filewalker"
+	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/hooks"
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type conf struct {

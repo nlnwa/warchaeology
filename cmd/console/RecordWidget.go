@@ -20,11 +20,12 @@ package console
 import (
 	"bytes"
 	"fmt"
+	"io"
+
 	"github.com/awesome-gocui/gocui"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/spf13/viper"
-	"io"
 )
 
 type RecordWidget struct {

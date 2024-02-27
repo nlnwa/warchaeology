@@ -19,12 +19,13 @@ package nedlibreader
 import (
 	"bufio"
 	"bytes"
-	"github.com/nlnwa/gowarc"
-	"github.com/spf13/afero"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/nlnwa/gowarc"
+	"github.com/spf13/afero"
 )
 
 type NedlibReader struct {

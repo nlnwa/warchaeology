@@ -18,8 +18,9 @@
 package utils_test
 
 import (
-	"github.com/nlnwa/warchaeology/internal/utils"
 	"testing"
+
+	"github.com/nlnwa/warchaeology/internal/utils"
 )
 
 func TestContainsMatchOnMatching(t *testing.T) {

@@ -19,12 +19,13 @@ package ftpfs
 
 import (
 	"context"
-	"github.com/jackc/puddle"
-	"github.com/jlaffaye/ftp"
-	"github.com/spf13/afero"
 	"os"
 	"syscall"
 	"time"
+
+	"github.com/jackc/puddle"
+	"github.com/jlaffaye/ftp"
+	"github.com/spf13/afero"
 )
 
 // Fs is an implementation of afero.Fs that utilizes functions from the ftp package.

@@ -17,9 +17,10 @@
 package internal
 
 import (
-	"github.com/nlnwa/whatwg-url/url"
 	"net"
 	"strings"
+
+	"github.com/nlnwa/whatwg-url/url"
 )
 
 func SsurtUrl(u *url.Url, includeScheme bool) (string, error) {

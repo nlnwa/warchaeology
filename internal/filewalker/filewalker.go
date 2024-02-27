@@ -5,6 +5,13 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/klauspost/compress/gzip"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/ftpfs"
@@ -15,12 +22,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/tarfs"
 	"github.com/spf13/viper"
-	"io/fs"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
 )
 
 type FileWalker interface {

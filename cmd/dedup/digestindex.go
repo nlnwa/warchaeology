@@ -18,13 +18,14 @@ package dedup
 
 import (
 	"fmt"
+	"os"
+	"path"
+
 	"github.com/dgraph-io/badger/v3"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/utils"
 	"github.com/spf13/viper"
-	"os"
-	"path"
 )
 
 const minIndexDiskFree = 1 * 1024 * 1024

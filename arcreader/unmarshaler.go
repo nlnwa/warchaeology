@@ -20,14 +20,15 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/klauspost/compress/gzip"
-	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal"
 	"io"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/klauspost/compress/gzip"
+	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/internal"
 )
 
 type unmarshaler struct {

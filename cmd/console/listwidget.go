@@ -19,10 +19,11 @@ package console
 import (
 	"context"
 	"fmt"
-	"github.com/awesome-gocui/gocui"
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/awesome-gocui/gocui"
 )
 
 const (

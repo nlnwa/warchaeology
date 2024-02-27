@@ -20,6 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"os/signal"
+	"runtime"
+	"syscall"
+
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/filter"
@@ -29,11 +35,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"io"
-	"os"
-	"os/signal"
-	"runtime"
-	"syscall"
 )
 
 type conf struct {

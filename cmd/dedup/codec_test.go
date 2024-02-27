@@ -17,10 +17,11 @@
 package dedup
 
 import (
-	"github.com/nlnwa/gowarc"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/nlnwa/gowarc"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_codec_decode(t *testing.T) {

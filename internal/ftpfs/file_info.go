@@ -18,10 +18,11 @@
 package ftpfs
 
 import (
-	"github.com/jlaffaye/ftp"
 	"io/fs"
 	"os"
 	"time"
+
+	"github.com/jlaffaye/ftp"
 )
 
 const defaultFileMode = 0o555
