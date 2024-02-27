@@ -17,7 +17,7 @@
 #
 
 set -e
-rm -rf completions
+rm --recursive --force completions
 mkdir completions
 for sh in bash zsh fish; do
 	go run main.go completion "$sh" >"completions/warc.$sh"
