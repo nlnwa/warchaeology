@@ -5,7 +5,7 @@ weight: 50
 
 ## Getting Started
 
-Warchaeology is written in [go](https://go.dev) and at least v1.16 should be installed.
+Warchaeology is written in [go](https://go.dev) and requires v1.21 or greater to build.
 
 #### Clone the repository
 ``` sh
