@@ -13,7 +13,7 @@ require (
 	github.com/nlnwa/gowarc v1.5.0
 	github.com/nlnwa/whatwg-url v0.4.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/cast v1.6.0
 	github.com/spf13/cobra v1.8.0
