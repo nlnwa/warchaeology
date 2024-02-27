@@ -23,9 +23,7 @@ import (
 	"strings"
 
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/utils"
-	"github.com/spf13/viper"
 )
 
 type Filter struct {
@@ -36,78 +34,89 @@ type Filter struct {
 	mime        []string
 }
 
-func NewFromViper() *Filter {
+func New(options ...func(*Filter)) *Filter {
 	f := &Filter{}
-
-	// Parse record ID's flag
-	f.ids = viper.GetStringSlice(flag.RecordId)
-	for i := 0; i < len(f.ids); i++ {
-		f.ids[i] = strings.Trim(f.ids[i], "<>")
+	for _, option := range options {
+		option(f)
 	}
-
-	// Parse record types flag
-	recordTypes := viper.GetStringSlice(flag.RecordType)
-	for _, r := range recordTypes {
-		switch strings.ToLower(r) {
-		case "warcinfo":
-			f.RecordTypes = f.RecordTypes | gowarc.Warcinfo
-		case "request":
-			f.RecordTypes = f.RecordTypes | gowarc.Request
-		case "response":
-			f.RecordTypes = f.RecordTypes | gowarc.Response
-		case "metadata":
-			f.RecordTypes = f.RecordTypes | gowarc.Metadata
-		case "revisit":
-			f.RecordTypes = f.RecordTypes | gowarc.Revisit
-		case "resource":
-			f.RecordTypes = f.RecordTypes | gowarc.Resource
-		case "continuation":
-			f.RecordTypes = f.RecordTypes | gowarc.Continuation
-		case "conversion":
-			f.RecordTypes = f.RecordTypes | gowarc.Conversion
-		}
-	}
-
-	// Parse response code flag
-	rc := viper.GetString(flag.ResponseCode)
-	responseCodes := strings.Split(rc, "-")
-	switch len(responseCodes) {
-	case 1:
-		if len(responseCodes[0]) == 0 {
-			f.toStatus = math.MaxInt32
-		} else {
-			if i, e := strconv.Atoi(responseCodes[0]); e == nil {
-				f.fromStatus = i
-				f.toStatus = i + 1
-			} else {
-				panic(e)
-			}
-		}
-	case 2:
-		if len(responseCodes[0]) > 0 {
-			if i, e := strconv.Atoi(responseCodes[0]); e == nil {
-				f.fromStatus = i
-			} else {
-				panic(e)
-			}
-		}
-		if len(responseCodes[1]) == 0 {
-			f.toStatus = math.MaxInt32
-		} else {
-			if i, e := strconv.Atoi(responseCodes[1]); e == nil {
-				f.toStatus = i
-			} else {
-				panic(e)
-			}
-		}
-	default:
-		panic("Illegal response code")
-	}
-
-	// Parse document mmime-type flag
-	f.mime = viper.GetStringSlice(flag.MimeType)
-
 	return f
+}
+
+func WithRecordIds(ids []string) func(*Filter) {
+	return func(f *Filter) {
+		for id := range ids {
+			f.ids = append(f.ids, strings.Trim(ids[id], "<>"))
+		}
+	}
+}
+
+func WithRecordTypes(recordTypes []string) func(*Filter) {
+	return func(f *Filter) {
+		for _, r := range recordTypes {
+			switch strings.ToLower(r) {
+			case "warcinfo":
+				f.RecordTypes = f.RecordTypes | gowarc.Warcinfo
+			case "request":
+				f.RecordTypes = f.RecordTypes | gowarc.Request
+			case "response":
+				f.RecordTypes = f.RecordTypes | gowarc.Response
+			case "metadata":
+				f.RecordTypes = f.RecordTypes | gowarc.Metadata
+			case "revisit":
+				f.RecordTypes = f.RecordTypes | gowarc.Revisit
+			case "resource":
+				f.RecordTypes = f.RecordTypes | gowarc.Resource
+			case "continuation":
+				f.RecordTypes = f.RecordTypes | gowarc.Continuation
+			case "conversion":
+				f.RecordTypes = f.RecordTypes | gowarc.Conversion
+			}
+		}
+	}
+}
+
+func WithResponseCode(responseCode string) func(*Filter) {
+	return func(f *Filter) {
+		rc := strings.Split(responseCode, "-")
+		switch len(rc) {
+		case 1:
+			if len(rc[0]) == 0 {
+				f.toStatus = math.MaxInt32
+			} else {
+				if i, e := strconv.Atoi(rc[0]); e == nil {
+					f.fromStatus = i
+					f.toStatus = i + 1
+				} else {
+					panic(e)
+				}
+			}
+		case 2:
+			if len(rc[0]) > 0 {
+				if i, e := strconv.Atoi(rc[0]); e == nil {
+					f.fromStatus = i
+				} else {
+					panic(e)
+				}
+			}
+			if len(rc[1]) == 0 {
+				f.toStatus = math.MaxInt32
+			} else {
+				if i, e := strconv.Atoi(rc[1]); e == nil {
+					f.toStatus = i
+				} else {
+					panic(e)
+				}
+			}
+		default:
+			panic("Illegal response code")
+		}
+	}
+}
+
+func WithMimeType(mimeTypes []string) func(*Filter) {
+	return func(f *Filter) {
+		f.mime = mimeTypes
+	}
 }
 
 func (f *Filter) Accept(wr gowarc.WarcRecord) bool {

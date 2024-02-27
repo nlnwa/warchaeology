@@ -99,7 +99,12 @@ Output options:
 				viper.Set(flag.LogConsole, []string{"summary"})
 			}
 
-			c.filter = filter.NewFromViper()
+			c.filter = filter.New(
+				filter.WithMimeType(viper.GetStringSlice(flag.MimeType)),
+				filter.WithResponseCode(viper.GetString(flag.ResponseCode)),
+				filter.WithRecordIds(viper.GetStringSlice(flag.RecordId)),
+				filter.WithRecordTypes(viper.GetStringSlice(flag.RecordType)),
+			)
 
 			return runE(cmd.Name(), c)
 		},

@@ -63,9 +63,12 @@ func NewCommand() *cobra.Command {
 				c.offset = 0
 			}
 
-			viper.Set(flag.MimeType, []string{"image/gif", "image/jpeg", "image/png"})
-			c.filter = filter.NewFromViper()
-
+			c.filter = filter.New(
+				filter.WithMimeType([]string{"image/gif", "image/jpeg", "image/png"}),
+				filter.WithResponseCode(viper.GetString(flag.ResponseCode)),
+				filter.WithRecordIds(viper.GetStringSlice(flag.RecordId)),
+				filter.WithRecordTypes(viper.GetStringSlice(flag.RecordType)),
+			)
 			readFile(c, fileName)
 			return nil
 		},
