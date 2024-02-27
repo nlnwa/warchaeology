@@ -1,0 +1,79 @@
+output:
+  format: github-actions
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true
+
+linters-settings:
+  gofmt:
+    simplify: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+severity:
+  case-sensitive: true
+
+linters:
+  enable-all: true
+  disable:
+  # TODO(https://github.com/nlnwa/warchaeology/issues/66): The following
+  # sub-linters should be evaluated if they are going to be enabled or not.
+    - bodyclose
+    - containedctx
+    - cyclop
+    - deadcode
+    - depguard
+    - errname
+    - errorlint
+    - exhaustive
+    - exhaustivestruct
+    - exhaustruct
+    - forbidigo
+    - forcetypeassert
+    - funlen
+    - gci
+    - gochecknoglobals
+    - gocognit
+    - gocritic
+    - godot
+    - godox
+    - goerr113
+    - gofumpt
+    - goimports
+    - golint
+    - gomnd
+    - gosec
+    - ifshort
+    - inamedparam
+    - interfacebloat
+    - interfacer
+    - ireturn
+    - lll
+    - maligned
+    - mirror
+    - misspell
+    - nakedret
+    - nestif
+    - nilerr
+    - nlreturn
+    - nonamedreturns
+    - nosnakecase
+    - paralleltest
+    - perfsprint
+    - prealloc
+    - predeclared
+    - revive
+    - scopelint
+    - stylecheck
+    - tenv
+    - testifylint
+    - testpackage
+    - unparam
+    - varcheck
+    - varnamelen
+    - whitespace
+    - wrapcheck
+    - wsl
