@@ -35,7 +35,7 @@ you want to view generated documentation on localhost.
 
 Start a webserver serving documentation on [http://localhost:1313/](http://localhost:1313/)
 ``` sh
-$ hack/doc/serve.sh
+$ script/doc/serve.sh
 ```
 
 Source files for documentation are located in `docs/content`. The files in `docs/content/cmd` (except `_index.md`)
@@ -49,10 +49,10 @@ $ git checkout main
 $ git pull
 ```
 
-Run `hack/release/create.sh` with the release version as parameter. The version should NOT contain a 'v' prefix.
+Run `script/release/create.sh` with the release version as parameter. The version should NOT contain a 'v' prefix.
 For example to release v1.0.2, run:
 ``` sh
-$ hack/release/create.sh 1.0.2
+$ script/release/create.sh 1.0.2
 ```
 
 This will recreate the command line documentation, commit it and tag the release. The next thing you need to do is to
