@@ -48,7 +48,7 @@ nfpms:
     description: All things WARC
     homepage: https://nlnwa.github.io/warchaeology/
     license: Apache 2.0
-    maintainer: John Erik Halse <john.halse@nb.no>
+    maintainer: The web archive of the National Library of Norway <nettarkivet@nb.no>
     file_name_template: '{{ .ConventionalFileName }}'
     formats:
       - deb
