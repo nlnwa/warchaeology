@@ -32,42 +32,45 @@ import (
 
 func NewCommand() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "console <directory>",
-		Short: "A shell for working with WARC files",
-		Long:  ``,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				state.dir = args[0]
-			}
-			var err error
-			if state.dir, err = filepath.Abs(state.dir); err != nil {
-				return err
-			}
-			if state.dir, err = filepath.EvalSymlinks(state.dir); err != nil {
-				return err
-			}
-			var f os.FileInfo
-			f, err = os.Lstat(state.dir)
-			if err != nil {
-				return err
-			}
-			if !f.IsDir() {
-				f := path.Base(state.dir)
-				state.dir = path.Dir(state.dir)
-				state.files = append(state.files, f)
-			}
-			if state.suffixes, err = cmd.Flags().GetStringSlice(flag.Suffixes); err != nil {
-				return err
-			}
-
-			return runE()
-		},
+		Use:               "console <directory>",
+		Short:             "A shell for working with WARC files",
+		Long:              ``,
+		RunE:              parseArgumentsAndCallConsole,
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
 	cmd.Flags().StringSlice(flag.Suffixes, []string{".warc", ".warc.gz"}, flag.SuffixesHelp)
 
 	return cmd
+}
+
+func parseArgumentsAndCallConsole(cmd *cobra.Command, args []string) error {
+	if len(args) > 0 {
+		state.dir = args[0]
+	}
+	var err error
+	if state.dir, err = filepath.Abs(state.dir); err != nil {
+		return err
+	}
+	if state.dir, err = filepath.EvalSymlinks(state.dir); err != nil {
+		return err
+	}
+	var f os.FileInfo
+	f, err = os.Lstat(state.dir)
+	if err != nil {
+		return err
+	}
+	if !f.IsDir() {
+		f := path.Base(state.dir)
+		state.dir = path.Dir(state.dir)
+		state.files = append(state.files, f)
+	}
+	if state.suffixes, err = cmd.Flags().GetStringSlice(flag.Suffixes); err != nil {
+		return err
+	}
+
+	return runE()
+
 }
 
 var state = &State{curView: "dir"}

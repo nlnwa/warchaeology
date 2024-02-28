@@ -45,45 +45,11 @@ type conf struct {
 }
 
 func NewCommand() *cobra.Command {
-	c := &conf{}
 	var cmd = &cobra.Command{
 		Use:   "nedlib <files/dirs>",
 		Short: "Convert directory with files harvested with Nedlib into warc files",
 		Long:  ``,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			// The Nedlib data structure does not support direct filename transformations.
-			// Instead, we employ a custom generator that treats the input filename as a date.
-			// When we request a new warcwriter, we submit a synthetic fromFilename based on the date of the first record.
-			viper.Set(flag.NameGenerator, "nedlib")
-
-			if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
-				return err
-			} else {
-				wc.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
-					payload := &gowarc.WarcFields{}
-					payload.Set("software", cmdversion.SoftwareVersion()+" https://github.com/nlnwa/warchaeology")
-					payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", wc.WarcVersion.Minor(), wc.WarcVersion.Minor()))
-					payload.Set("description", "Converted from Nedlib")
-					h, e := os.Hostname()
-					if e != nil {
-						return e
-					}
-					payload.Set("host", h)
-
-					_, err := recordBuilder.WriteString(payload.String())
-					return err
-				}
-
-				c.writerConf = wc
-			}
-			c.concurrency = viper.GetInt(flag.Concurrency)
-
-			if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
-				return errors.New("missing file or directory name")
-			}
-			c.files = args
-			return runE(cmd.Name(), c)
-		},
+		RunE:  parseArgumentsAndCallNedlib,
 	}
 
 	cacheDir, err := os.UserCacheDir()
@@ -115,6 +81,43 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().String(flag.CloseOutputFileHook, "", flag.CloseOutputFileHookHelp)
 
 	return cmd
+}
+
+func parseArgumentsAndCallNedlib(cmd *cobra.Command, args []string) error {
+	config := &conf{}
+	// The Nedlib data structure does not support direct filename transformations.
+	// Instead, we employ a custom generator that treats the input filename as a date.
+	// When we request a new warcwriter, we submit a synthetic fromFilename based on the date of the first record.
+	viper.Set(flag.NameGenerator, "nedlib")
+
+	if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
+		return err
+	} else {
+		wc.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
+			payload := &gowarc.WarcFields{}
+			payload.Set("software", cmdversion.SoftwareVersion()+" https://github.com/nlnwa/warchaeology")
+			payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", wc.WarcVersion.Minor(), wc.WarcVersion.Minor()))
+			payload.Set("description", "Converted from Nedlib")
+			h, e := os.Hostname()
+			if e != nil {
+				return e
+			}
+			payload.Set("host", h)
+
+			_, err := recordBuilder.WriteString(payload.String())
+			return err
+		}
+
+		config.writerConf = wc
+	}
+	config.concurrency = viper.GetInt(flag.Concurrency)
+
+	if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
+		return errors.New("missing file or directory name")
+	}
+	config.files = args
+	return runE(cmd.Name(), config)
+
 }
 
 func runE(cmd string, c *conf) error {

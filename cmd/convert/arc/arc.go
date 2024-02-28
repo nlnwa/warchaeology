@@ -45,45 +45,11 @@ type conf struct {
 }
 
 func NewCommand() *cobra.Command {
-	c := &conf{}
 	var cmd = &cobra.Command{
-		Use:   "arc <files/dirs>",
-		Short: "Convert arc file into warc file",
-		Long:  ``,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			wc, err := warcwriterconfig.NewFromViper(cmd.Name())
-			if err != nil {
-				return err
-			}
-
-			wc.OneToOneWriter = true
-
-			if wc.OneToOneWriter {
-				wc.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
-					payload := &gowarc.WarcFields{}
-					payload.Set("software", cmdversion.SoftwareVersion()+" https://github.com/nlnwa/warchaeology")
-					payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", wc.WarcVersion.Minor(), wc.WarcVersion.Minor()))
-					payload.Set("description", "Converted from ARC")
-					h, e := os.Hostname()
-					if e != nil {
-						return e
-					}
-					payload.Set("host", h)
-
-					_, err := recordBuilder.WriteString(payload.String())
-					return err
-				}
-			}
-
-			c.writerConf = wc
-			c.concurrency = viper.GetInt(flag.Concurrency)
-
-			if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
-				return errors.New("missing file or directory name")
-			}
-			c.files = args
-			return runE(cmd.Name(), c)
-		},
+		Use:               "arc <files/dirs>",
+		Short:             "Convert arc file into warc file",
+		Long:              ``,
+		RunE:              parseArgumentsAndCallArc,
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
@@ -122,6 +88,43 @@ func NewCommand() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func parseArgumentsAndCallArc(cmd *cobra.Command, args []string) error {
+	config := &conf{}
+	wc, err := warcwriterconfig.NewFromViper(cmd.Name())
+	if err != nil {
+		return err
+	}
+
+	wc.OneToOneWriter = true
+
+	if wc.OneToOneWriter {
+		wc.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
+			payload := &gowarc.WarcFields{}
+			payload.Set("software", cmdversion.SoftwareVersion()+" https://github.com/nlnwa/warchaeology")
+			payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", wc.WarcVersion.Minor(), wc.WarcVersion.Minor()))
+			payload.Set("description", "Converted from ARC")
+			h, e := os.Hostname()
+			if e != nil {
+				return e
+			}
+			payload.Set("host", h)
+
+			_, err := recordBuilder.WriteString(payload.String())
+			return err
+		}
+	}
+
+	config.writerConf = wc
+	config.concurrency = viper.GetInt(flag.Concurrency)
+
+	if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
+		return errors.New("missing file or directory name")
+	}
+	config.files = args
+	return runE(cmd.Name(), config)
+
 }
 
 func runE(cmd string, c *conf) error {

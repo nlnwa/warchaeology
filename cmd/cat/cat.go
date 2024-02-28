@@ -43,7 +43,6 @@ type conf struct {
 }
 
 func NewCommand() *cobra.Command {
-	c := &conf{}
 	var cmd = &cobra.Command{
 		Use:   "cat",
 		Short: "Concatenate and print warc files",
@@ -53,34 +52,7 @@ warc cat file1.warc.gz
 
 # Pipe payload from record #4 into the image viewer feh
 warc cat -n4 -P file1.warc.gz | feh -`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return errors.New("missing file name")
-			}
-			c.fileName = args[0]
-			c.offset = viper.GetInt64(flag.Offset)
-			c.recordCount = viper.GetInt(flag.RecordCount)
-			c.recordNum = viper.GetInt(flag.RecordNum)
-			c.showWarcHeader = viper.GetBool(flag.ShowWarcHeader)
-			c.showProtocolHeader = viper.GetBool(flag.ShowProtocolHeader)
-			c.showPayload = viper.GetBool(flag.ShowPayload)
-
-			if (c.offset >= 0 || c.recordNum >= 0) && c.recordCount == 0 {
-				c.recordCount = 1
-			}
-			if c.offset < 0 {
-				c.offset = 0
-			}
-
-			c.filter = filter.NewFromViper()
-
-			if !(c.showWarcHeader || c.showProtocolHeader || c.showPayload) {
-				c.showWarcHeader = true
-				c.showProtocolHeader = true
-				c.showPayload = true
-			}
-			return runE(c)
-		},
+		RunE: parseArgumentsAndCallCat,
 	}
 
 	cmd.Flags().Int64P(flag.Offset, "o", -1, flag.OffsetHelp)
@@ -95,6 +67,36 @@ warc cat -n4 -P file1.warc.gz | feh -`,
 	cmd.Flags().StringSliceP(flag.MimeType, "m", []string{}, flag.MimeTypeHelp)
 
 	return cmd
+}
+
+func parseArgumentsAndCallCat(cmd *cobra.Command, args []string) error {
+	config := &conf{}
+	if len(args) == 0 {
+		return errors.New("missing file name")
+	}
+	config.fileName = args[0]
+	config.offset = viper.GetInt64(flag.Offset)
+	config.recordCount = viper.GetInt(flag.RecordCount)
+	config.recordNum = viper.GetInt(flag.RecordNum)
+	config.showWarcHeader = viper.GetBool(flag.ShowWarcHeader)
+	config.showProtocolHeader = viper.GetBool(flag.ShowProtocolHeader)
+	config.showPayload = viper.GetBool(flag.ShowPayload)
+
+	if (config.offset >= 0 || config.recordNum >= 0) && config.recordCount == 0 {
+		config.recordCount = 1
+	}
+	if config.offset < 0 {
+		config.offset = 0
+	}
+
+	config.filter = filter.NewFromViper()
+
+	if !(config.showWarcHeader || config.showProtocolHeader || config.showPayload) {
+		config.showWarcHeader = true
+		config.showProtocolHeader = true
+		config.showPayload = true
+	}
+	return runE(config)
 }
 
 func runE(c *conf) error {

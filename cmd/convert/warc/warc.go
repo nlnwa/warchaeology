@@ -47,28 +47,12 @@ type conf struct {
 }
 
 func NewCommand() *cobra.Command {
-	c := &conf{}
 	var cmd = &cobra.Command{
 		Use:   "warc <files/dirs>",
 		Short: "Convert WARC file into WARC file",
 		Long: `The WARC to WARC converter can be used to reorganize, convert or repair WARC-records.
 This is an experimental feature.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
-				return err
-			} else {
-				c.writerConf = wc
-			}
-			c.concurrency = viper.GetInt(flag.Concurrency)
-			c.minWARCDiskFree = utils.ParseSizeInBytes(viper.GetString(flag.MinFreeDisk))
-			c.repair = viper.GetBool(flag.Repair)
-
-			if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
-				return errors.New("missing file or directory name")
-			}
-			c.files = args
-			return runE(cmd.Name(), c)
-		},
+		RunE:              parseArgumentsAndCallWarc,
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
@@ -104,6 +88,25 @@ This is an experimental feature.`,
 	cmd.Flags().String(flag.CloseOutputFileHook, "", flag.CloseOutputFileHookHelp)
 
 	return cmd
+}
+
+func parseArgumentsAndCallWarc(cmd *cobra.Command, args []string) error {
+	config := &conf{}
+	if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
+		return err
+	} else {
+		config.writerConf = wc
+	}
+	config.concurrency = viper.GetInt(flag.Concurrency)
+	config.minWARCDiskFree = utils.ParseSizeInBytes(viper.GetString(flag.MinFreeDisk))
+	config.repair = viper.GetBool(flag.Repair)
+
+	if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
+		return errors.New("missing file or directory name")
+	}
+	config.files = args
+	return runE(cmd.Name(), config)
+
 }
 
 func runE(cmd string, c *conf) error {

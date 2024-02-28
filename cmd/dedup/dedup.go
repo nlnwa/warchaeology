@@ -49,8 +49,6 @@ type conf struct {
 }
 
 func NewCommand() *cobra.Command {
-	c := &conf{}
-
 	var cmd = &cobra.Command{
 		Use:   "dedup",
 		Short: "Deduplicate WARC files",
@@ -58,36 +56,7 @@ func NewCommand() *cobra.Command {
 
 NOTE: The filtering options only decides which records are candidates for deduplication.
 The remaining records are written as is.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			utils.CheckFileDescriptorLimit(utils.BadgerRecommendedMaxFileDescr)
-
-			if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
-				return err
-			} else {
-				c.writerConf = wc
-			}
-
-			c.concurrency = viper.GetInt(flag.Concurrency)
-			c.minimumSizeGain = utils.ParseSizeInBytes(viper.GetString(flag.DedupSizeGain))
-			c.minWARCDiskFree = utils.ParseSizeInBytes(viper.GetString(flag.MinFreeDisk))
-			c.repair = viper.GetBool(flag.Repair)
-
-			if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
-				return errors.New("missing file or directory name")
-			}
-			c.files = args
-			var err error
-
-			if c.digestIndex, err = NewDigestIndex(viper.GetBool(flag.NewIndex), cmd.Name()); err != nil {
-				fmt.Println(err)
-				return nil
-			}
-			defer c.digestIndex.Close()
-
-			c.filter = filter.NewFromViper()
-
-			return runE(cmd.Name(), c)
-		},
+		RunE:              parseArgumentsAndCallDeduplication,
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
@@ -154,6 +123,38 @@ The remaining records are written as is.`,
 	}
 
 	return cmd
+}
+
+func parseArgumentsAndCallDeduplication(cmd *cobra.Command, args []string) error {
+	config := &conf{}
+	utils.CheckFileDescriptorLimit(utils.BadgerRecommendedMaxFileDescr)
+
+	if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
+		return err
+	} else {
+		config.writerConf = wc
+	}
+
+	config.concurrency = viper.GetInt(flag.Concurrency)
+	config.minimumSizeGain = utils.ParseSizeInBytes(viper.GetString(flag.DedupSizeGain))
+	config.minWARCDiskFree = utils.ParseSizeInBytes(viper.GetString(flag.MinFreeDisk))
+	config.repair = viper.GetBool(flag.Repair)
+
+	if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
+		return errors.New("missing file or directory name")
+	}
+	config.files = args
+	var err error
+
+	if config.digestIndex, err = NewDigestIndex(viper.GetBool(flag.NewIndex), cmd.Name()); err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	defer config.digestIndex.Close()
+
+	config.filter = filter.NewFromViper()
+
+	return runE(cmd.Name(), config)
 }
 
 func runE(cmd string, c *conf) error {
