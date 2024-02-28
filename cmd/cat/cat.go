@@ -72,7 +72,12 @@ warc cat -n4 -P file1.warc.gz | feh -`,
 				c.offset = 0
 			}
 
-			c.filter = filter.NewFromViper()
+			c.filter = filter.New(
+				filter.WithMimeType(viper.GetStringSlice(flag.MimeType)),
+				filter.WithResponseCode(viper.GetString(flag.ResponseCode)),
+				filter.WithRecordIds(viper.GetStringSlice(flag.RecordId)),
+				filter.WithRecordTypes(viper.GetStringSlice(flag.RecordType)),
+			)
 
 			if !(c.showWarcHeader || c.showProtocolHeader || c.showPayload) {
 				c.showWarcHeader = true
