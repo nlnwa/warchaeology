@@ -38,8 +38,8 @@ type Cdx struct {
 	// rle - Record Length. The length of the record that this line refers to. This is the entire record
 	// (including e.g. WARC headers) as written on disk (compressed if stored compressed).
 	Rle string `json:"rle,omitempty"`
-	// rct - Record Concurrant To. The record ID of another record that the current record is considered to be
-	// ‘concurrant’ to. See further WARC chapter 5.7 (WARC-Concurrent-To).
+	// rct - Record Concurrent To. The record ID of another record that the current record is considered to be
+	// ‘concurrent’ to. See further WARC chapter 5.7 (WARC-Concurrent-To).
 	Rct string `json:"rct,omitempty"`
 	// rou (recommended) - Revisit Original URI. Only valid for records of type revisit. Contains the URI of
 	// the record that this record is considered a revisit of.
