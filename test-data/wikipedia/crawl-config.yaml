@@ -1,0 +1,9 @@
+# To recreate this test data, run:
+# docker run --volume $PWD/crawl-config.yaml:/app/crawl-config.yaml --volume $PWD/crawls:/crawls/ webrecorder/browsertrix-crawler@sha256:6ad16c3a85e2238f9e7b9fb162874abc07361fef463f632a79998c920f13e596 crawl --config /app/crawl-config.yaml
+# and you will find the test data here: `crawls/collections/labrador_retriever/labrador_retriever_0.warc.gz`
+seeds:
+  - url: https://en.wikipedia.org/wiki/Labrador_Retriever
+    depth: 0
+    scopeType: "prefix"
+combineWARC: true
+collection: "labrador_retriever"
