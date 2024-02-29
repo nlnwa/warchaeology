@@ -80,11 +80,7 @@ func parseArgumentsAndCallCat(cmd *cobra.Command, args []string) error {
 		config.showProtocolHeader = true
 		config.showPayload = true
 	}
-	return runE(config)
-}
-
-func runE(c *conf) error {
-	readFile(c, c.fileName)
+	readFile(config, config.fileName)
 	return nil
 }
 
