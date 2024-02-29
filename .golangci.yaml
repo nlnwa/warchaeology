@@ -52,7 +52,6 @@ linters:
     - ireturn
     - lll
     - maligned
-    - mirror
     - misspell
     - nakedret
     - nestif
