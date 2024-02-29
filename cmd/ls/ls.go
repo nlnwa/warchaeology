@@ -48,7 +48,6 @@ type conf struct {
 }
 
 func NewCommand() *cobra.Command {
-	c := &conf{}
 	var cmd = &cobra.Command{
 		Use:   "ls <files/dirs>",
 		Short: "List warc file contents",
@@ -75,34 +74,7 @@ Output options:
              V - Offset in WARC file
            A number after the field letter restricts the field length. By adding a + or - sign before the number the field is
            padded to have the exact length. + is right aligned and - is left aligned.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
-				return errors.New("missing file or directory name")
-			}
-			c.files = args
-			c.delimiter = viper.GetString(flag.Delimiter)
-			c.concurrency = viper.GetInt(flag.Concurrency)
-			c.offset = viper.GetInt64(flag.Offset)
-			c.recordCount = viper.GetInt(flag.RecordCount)
-			c.strict = viper.GetBool(flag.Strict)
-			c.fields = viper.GetString(flag.Fields)
-
-			if c.offset >= 0 && c.recordCount == 0 {
-				c.recordCount = 1
-				// TODO: check that input is exactly one file when using offset
-			}
-			if c.offset < 0 {
-				c.offset = 0
-			}
-
-			if !cmd.Flag(flag.LogConsole).Changed {
-				viper.Set(flag.LogConsole, []string{"summary"})
-			}
-
-			c.filter = filter.NewFromViper()
-
-			return runE(cmd.Name(), c)
-		},
+		RunE:              parseArgumentsAndCallLs,
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
@@ -136,6 +108,37 @@ Output options:
 	}
 
 	return cmd
+}
+
+func parseArgumentsAndCallLs(cmd *cobra.Command, args []string) error {
+	config := &conf{}
+	if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
+		return errors.New("missing file or directory name")
+	}
+	config.files = args
+	config.delimiter = viper.GetString(flag.Delimiter)
+	config.concurrency = viper.GetInt(flag.Concurrency)
+	config.offset = viper.GetInt64(flag.Offset)
+	config.recordCount = viper.GetInt(flag.RecordCount)
+	config.strict = viper.GetBool(flag.Strict)
+	config.fields = viper.GetString(flag.Fields)
+
+	if config.offset >= 0 && config.recordCount == 0 {
+		config.recordCount = 1
+		// TODO: check that input is exactly one file when using offset
+	}
+	if config.offset < 0 {
+		config.offset = 0
+	}
+
+	if !cmd.Flag(flag.LogConsole).Changed {
+		viper.Set(flag.LogConsole, []string{"summary"})
+	}
+
+	config.filter = filter.NewFromViper()
+
+	return runE(cmd.Name(), config)
+
 }
 
 func runE(cmd string, c *conf) error {

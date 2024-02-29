@@ -45,35 +45,37 @@ type conf struct {
 }
 
 func NewCommand() *cobra.Command {
-	c := &conf{}
 	var cmd = &cobra.Command{
 		Use:    "aart",
 		Short:  "Show images",
 		Long:   ``,
 		Hidden: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return errors.New("missing file name")
-			}
-			fileName := args[0]
-			c.offset = viper.GetInt64(flag.Offset)
-			c.recordNum = viper.GetInt(flag.RecordNum)
-
-			if c.offset < 0 {
-				c.offset = 0
-			}
-
-			viper.Set(flag.MimeType, []string{"image/gif", "image/jpeg", "image/png"})
-			c.filter = filter.NewFromViper()
-
-			readFile(c, fileName)
-			return nil
-		},
-	}
+		RunE:   parseArgumentsAndCallAsciiArt}
 
 	cmd.Flags().IntP("width", "w", 100, "Width of image")
 
 	return cmd
+}
+
+func parseArgumentsAndCallAsciiArt(cmd *cobra.Command, args []string) error {
+	config := &conf{}
+	if len(args) == 0 {
+		return errors.New("missing file name")
+	}
+	fileName := args[0]
+	config.offset = viper.GetInt64(flag.Offset)
+	config.recordNum = viper.GetInt(flag.RecordNum)
+
+	if config.offset < 0 {
+		config.offset = 0
+	}
+
+	viper.Set(flag.MimeType, []string{"image/gif", "image/jpeg", "image/png"})
+	config.filter = filter.NewFromViper()
+
+	readFile(config, fileName)
+	return nil
+
 }
 
 func readFile(c *conf, fileName string) {

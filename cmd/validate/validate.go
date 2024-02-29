@@ -53,29 +53,10 @@ var config conf
 
 func NewCommand() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "validate <files/dirs>",
-		Short: "Validate warc files",
-		Long:  ``,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
-				return errors.New("missing file or directory name")
-			}
-			config.files = args
-			config.warcDir = viper.GetString(flag.WarcDir)
-
-			var err error
-			config.openOutputFileHook, err = hooks.NewOpenOutputFileHook(cmd.Name(), viper.GetString(flag.OpenOutputFileHook))
-			if err != nil {
-				return err
-			}
-
-			config.closeOutputFileHook, err = hooks.NewCloseOutputFileHook(cmd.Name(), viper.GetString(flag.CloseOutputFileHook))
-			if err != nil {
-				return err
-			}
-
-			return runE(cmd.Name())
-		},
+		Use:               "validate <files/dirs>",
+		Short:             "Validate warc files",
+		Long:              ``,
+		RunE:              parseArgumentsAndCallValidate,
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
@@ -101,6 +82,28 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().String(flag.CalculateHash, "", flag.CalculateHashHelp)
 
 	return cmd
+}
+
+func parseArgumentsAndCallValidate(cmd *cobra.Command, args []string) error {
+
+	if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
+		return errors.New("missing file or directory name")
+	}
+	config.files = args
+	config.warcDir = viper.GetString(flag.WarcDir)
+
+	var err error
+	config.openOutputFileHook, err = hooks.NewOpenOutputFileHook(cmd.Name(), viper.GetString(flag.OpenOutputFileHook))
+	if err != nil {
+		return err
+	}
+
+	config.closeOutputFileHook, err = hooks.NewCloseOutputFileHook(cmd.Name(), viper.GetString(flag.CloseOutputFileHook))
+	if err != nil {
+		return err
+	}
+
+	return runE(cmd.Name())
 }
 
 func runE(cmd string) error {
