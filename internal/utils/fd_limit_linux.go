@@ -16,7 +16,7 @@ func CheckFileDescriptorLimit(limit uint64) {
 	}
 
 	if rLimit.Max < limit {
-		fmt.Printf("It is recomended to set max file descriptors to at least %d. Current value is %d\n", limit, rLimit.Max)
+		fmt.Printf("It is recommended to set max file descriptors to at least %d. Current value is %d\n", limit, rLimit.Max)
 	}
 
 	if rLimit.Cur > limit {
