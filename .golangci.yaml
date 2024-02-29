@@ -62,7 +62,6 @@ linters:
     - paralleltest
     - perfsprint
     - prealloc
-    - predeclared
     - revive
     - scopelint
     - stylecheck
