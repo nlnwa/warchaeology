@@ -152,7 +152,7 @@ func readFile(c *conf, fileName string) {
 			}
 
 			// Write separator
-			_, err = out.Write([]byte("\r\n"))
+			_, err = out.WriteString("\r\n")
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 			}
@@ -190,7 +190,7 @@ func readFile(c *conf, fileName string) {
 		}
 
 		// Write end of record separator
-		_, err = out.Write([]byte("\r\n\r\n"))
+		_, err = out.WriteString("\r\n\r\n")
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}
