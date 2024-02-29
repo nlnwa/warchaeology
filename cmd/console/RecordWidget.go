@@ -253,9 +253,9 @@ func (f *visibleLineEndingFilter) Write(p []byte) (n int, err error) {
 	return f.w.Write(p)
 }
 
-func colorizeReplaceAll(source, old, new []byte) []byte {
+func colorizeReplaceAll(source, old, replacement []byte) []byte {
 	reset := escapeFgColor(gocui.ColorDefault)
-	v := fmt.Sprintf("%s%s%s", escapeFgColor(gocui.ColorGreen), new, reset)
+	v := fmt.Sprintf("%s%s%s", escapeFgColor(gocui.ColorGreen), replacement, reset)
 	return bytes.ReplaceAll(source, old, []byte(v))
 }
 
