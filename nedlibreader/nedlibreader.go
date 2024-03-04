@@ -47,6 +47,7 @@ func (n *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Validation, err
 	if err != nil {
 		return nil, 0, validation, err
 	}
+	defer response.Body.Close()
 
 	rb := gowarc.NewRecordBuilder(gowarc.Response, n.opts...)
 
