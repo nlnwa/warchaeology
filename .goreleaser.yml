@@ -72,11 +72,6 @@ nfpms:
         dst: /usr/share/doc/warc/copyright
         file_info:
           mode: 0644
-    overrides:
-      rpm:
-        replacements:
-          amd64: x86_64
-          arm64: aarch64
 
 checksum:
   name_template: 'checksums.txt'
