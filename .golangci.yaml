@@ -21,7 +21,6 @@ linters:
   disable:
   # TODO(https://github.com/nlnwa/warchaeology/issues/66): The following
   # sub-linters should be evaluated if they are going to be enabled or not.
-    - bodyclose
     - containedctx
     - cyclop
     - deadcode
