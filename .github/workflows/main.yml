@@ -6,6 +6,9 @@ on:
 permissions:
   contents: write
 
+env:
+  github_pages_branch: gh-pages
+
 jobs:
   lint:
     name: lint
@@ -34,6 +37,40 @@ jobs:
           go-version: '1.21'
       - name: Test
         run: go test ./...
+
+  benchmark:
+    name: Benchmark
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+      - name: Run benchmark
+        run: go test ./... -bench="Bench" -count 10 | tee benchmark-result.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-benchmark-results
+          path: benchmark-result.txt
+      # TODO: immediately after merging this, the following code should be
+      # replaced by downloading the previous benchmark results instead
+      - name: make dummy dir
+        run: mkdir -p ./previous/benchmarks/${{ matrix.os }}/
+      - name: create dummy file
+        run: echo ' ' > ./previous/benchmarks/${{ matrix.os }}/results.json
+      - name: Compare benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Benchmarks
+          tool: 'go'
+          output-file-path: benchmark-result.txt
+          external-data-json-path: ./previous/benchmarks/${{ matrix.os }}/results.json
+          auto-push: false
+          fail-on-alert: true
+          alert-threshold: "150%"
 
   build:
     runs-on: ubuntu-latest
@@ -95,3 +132,32 @@ jobs:
         with:
           name: rpm-i386
           path: dist/warchaeology-*i386.rpm
+
+  publish-benchmarks:
+    name: Publish benchmarks
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    if: github.ref_name == github.event.repository.default_branch
+    needs:
+      - benchmark
+      - build
+      - test
+      - lint
+    steps:
+      - name: Download benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.os }}-benchmark-results
+          path: benchmark-result.txt
+      - name: Publish benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Benchmarks
+          tool: 'go'
+          output-file-path: benchmark-result.txt
+          benchmark-data-dir-path: benchmarks/${{ matrix.os }}
+          auto-push: true
+          fail-on-alert: true
+          alert-threshold: "150%"
