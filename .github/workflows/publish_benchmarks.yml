@@ -1,0 +1,41 @@
+# Do not run this workflow on pull request since this workflow has permission to modify contents.
+name: Publish benchmarks
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  # deployments permission to deploy GitHub pages website
+  deployments: write
+  # contents permission to update benchmark contents in gh-pages branch
+  contents: write
+
+jobs:
+  publish-benchmarks:
+    name: Publish benchmark results
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+      - name: Run benchmarks
+        run: go test ./... -bench="Bench" | tee benchmark-result.txt
+      - name: Publish benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Go Benchmark
+          tool: 'go'
+          output-file-path: benchmark-result.txt
+          benchmark-data-dir-path: benchmarks/${{ matrix.os }}
+          auto-push: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fail-on-alert: true
+          alert-threshold: "150%"
