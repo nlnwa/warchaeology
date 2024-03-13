@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710330506285,
+  "lastUpdate": 1710332962600,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -60,6 +60,36 @@ window.BENCHMARK_DATA = {
             "value": 189.2,
             "unit": "ns/op",
             "extra": "6149486 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "521798023390169609c0d58ea172af8903a6dbee",
+          "message": "Merge pull request #93 from nlnwa/fix/use-correct-os\n\nfix: use correct OS",
+          "timestamp": "2024-03-13T13:28:56+01:00",
+          "tree_id": "d657ad88a6d7a02d2608c9937dfafeb67df2d1b0",
+          "url": "https://github.com/nlnwa/warchaeology/commit/521798023390169609c0d58ea172af8903a6dbee"
+        },
+        "date": 1710332961490,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 190.1,
+            "unit": "ns/op",
+            "extra": "6305347 times\n4 procs"
           }
         ]
       }
