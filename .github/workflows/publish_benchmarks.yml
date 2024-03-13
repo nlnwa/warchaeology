@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Code Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
@@ -39,3 +41,45 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on-alert: true
           alert-threshold: "150%"
+
+      - name: Create benchmark result directory
+        run: mkdir --parents benchmarks/${{ matrix.os }}/
+      - name: Create benchmark results json
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Go Benchmark
+          tool: 'go'
+          output-file-path: benchmark-result.txt
+          external-data-json-path: benchmarks/${{ matrix.os }}/results.json
+          auto-push: false
+          fail-on-alert: true
+          alert-threshold: "150%"
+      - name: Upload artifact for benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-benchmark-results
+          path: benchmarks/${{ matrix.os }}/results.json
+      - name: Code Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: benchmark-results
+      - name: Download artifact for previous benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.os }}-benchmark-results
+          path: benchmarks/${{ matrix.os }}/
+      - name: Commit and push benchmark results
+        uses: EndBug/add-and-commit@v9
+        id: commit-and-push
+        with:
+          add: "benchmarks"
+          message: 'chore: update benchmark results'
+          new_branch: benchmark-results
+          pathspec_error_handling: exitImmediately
+          push: true
+      - name: Verify that a commit has been pushed
+        run: |
+          if [ "${{ steps.commit-and-push.outputs.pushed }}" != "true" ]; then
+            echo "Commit failed"
+            exit 1
+          fi
