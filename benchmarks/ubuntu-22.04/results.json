@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1710330507240,
+  "lastUpdate": 1710332963760,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,20 +16,20 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "ab32b5f0340bc6b44ded32960c8fe1dbbcefe29c",
-          "message": "Merge pull request #92 from nlnwa/ci/auto-commit-benchmark-results-to-dedicated-branch\n\nci: push benchmark results to dedicated branch",
-          "timestamp": "2024-03-13T12:48:03+01:00",
-          "tree_id": "710d3b1704769d90b3517ec58380b6695f6c3616",
-          "url": "https://github.com/nlnwa/warchaeology/commit/ab32b5f0340bc6b44ded32960c8fe1dbbcefe29c"
+          "id": "521798023390169609c0d58ea172af8903a6dbee",
+          "message": "Merge pull request #93 from nlnwa/fix/use-correct-os\n\nfix: use correct OS",
+          "timestamp": "2024-03-13T13:28:56+01:00",
+          "tree_id": "d657ad88a6d7a02d2608c9937dfafeb67df2d1b0",
+          "url": "https://github.com/nlnwa/warchaeology/commit/521798023390169609c0d58ea172af8903a6dbee"
         },
-        "date": 1710330507239,
+        "date": 1710332963759,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 189.2,
+            "value": 190.1,
             "unit": "ns/op",
-            "extra": "6149486 times\n4 procs"
+            "extra": "6305347 times\n4 procs"
           }
         ]
       }
