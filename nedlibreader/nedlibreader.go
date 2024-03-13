@@ -56,7 +56,7 @@ func (n *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Validation, err
 	header := response.Header
 	dateString := header.Get("Date")
 	if dateString != "" {
-		t, err := time.Parse(time.RFC1123, dateString)
+		t, err := parseTime(dateString)
 		if err != nil {
 			return nil, 0, validation, err
 		}
