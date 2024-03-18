@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710752741354,
+  "lastUpdate": 1710773377407,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -150,6 +150,36 @@ window.BENCHMARK_DATA = {
             "value": 191.6,
             "unit": "ns/op",
             "extra": "6224840 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "43d5f0ec0e18d4d92624b7976e17fed65b8ba66b",
+          "message": "Merge pull request #97 from nlnwa/dependabot/github_actions/actions/setup-go-5\n\nbuild(deps): bump actions/setup-go from 4 to 5",
+          "timestamp": "2024-03-18T15:49:17+01:00",
+          "tree_id": "723cdd5a59952a30de12ea60773901e6114d7fd3",
+          "url": "https://github.com/nlnwa/warchaeology/commit/43d5f0ec0e18d4d92624b7976e17fed65b8ba66b"
+        },
+        "date": 1710773376968,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 188.7,
+            "unit": "ns/op",
+            "extra": "6359430 times\n4 procs"
           }
         ]
       }
