@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1710399470142,
+  "lastUpdate": 1710752742254,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,20 +16,20 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "9a92906ac8914851a54b638ac789f97188a60152",
-          "message": "Merge pull request #95 from nlnwa/dependabot/go_modules/google.golang.org/protobuf-1.33.0\n\nbuild(deps): bump google.golang.org/protobuf from 1.31.0 to 1.33.0",
-          "timestamp": "2024-03-14T07:57:04+01:00",
-          "tree_id": "5214911c7882e8ba8e20e5834c8cf67efaddbd39",
-          "url": "https://github.com/nlnwa/warchaeology/commit/9a92906ac8914851a54b638ac789f97188a60152"
+          "id": "60cca4b813a6ddcab4b155bd8f9f433feaeb4715",
+          "message": "Merge pull request #96 from nlnwa/ci/compare-with-previous-benchmarks\n\nci: compare with previous benchmarks",
+          "timestamp": "2024-03-18T10:05:16+01:00",
+          "tree_id": "0bc9a7ef5ae75265896de1c621457e1e6e0ada3b",
+          "url": "https://github.com/nlnwa/warchaeology/commit/60cca4b813a6ddcab4b155bd8f9f433feaeb4715"
         },
-        "date": 1710399470142,
+        "date": 1710752742254,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 191.4,
+            "value": 191.6,
             "unit": "ns/op",
-            "extra": "6350492 times\n4 procs"
+            "extra": "6224840 times\n4 procs"
           }
         ]
       }
