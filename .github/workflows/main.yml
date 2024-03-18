@@ -52,16 +52,15 @@ jobs:
         with:
           name: ${{ matrix.os }}-benchmark-results
           path: benchmark-result.txt
-      # TODO: immediately after merging this, the following code should be
-      # replaced by downloading the previous benchmark results instead
-      - name: make dummy dir
-        run: mkdir --parents ./previous/benchmarks/${{ matrix.os }}/
-      - name: create dummy file
-        run: echo ' ' > ./previous/benchmarks/${{ matrix.os }}/results.json
+      - name: Download previous benchmark results
+        uses: actions/checkout@v4
+        with:
+          ref: benchmark-results
+          path: previous/
       - name: Compare benchmark results
         uses: benchmark-action/github-action-benchmark@v1
         with:
-          name: Benchmarks
+          name: Go Benchmark
           tool: 'go'
           output-file-path: benchmark-result.txt
           external-data-json-path: ./previous/benchmarks/${{ matrix.os }}/results.json
