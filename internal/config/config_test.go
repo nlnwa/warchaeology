@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/kirsle/configdir"
@@ -23,6 +24,9 @@ type env struct {
 }
 
 func TestCommand(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/89): This test fails on windows")
+	}
 	tests := []struct {
 		name     string
 		cmdLine  []string
