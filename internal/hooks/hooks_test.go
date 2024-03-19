@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -9,7 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	windowsOs = "windows"
+)
+
 func TestOpenInputFileHook(t *testing.T) {
+	if runtime.GOOS == windowsOs {
+		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/89): This test fails on windows")
+	}
 	tests := []struct {
 		name     string
 		command  string
@@ -58,6 +66,9 @@ func TestOpenInputFileHook(t *testing.T) {
 }
 
 func TestCloseInputFileHook(t *testing.T) {
+	if runtime.GOOS == windowsOs {
+		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/89): This test fails on windows")
+	}
 	tests := []struct {
 		name       string
 		command    string
@@ -107,6 +118,9 @@ func TestCloseInputFileHook(t *testing.T) {
 }
 
 func TestOpenOutputFileHook(t *testing.T) {
+	if runtime.GOOS == windowsOs {
+		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/89): This test fails on windows")
+	}
 	tests := []struct {
 		name        string
 		command     string
@@ -157,6 +171,9 @@ func TestOpenOutputFileHook(t *testing.T) {
 }
 
 func TestCloseOutputFileHook(t *testing.T) {
+	if runtime.GOOS == windowsOs {
+		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/89): This test fails on windows")
+	}
 	tests := []struct {
 		name        string
 		command     string
