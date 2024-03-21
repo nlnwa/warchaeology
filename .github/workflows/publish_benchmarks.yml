@@ -17,7 +17,7 @@ jobs:
     name: Publish benchmark results
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-2022]
+        os: [ubuntu-22.04, windows-2022, macos-13]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Code Checkout
