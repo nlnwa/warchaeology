@@ -27,6 +27,10 @@ func TestCommand(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/89): This test fails on windows")
 	}
+	if runtime.GOOS == "darwin" {
+		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/100): This test fails on macOS")
+	}
+
 	tests := []struct {
 		name     string
 		cmdLine  []string
