@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1711024806033,
+  "lastUpdate": 1711025997426,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,20 +16,20 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "062052fc810590462d9e1bc6179b0d57039a0d62",
-          "message": "Merge pull request #102 from nlnwa/ci/enable-benchmarking-for-different-os\n\nci: enable benchmarking for different OSs",
-          "timestamp": "2024-03-21T13:39:34+01:00",
-          "tree_id": "3668288ed38b023f5ccac85fc3964fa34dd9b442",
-          "url": "https://github.com/nlnwa/warchaeology/commit/062052fc810590462d9e1bc6179b0d57039a0d62"
+          "id": "af8a95b98503d8fe95b4a871b75e9257bb7e7b71",
+          "message": "Merge pull request #103 from nlnwa/revert/mac-os-benchmark\n\nRevert \"ci: enable benchmarking for MacOS\"",
+          "timestamp": "2024-03-21T13:59:32+01:00",
+          "tree_id": "1d1c41c0c770d428da5e264d94aeefffa90f5981",
+          "url": "https://github.com/nlnwa/warchaeology/commit/af8a95b98503d8fe95b4a871b75e9257bb7e7b71"
         },
-        "date": 1711024806033,
+        "date": 1711025997425,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 190.9,
+            "value": 188.8,
             "unit": "ns/op",
-            "extra": "6356883 times\n4 procs"
+            "extra": "6369168 times\n4 procs"
           }
         ]
       }
