@@ -41,10 +41,13 @@ func TestFilewalker_Walk(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := walker{}
-			f := filewalker.New(tt.paths, tt.recursive, tt.followSymlinks, tt.suffixes, 1, w.walkfunc)
+			f, err := filewalker.New(tt.paths, tt.recursive, tt.followSymlinks, tt.suffixes, 1, w.walkfunc)
+			if err != nil {
+				t.Fatal(err)
+			}
 			ctx := context.TODO()
 			stats := &result{}
-			err := f.Walk(ctx, stats)
+			err = f.Walk(ctx, stats)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, w)
 		})

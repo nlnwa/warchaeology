@@ -60,7 +60,7 @@ type fileWalker struct {
 }
 
 func New(paths []string, recursive, followSymlinks bool, suffixes []string, concurrency int,
-	fn func(fs afero.Fs, path string) Result) FileWalker {
+	fn func(fs afero.Fs, path string) Result) (FileWalker, error) {
 	return &fileWalker{
 		fs:             resolveFilesystem(),
 		paths:          paths,
@@ -70,7 +70,7 @@ func New(paths []string, recursive, followSymlinks bool, suffixes []string, conc
 		concurrency:    concurrency,
 		processor:      fn,
 		processedPaths: NewStringSet(),
-	}
+	}, nil
 }
 
 func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) Result) (FileWalker, error) {
