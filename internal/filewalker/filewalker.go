@@ -60,9 +60,13 @@ type fileWalker struct {
 }
 
 func New(paths []string, recursive, followSymlinks bool, suffixes []string, concurrency int,
-	fn func(fs afero.Fs, path string) Result) FileWalker {
+	fn func(fs afero.Fs, path string) Result) (FileWalker, error) {
+	fileSystem, err := resolveFilesystem()
+	if err != nil {
+		return nil, fmt.Errorf("error resolving filesystem: original error: '%w'", err)
+	}
 	return &fileWalker{
-		fs:             resolveFilesystem(),
+		fs:             fileSystem,
 		paths:          paths,
 		recursive:      recursive,
 		followSymlinks: followSymlinks,
@@ -70,7 +74,7 @@ func New(paths []string, recursive, followSymlinks bool, suffixes []string, conc
 		concurrency:    concurrency,
 		processor:      fn,
 		processedPaths: NewStringSet(),
-	}
+	}, nil
 }
 
 func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) Result) (FileWalker, error) {
@@ -119,9 +123,13 @@ func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) 
 			return nil, err
 		}
 	}
+	fileSystem, err := resolveFilesystem()
+	if err != nil {
+		return nil, fmt.Errorf("error resolving filesystem: original error: '%w'", err)
+	}
 	return &fileWalker{
 		cmd:                cmd,
-		fs:                 resolveFilesystem(),
+		fs:                 fileSystem,
 		paths:              paths,
 		recursive:          viper.GetBool(flag.Recursive),
 		followSymlinks:     viper.GetBool(flag.FollowSymlinks),
@@ -137,48 +145,48 @@ func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) 
 	}, nil
 }
 
-func resolveFilesystem() afero.Fs {
+func resolveFilesystem() (afero.Fs, error) {
 	filesystemDefinition := viper.GetString(flag.SrcFilesystem)
 	if filesystemDefinition == "" {
-		return afero.NewOsFs()
+		return afero.NewOsFs(), nil
 	}
 
 	url, err := url.Parse(filesystemDefinition)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error parsing filesystem definition: original error: '%w'", err)
 	}
 
 	//ftp://user:password@host:port/path
 	if url.Protocol() == "ftp:" {
 		hostPort := fmt.Sprintf("%s:%d", url.Host(), url.DecodedPort())
-		return ftpfs.New(hostPort, url.Username(), url.Password(), int32(viper.GetInt(flag.Concurrency)))
+		return ftpfs.New(hostPort, url.Username(), url.Password(), int32(viper.GetInt(flag.Concurrency))), nil
 	}
 
 	// tar://path/to/archive.tar
 	if url.Protocol() == "tar:" {
 		filepath, err := afero.NewOsFs().Open(url.Hostname() + url.Pathname())
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("error opening tar file: original error: '%w'", err)
 		}
 		tarReader := tar.NewReader(filepath)
-		return tarfs.New(tarReader)
+		return tarfs.New(tarReader), nil
 	}
 
 	// tgz://path/to/archive.tar.gz
 	if url.Protocol() == "tgz:" {
 		filepath, err := afero.NewOsFs().Open(url.Hostname() + url.Pathname())
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("error opening tar.gz file: original error: '%w'", err)
 		}
 		gzipReader, err := gzip.NewReader(filepath)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("error creating gzip reader: original error: '%w'", err)
 		}
 		tarReader := tar.NewReader(gzipReader)
-		return tarfs.New(tarReader)
+		return tarfs.New(tarReader), nil
 	}
 
-	panic("Unsupported filesystem: " + filesystemDefinition)
+	return nil, fmt.Errorf("unsupported filesystem: %s", filesystemDefinition)
 }
 
 func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
