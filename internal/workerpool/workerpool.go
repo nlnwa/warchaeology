@@ -5,39 +5,40 @@ import (
 	"sync"
 )
 
-type workerpool struct {
-	workers int
-	jobs    chan func()
-	wg      sync.WaitGroup
+type workerPool struct {
+	numberOfWorkers int
+	jobs            chan func()
+	waitGroup       sync.WaitGroup
 }
 
-func New(ctx context.Context, workers int) *workerpool {
-	w := &workerpool{
-		workers: workers,
-		jobs:    make(chan func(), workers*4),
-		wg:      sync.WaitGroup{},
+func New(ctx context.Context, numberOfWorkers int) *workerPool {
+	magicNumber := 4
+	pool := &workerPool{
+		numberOfWorkers: numberOfWorkers,
+		jobs:            make(chan func(), numberOfWorkers*magicNumber),
+		waitGroup:       sync.WaitGroup{},
 	}
-	for i := 0; i < workers; i++ {
+	for workerIndex := 0; workerIndex < numberOfWorkers; workerIndex++ {
 		go func(jobs <-chan func()) {
-			for j := range jobs {
+			for job := range jobs {
 				select {
 				case <-ctx.Done():
 				default:
-					j()
+					job()
 				}
-				w.wg.Done()
+				pool.waitGroup.Done()
 			}
-		}(w.jobs)
+		}(pool.jobs)
 	}
-	return w
+	return pool
 }
 
-func (w *workerpool) CloseWait() {
-	close(w.jobs)
-	w.wg.Wait()
+func (pool *workerPool) CloseWait() {
+	close(pool.jobs)
+	pool.waitGroup.Wait()
 }
 
-func (w *workerpool) Submit(job func()) {
-	w.wg.Add(1)
-	w.jobs <- job
+func (pool *workerPool) Submit(job func()) {
+	pool.waitGroup.Add(1)
+	pool.jobs <- job
 }
