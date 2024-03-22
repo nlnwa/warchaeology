@@ -189,6 +189,7 @@ func resolveFilesystem() (afero.Fs, error) {
 	return nil, fmt.Errorf("unsupported filesystem: %s", filesystemDefinition)
 }
 
+//nolint:gocyclo
 func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 	if viper.GetBool(flag.KeepIndex) {
 		if fileIndex, err := NewFileIndex(viper.GetBool(flag.NewIndex), walker.cmd); err != nil {
@@ -213,11 +214,11 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 	pool := workerPool.New(ctx, walker.concurrency)
 	resultChan := make(chan Result, 32)
 	submitJobFunction := func(fs afero.Fs, path string) {
-		pool.Submit(func() {
+		pool.Submit(func() error {
 			if walker.fileIndex != nil {
 				if result := walker.fileIndex.GetFileStats(path); result != nil {
 					resultChan <- result
-					return
+					return nil
 				}
 			}
 
@@ -225,9 +226,9 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 			if err := walker.openInputFileHook.Run(path); err != nil {
 				if err == hooks.ErrSkipFile {
 					fmt.Printf("Skipping file: %s\n", path)
-					return
+					return nil
 				}
-				panic(err)
+				return fmt.Errorf("error running openInputFileHook: original error: '%w'", err)
 			}
 
 			// Process file
@@ -235,20 +236,24 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 
 			// run closeInputFileHook hook
 			if err := walker.closeInputFileHook.Run(path, results.ErrorCount()); err != nil {
-				panic(err)
+				return fmt.Errorf("error running closeInputFileHook: original error: '%w'", err)
 			}
 
 			if walker.fileIndex != nil {
 				walker.fileIndex.SaveFileStats(path, results)
 			}
 			resultChan <- results
+			return nil
 		})
 	}
 
 	allResults := &sync.WaitGroup{}
 	allResults.Add(1)
 	defer func() {
-		pool.CloseWait()
+		err := pool.CloseWait()
+		if err != nil {
+			panic(err)
+		}
 		resultChan <- nil
 		allResults.Wait()
 		timeSpent := time.Since(startTime)
