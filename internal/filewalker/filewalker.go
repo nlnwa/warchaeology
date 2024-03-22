@@ -17,7 +17,7 @@ import (
 	"github.com/nlnwa/warchaeology/internal/ftpfs"
 	"github.com/nlnwa/warchaeology/internal/hooks"
 	"github.com/nlnwa/warchaeology/internal/utils"
-	"github.com/nlnwa/warchaeology/internal/workerpool"
+	workerPool "github.com/nlnwa/warchaeology/internal/workerpool"
 	"github.com/nlnwa/whatwg-url/url"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/tarfs"
@@ -30,6 +30,9 @@ type FileWalker interface {
 
 type logType uint8
 
+var anim = `-\|/`
+var animPos int
+
 const (
 	info     logType = 1
 	err      logType = 2
@@ -37,7 +40,7 @@ const (
 	progress logType = 8
 )
 
-type filewalker struct {
+type fileWalker struct {
 	cmd                string
 	fs                 afero.Fs
 	paths              []string
@@ -58,8 +61,8 @@ type filewalker struct {
 
 func New(paths []string, recursive, followSymlinks bool, suffixes []string, concurrency int,
 	fn func(fs afero.Fs, path string) Result) FileWalker {
-	return &filewalker{
-		fs:             resolveFs(),
+	return &fileWalker{
+		fs:             resolveFilesystem(),
 		paths:          paths,
 		recursive:      recursive,
 		followSymlinks: followSymlinks,
@@ -116,9 +119,9 @@ func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) 
 			return nil, err
 		}
 	}
-	return &filewalker{
+	return &fileWalker{
 		cmd:                cmd,
-		fs:                 resolveFs(),
+		fs:                 resolveFilesystem(),
 		paths:              paths,
 		recursive:          viper.GetBool(flag.Recursive),
 		followSymlinks:     viper.GetBool(flag.FollowSymlinks),
@@ -134,86 +137,84 @@ func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) 
 	}, nil
 }
 
-func resolveFs() afero.Fs {
-	fsDef := viper.GetString(flag.SrcFilesystem)
-	if fsDef == "" {
+func resolveFilesystem() afero.Fs {
+	filesystemDefinition := viper.GetString(flag.SrcFilesystem)
+	if filesystemDefinition == "" {
 		return afero.NewOsFs()
 	}
 
-	u, err := url.Parse(fsDef)
+	url, err := url.Parse(filesystemDefinition)
 	if err != nil {
 		panic(err)
 	}
 
 	//ftp://user:password@host:port/path
-	if u.Protocol() == "ftp:" {
-		hostPort := fmt.Sprintf("%s:%d", u.Host(), u.DecodedPort())
-		return ftpfs.New(hostPort, u.Username(), u.Password(), int32(viper.GetInt(flag.Concurrency)))
+	if url.Protocol() == "ftp:" {
+		hostPort := fmt.Sprintf("%s:%d", url.Host(), url.DecodedPort())
+		return ftpfs.New(hostPort, url.Username(), url.Password(), int32(viper.GetInt(flag.Concurrency)))
 	}
 
 	// tar://path/to/archive.tar
-	if u.Protocol() == "tar:" {
-		f := u.Hostname() + u.Pathname()
-		r, err := afero.NewOsFs().Open(f)
+	if url.Protocol() == "tar:" {
+		filepath, err := afero.NewOsFs().Open(url.Hostname() + url.Pathname())
 		if err != nil {
 			panic(err)
 		}
-		tr := tar.NewReader(r)
-		return tarfs.New(tr)
+		tarReader := tar.NewReader(filepath)
+		return tarfs.New(tarReader)
 	}
 
 	// tgz://path/to/archive.tar.gz
-	if u.Protocol() == "tgz:" {
-		f := u.Hostname() + u.Pathname()
-		r, err := afero.NewOsFs().Open(f)
+	if url.Protocol() == "tgz:" {
+		filepath, err := afero.NewOsFs().Open(url.Hostname() + url.Pathname())
 		if err != nil {
 			panic(err)
 		}
-		gr, err := gzip.NewReader(r)
+		gzipReader, err := gzip.NewReader(filepath)
 		if err != nil {
 			panic(err)
 		}
-		tr := tar.NewReader(gr)
-		return tarfs.New(tr)
+		tarReader := tar.NewReader(gzipReader)
+		return tarfs.New(tarReader)
 	}
 
-	panic("Unsupported filesystem: " + fsDef)
+	panic("Unsupported filesystem: " + filesystemDefinition)
 }
 
-func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
+func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 	if viper.GetBool(flag.KeepIndex) {
-		if fileIndex, err := NewFileIndex(viper.GetBool(flag.NewIndex), f.cmd); err != nil {
+		if fileIndex, err := NewFileIndex(viper.GetBool(flag.NewIndex), walker.cmd); err != nil {
 			return err
 		} else {
-			f.fileIndex = fileIndex
+			walker.fileIndex = fileIndex
 		}
-		defer f.fileIndex.Close()
+		defer walker.fileIndex.Close()
 	}
 
 	startTime := time.Now()
 
-	if f.logFileName != "" {
+	if walker.logFileName != "" {
 		var err error
-		f.logFile, err = os.Create(f.logFileName)
+		walker.logFile, err = os.Create(walker.logFileName)
 		if err != nil {
 			return err
 		}
-		defer func() { _ = f.logFile.Close() }()
+		defer func() { _ = walker.logFile.Close() }()
 	}
 
-	wp := workerpool.New(ctx, f.concurrency)
+	pool := workerPool.New(ctx, walker.concurrency)
 	resultChan := make(chan Result, 32)
-	fn := func(fs afero.Fs, path string) {
-		wp.Submit(func() {
-			if f.fileIndex != nil {
-				if r := f.fileIndex.GetFileStats(path); r != nil {
-					resultChan <- r
+	submitJobFunction := func(fs afero.Fs, path string) {
+		pool.Submit(func() {
+			if walker.fileIndex != nil {
+				if result := walker.fileIndex.GetFileStats(path); result != nil {
+					resultChan <- result
 					return
 				}
 			}
 
 			// run openInputFileHook hook
-			if err := f.openInputFileHook.Run(path); err != nil {
+			if err := walker.openInputFileHook.Run(path); err != nil {
 				if err == hooks.ErrSkipFile {
 					fmt.Printf("Skipping file: %s\n", path)
 					return
@@ -222,55 +223,54 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 			}
 
 			// Process file
-			r := f.processor(fs, path)
+			results := walker.processor(fs, path)
 
 			// run closeInputFileHook hook
-			if err := f.closeInputFileHook.Run(path, r.ErrorCount()); err != nil {
+			if err := walker.closeInputFileHook.Run(path, results.ErrorCount()); err != nil {
 				panic(err)
 			}
 
-			if f.fileIndex != nil {
-				f.fileIndex.SaveFileStats(path, r)
+			if walker.fileIndex != nil {
+				walker.fileIndex.SaveFileStats(path, results)
 			}
-			resultChan <- r
+			resultChan <- results
 		})
 	}
 
 	allResults := &sync.WaitGroup{}
 	allResults.Add(1)
 	defer func() {
-		wp.CloseWait()
+		pool.CloseWait()
 		resultChan <- nil
 		allResults.Wait()
 		timeSpent := time.Since(startTime)
-		if f.isLog(summary) {
-			s := fmt.Sprintf("Total time: %v, %s", timeSpent, stats)
-			f.logSummary(s)
-		} else if f.isLog(progress) {
+		if walker.isLog(summary) {
+			walker.logSummary(fmt.Sprintf("Total time: %v, %s", timeSpent, stats))
+		} else if walker.isLog(progress) {
 			fmt.Printf("                                                                                     \r")
 		}
 	}()
 	go func() {
 		count := 0
 		for {
-			res := <-resultChan
-			if res == nil {
+			result := <-resultChan
+			if result == nil {
 				allResults.Done()
 				break
 			}
 			count++
-			if res.ErrorCount() > 0 && f.isLog(err) {
-				f.logError(res, count)
-			} else if f.isLog(info) {
-				f.logInfo(res, count)
+			if result.ErrorCount() > 0 && walker.isLog(err) {
+				walker.logError(result, count)
+			} else if walker.isLog(info) {
+				walker.logInfo(result, count)
 			}
 
-			stats.Merge(res.GetStats())
-			if res.Fatal() != nil {
-				fmt.Printf("ERROR: %s\n", res.Fatal())
+			stats.Merge(result.GetStats())
+			if result.Fatal() != nil {
+				fmt.Printf("ERROR: %s\n", result.Fatal())
 			}
 
-			if f.isLog(progress) {
+			if walker.isLog(progress) {
 				fmt.Printf("  %s %s\r", string(anim[animPos]), stats.String())
 				animPos++
 				if animPos >= len(anim) {
@@ -279,29 +279,29 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 			}
 		}
 	}()
-	for _, p := range f.paths {
-		if !f.processedPaths.Contains(p) {
-			if err := f.walkDir(ctx, p, p, fn); err != nil {
+	for _, path := range walker.paths {
+		if !walker.processedPaths.Contains(path) {
+			if err := walker.walkDir(ctx, path, path, submitJobFunction); err != nil {
 				return err
 			}
 		}
 	}
 	srcFileList := viper.GetString(flag.SrcFileList)
 	if srcFileList != "" {
-		sfl, err := os.Open(srcFileList) //open the file
+		sourceFile, err := os.Open(srcFileList)
 		if err != nil {
 			fmt.Println("Error opening file:", err)
 			return nil
 		}
 		defer func(sfl *os.File) {
 			_ = sfl.Close()
-		}(sfl)
+		}(sourceFile)
 
-		scanner := bufio.NewScanner(sfl) //scan the contents of a file and print line by line
+		scanner := bufio.NewScanner(sourceFile) //scan the contents of a file and print line by line
 		for scanner.Scan() {
-			p := scanner.Text()
-			if !f.processedPaths.Contains(p) {
-				if err := f.walkDir(ctx, p, p, fn); err != nil {
+			token := scanner.Text()
+			if !walker.processedPaths.Contains(token) {
+				if err := walker.walkDir(ctx, token, token, submitJobFunction); err != nil {
 					return err
 				}
 			}
@@ -314,38 +314,38 @@ func (f *filewalker) Walk(ctx context.Context, stats Stats) error {
 	return nil
 }
 
-func (f *filewalker) walkDir(ctx context.Context, root, dirName string, fn func(fs afero.Fs, path string)) error {
-	return afero.Walk(f.fs, dirName, func(path string, d fs.FileInfo, err error) error {
+func (walker *fileWalker) walkDir(ctx context.Context, root, dirName string, fn func(fs afero.Fs, path string)) error {
+	return afero.Walk(walker.fs, dirName, func(path string, fileInfo fs.FileInfo, err error) error {
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, "Error:", err)
 			return nil
 		}
-		if d.IsDir() {
-			f.processedPaths.Add(path)
-			if !f.recursive && root != path {
+		if fileInfo.IsDir() {
+			walker.processedPaths.Add(path)
+			if !walker.recursive && root != path {
 				return filepath.SkipDir
 			}
-		} else if !d.IsDir() && !d.Mode().IsRegular() {
-			if f.followSymlinks {
-				if lr, ok := f.fs.(afero.LinkReader); ok {
-					s, err := lr.ReadlinkIfPossible(path)
+		} else if !fileInfo.IsDir() && !fileInfo.Mode().IsRegular() {
+			if walker.followSymlinks {
+				if linkReader, ok := walker.fs.(afero.LinkReader); ok {
+					linkPath, err := linkReader.ReadlinkIfPossible(path)
 					if err != nil {
 						_, _ = fmt.Fprintln(os.Stderr, "Error:", err)
 						return filepath.SkipDir
 					}
-					s = filepath.Join(filepath.Dir(path), s)
-					if f.processedPaths.Contains(s) {
+					linkPath = filepath.Join(filepath.Dir(path), linkPath)
+					if walker.processedPaths.Contains(linkPath) {
 						return nil
 					}
-					return f.walkDir(ctx, root, s, fn)
+					return walker.walkDir(ctx, root, linkPath, fn)
 				} else {
 					_, _ = fmt.Fprintln(os.Stderr, "Error: Symlinks not supported by filesystem")
 					return filepath.SkipDir
 				}
 			}
-		} else if f.hasSuffix(path) && !f.processedPaths.Contains(path) {
-			f.processedPaths.Add(path)
-			fn(f.fs, path)
+		} else if walker.hasSuffix(path) && !walker.processedPaths.Contains(path) {
+			walker.processedPaths.Add(path)
+			fn(walker.fs, path)
 		}
 
 		select {
@@ -357,53 +357,50 @@ func (f *filewalker) walkDir(ctx context.Context, root, dirName string, fn func(
 	})
 }
 
-func (f *filewalker) hasSuffix(path string) bool {
-	if f.suffixes == nil || len(f.suffixes) == 0 {
+func (walker *fileWalker) hasSuffix(path string) bool {
+	if walker.suffixes == nil || len(walker.suffixes) == 0 {
 		return true
 	}
-	for _, s := range f.suffixes {
-		if strings.HasSuffix(path, s) {
+	for _, suffix := range walker.suffixes {
+		if strings.HasSuffix(path, suffix) {
 			return true
 		}
 	}
 	return false
 }
 
-func (f *filewalker) isLog(l logType) bool {
-	return f.logConsoleTypes&l != 0 || f.logFile != nil && f.logfileTypes&l != 0
+func (walker *fileWalker) isLog(log logType) bool {
+	return walker.logConsoleTypes&log != 0 || walker.logFile != nil && walker.logfileTypes&log != 0
 }
 
-func (f *filewalker) logSummary(s string) {
-	if f.logConsoleTypes&summary != 0 {
-		fmt.Println(s)
+func (walker *fileWalker) logSummary(str string) {
+	if walker.logConsoleTypes&summary != 0 {
+		fmt.Println(str)
 	}
-	if f.logFile != nil && f.logfileTypes&summary != 0 {
-		_, _ = fmt.Fprintln(f.logFile, s)
-	}
-}
-
-func (f *filewalker) logInfo(res Result, recNum int) {
-	s := res.Log(recNum)
-	if f.logConsoleTypes&info != 0 {
-		fmt.Println(s)
-	}
-	if f.logFile != nil && f.logfileTypes&info != 0 {
-		_, _ = fmt.Fprintln(f.logFile, s)
+	if walker.logFile != nil && walker.logfileTypes&summary != 0 {
+		_, _ = fmt.Fprintln(walker.logFile, str)
 	}
 }
 
-func (f *filewalker) logError(res Result, recNum int) {
-	s := res.Log(recNum)
-	e := strings.ReplaceAll(res.Error(), "\n", "\n  ")
-	if f.logConsoleTypes&err != 0 {
-		fmt.Println(s)
-		fmt.Println(e)
+func (walker *fileWalker) logInfo(res Result, recNum int) {
+	logString := res.Log(recNum)
+	if walker.logConsoleTypes&info != 0 {
+		fmt.Println(logString)
 	}
-	if f.logFile != nil && f.logfileTypes&err != 0 {
-		_, _ = fmt.Fprintln(f.logFile, s)
-		_, _ = fmt.Fprintln(f.logFile, e)
+	if walker.logFile != nil && walker.logfileTypes&info != 0 {
+		_, _ = fmt.Fprintln(walker.logFile, logString)
 	}
 }
 
-var anim = `-\|/`
-var animPos int
+func (walker *fileWalker) logError(res Result, recordNumber int) {
+	recordNumberLogString := res.Log(recordNumber)
+	errorString := strings.ReplaceAll(res.Error(), "\n", "\n  ")
+	if walker.logConsoleTypes&err != 0 {
+		fmt.Println(recordNumberLogString)
+		fmt.Println(errorString)
+	}
+	if walker.logFile != nil && walker.logfileTypes&err != 0 {
+		_, _ = fmt.Fprintln(walker.logFile, recordNumberLogString)
+		_, _ = fmt.Fprintln(walker.logFile, errorString)
+	}
+}
