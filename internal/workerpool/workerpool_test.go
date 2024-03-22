@@ -2,6 +2,7 @@ package workerpool
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +19,7 @@ func TestSubmitJob(t *testing.T) {
 	pool := New(ctx, 1)
 	assert.NotNil(t, pool)
 
-	pool.Submit(func() {})
+	pool.Submit(func() error { return nil })
 }
 
 func TestClosePool(t *testing.T) {
@@ -26,5 +27,36 @@ func TestClosePool(t *testing.T) {
 	pool := New(ctx, 1)
 	assert.NotNil(t, pool)
 
-	pool.CloseWait()
+	err := pool.CloseWait()
+	assert.NoError(t, err)
+}
+
+func TestSubmitErrorJob(t *testing.T) {
+	ctx := context.Background()
+	pool := New(ctx, 1)
+	assert.NotNil(t, pool)
+
+	errorToBeRaised := fmt.Errorf("A custom error")
+	pool.Submit(func() error { return errorToBeRaised })
+	err := pool.CloseWait()
+	if err != errorToBeRaised {
+		assert.Error(t, err)
+	}
+	assert.Error(t, err)
+}
+
+func TestSubmitAMillionFailingJobs(t *testing.T) {
+	ctx := context.Background()
+	pool := New(ctx, 1)
+	assert.NotNil(t, pool)
+
+	errorToBeRaised := fmt.Errorf("A custom error")
+	for i := 0; i < 1000000; i++ {
+		pool.Submit(func() error { return errorToBeRaised })
+	}
+	err := pool.CloseWait()
+	if err != errorToBeRaised {
+		assert.Error(t, err)
+	}
+	assert.Error(t, err)
 }
