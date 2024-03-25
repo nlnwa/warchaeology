@@ -5,16 +5,16 @@ import (
 	"sync"
 )
 
-type workerPool struct {
+type WorkerPool struct {
 	numberOfWorkers int
 	jobs            chan func() error
 	errors          chan error
 	waitGroup       sync.WaitGroup
 }
 
-func New(ctx context.Context, numberOfWorkers int) *workerPool {
+func New(ctx context.Context, numberOfWorkers int) *WorkerPool {
 	magicNumber := 4
-	pool := &workerPool{
+	pool := &WorkerPool{
 		numberOfWorkers: numberOfWorkers,
 		jobs:            make(chan func() error, numberOfWorkers*magicNumber),
 		errors:          make(chan error, numberOfWorkers*magicNumber),
@@ -38,7 +38,7 @@ func New(ctx context.Context, numberOfWorkers int) *workerPool {
 	return pool
 }
 
-func (pool *workerPool) CloseWait() error {
+func (pool *WorkerPool) CloseWait() error {
 	pool.waitGroup.Wait()
 	close(pool.jobs)
 	close(pool.errors)
@@ -50,7 +50,7 @@ func (pool *workerPool) CloseWait() error {
 	return nil
 }
 
-func (pool *workerPool) Submit(job func() error) {
+func (pool *WorkerPool) Submit(job func() error) {
 	pool.waitGroup.Add(1)
 	pool.jobs <- job
 }

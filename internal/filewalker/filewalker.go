@@ -189,7 +189,6 @@ func resolveFilesystem() (afero.Fs, error) {
 	return nil, fmt.Errorf("unsupported filesystem: %s", filesystemDefinition)
 }
 
-//nolint:gocyclo
 func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 	if viper.GetBool(flag.KeepIndex) {
 		if fileIndex, err := NewFileIndex(viper.GetBool(flag.NewIndex), walker.cmd); err != nil {
@@ -249,20 +248,7 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 
 	allResults := &sync.WaitGroup{}
 	allResults.Add(1)
-	defer func() {
-		err := pool.CloseWait()
-		if err != nil {
-			panic(err)
-		}
-		resultChan <- nil
-		allResults.Wait()
-		timeSpent := time.Since(startTime)
-		if walker.isLog(summary) {
-			walker.logSummary(fmt.Sprintf("Total time: %v, %s", timeSpent, stats))
-		} else if walker.isLog(progress) {
-			fmt.Printf("                                                                                     \r")
-		}
-	}()
+	defer closePool(walker, pool, resultChan, allResults, startTime, stats)
 	go func() {
 		count := 0
 		for {
@@ -325,6 +311,21 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 		}
 	}
 	return nil
+}
+
+func closePool(walker *fileWalker, pool *workerPool.WorkerPool, resultChan chan Result, allResults *sync.WaitGroup, startTime time.Time, stats Stats) {
+	err := pool.CloseWait()
+	if err != nil {
+		panic(err)
+	}
+	resultChan <- nil
+	allResults.Wait()
+	timeSpent := time.Since(startTime)
+	if walker.isLog(summary) {
+		walker.logSummary(fmt.Sprintf("Total time: %v, %s", timeSpent, stats))
+	} else if walker.isLog(progress) {
+		fmt.Printf("                                                                                     \r")
+	}
 }
 
 func (walker *fileWalker) walkDir(ctx context.Context, root, dirName string, fn func(fs afero.Fs, path string)) error {
