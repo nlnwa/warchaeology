@@ -189,7 +189,6 @@ func resolveFilesystem() (afero.Fs, error) {
 	return nil, fmt.Errorf("unsupported filesystem: %s", filesystemDefinition)
 }
 
-//nolint:gocyclo
 func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 	if viper.GetBool(flag.KeepIndex) {
 		if fileIndex, err := NewFileIndex(viper.GetBool(flag.NewIndex), walker.cmd); err != nil {
@@ -249,49 +248,8 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 
 	allResults := &sync.WaitGroup{}
 	allResults.Add(1)
-	defer func() {
-		err := pool.CloseWait()
-		if err != nil {
-			panic(err)
-		}
-		resultChan <- nil
-		allResults.Wait()
-		timeSpent := time.Since(startTime)
-		if walker.isLog(summary) {
-			walker.logSummary(fmt.Sprintf("Total time: %v, %s", timeSpent, stats))
-		} else if walker.isLog(progress) {
-			fmt.Printf("                                                                                     \r")
-		}
-	}()
-	go func() {
-		count := 0
-		for {
-			result := <-resultChan
-			if result == nil {
-				allResults.Done()
-				break
-			}
-			count++
-			if result.ErrorCount() > 0 && walker.isLog(err) {
-				walker.logError(result, count)
-			} else if walker.isLog(info) {
-				walker.logInfo(result, count)
-			}
-
-			stats.Merge(result.GetStats())
-			if result.Fatal() != nil {
-				fmt.Printf("ERROR: %s\n", result.Fatal())
-			}
-
-			if walker.isLog(progress) {
-				fmt.Printf("  %s %s\r", string(anim[animPos]), stats.String())
-				animPos++
-				if animPos >= len(anim) {
-					animPos = 0
-				}
-			}
-		}
-	}()
+	defer closePool(walker, pool, resultChan, allResults, startTime, stats)
+	go printResultsAndProgress(walker, resultChan, allResults, stats)
 	for _, path := range walker.paths {
 		if !walker.processedPaths.Contains(path) {
 			if err := walker.walkDir(ctx, path, path, submitJobFunction); err != nil {
@@ -325,6 +283,51 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 		}
 	}
 	return nil
+}
+
+func closePool(walker *fileWalker, pool *workerPool.WorkerPool, resultChan chan Result, allResults *sync.WaitGroup, startTime time.Time, stats Stats) {
+	err := pool.CloseWait()
+	if err != nil {
+		panic(err)
+	}
+	resultChan <- nil
+	allResults.Wait()
+	timeSpent := time.Since(startTime)
+	if walker.isLog(summary) {
+		walker.logSummary(fmt.Sprintf("Total time: %v, %s", timeSpent, stats))
+	} else if walker.isLog(progress) {
+		fmt.Printf("                                                                                     \r")
+	}
+}
+
+func printResultsAndProgress(walker *fileWalker, resultChan chan Result, allResults *sync.WaitGroup, stats Stats) {
+	count := 0
+	for {
+		result := <-resultChan
+		if result == nil {
+			allResults.Done()
+			break
+		}
+		count++
+		if result.ErrorCount() > 0 && walker.isLog(err) {
+			walker.logError(result, count)
+		} else if walker.isLog(info) {
+			walker.logInfo(result, count)
+		}
+
+		stats.Merge(result.GetStats())
+		if result.Fatal() != nil {
+			fmt.Printf("ERROR: %s\n", result.Fatal())
+		}
+
+		if walker.isLog(progress) {
+			fmt.Printf("  %s %s\r", string(anim[animPos]), stats.String())
+			animPos++
+			if animPos >= len(anim) {
+				animPos = 0
+			}
+		}
+	}
 }
 
 func (walker *fileWalker) walkDir(ctx context.Context, root, dirName string, fn func(fs afero.Fs, path string)) error {
