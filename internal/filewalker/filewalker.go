@@ -34,10 +34,10 @@ var anim = `-\|/`
 var animPos int
 
 const (
-	info     logType = 1
-	err      logType = 2
-	summary  logType = 4
-	progress logType = 8
+	infoLogType     logType = 1
+	errorLogType    logType = 2
+	summaryLogType  logType = 4
+	progressLogType logType = 8
 )
 
 type fileWalker struct {
@@ -84,13 +84,13 @@ func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) 
 		for _, t := range viper.GetStringSlice(flag.LogConsole) {
 			switch strings.ToLower(t) {
 			case "info":
-				consoleType = consoleType | info
+				consoleType = consoleType | infoLogType
 			case "error":
-				consoleType = consoleType | err
+				consoleType = consoleType | errorLogType
 			case "summary":
-				consoleType = consoleType | summary
+				consoleType = consoleType | summaryLogType
 			case "progress":
-				consoleType = consoleType | progress
+				consoleType = consoleType | progressLogType
 			default:
 				panic("Illegal config value '" + t + "' for " + flag.LogConsole)
 			}
@@ -99,11 +99,11 @@ func NewFromViper(cmd string, paths []string, fn func(fs afero.Fs, path string) 
 	for _, t := range viper.GetStringSlice(flag.LogFile) {
 		switch strings.ToLower(t) {
 		case "info":
-			fileType = fileType | info
+			fileType = fileType | infoLogType
 		case "error":
-			fileType = fileType | err
+			fileType = fileType | errorLogType
 		case "summary":
-			fileType = fileType | summary
+			fileType = fileType | summaryLogType
 		default:
 			return nil, fmt.Errorf("illegal config value '%s' for %s", t, flag.LogFile)
 		}
@@ -252,9 +252,9 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 		resultChan <- nil
 		allResults.Wait()
 		timeSpent := time.Since(startTime)
-		if walker.isLog(summary) {
+		if walker.isLog(summaryLogType) {
 			walker.logSummary(fmt.Sprintf("Total time: %v, %s", timeSpent, stats))
-		} else if walker.isLog(progress) {
+		} else if walker.isLog(progressLogType) {
 			fmt.Printf("                                                                                     \r")
 		}
 	}()
@@ -267,9 +267,9 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 				break
 			}
 			count++
-			if result.ErrorCount() > 0 && walker.isLog(err) {
+			if result.ErrorCount() > 0 && walker.isLog(errorLogType) {
 				walker.logError(result, count)
-			} else if walker.isLog(info) {
+			} else if walker.isLog(infoLogType) {
 				walker.logInfo(result, count)
 			}
 
@@ -278,7 +278,7 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 				fmt.Printf("ERROR: %s\n", result.Fatal())
 			}
 
-			if walker.isLog(progress) {
+			if walker.isLog(progressLogType) {
 				fmt.Printf("  %s %s\r", string(anim[animPos]), stats.String())
 				animPos++
 				if animPos >= len(anim) {
@@ -382,20 +382,20 @@ func (walker *fileWalker) isLog(log logType) bool {
 }
 
 func (walker *fileWalker) logSummary(str string) {
-	if walker.logConsoleTypes&summary != 0 {
+	if walker.logConsoleTypes&summaryLogType != 0 {
 		fmt.Println(str)
 	}
-	if walker.logFile != nil && walker.logfileTypes&summary != 0 {
+	if walker.logFile != nil && walker.logfileTypes&summaryLogType != 0 {
 		_, _ = fmt.Fprintln(walker.logFile, str)
 	}
 }
 
 func (walker *fileWalker) logInfo(res Result, recNum int) {
 	logString := res.Log(recNum)
-	if walker.logConsoleTypes&info != 0 {
+	if walker.logConsoleTypes&infoLogType != 0 {
 		fmt.Println(logString)
 	}
-	if walker.logFile != nil && walker.logfileTypes&info != 0 {
+	if walker.logFile != nil && walker.logfileTypes&infoLogType != 0 {
 		_, _ = fmt.Fprintln(walker.logFile, logString)
 	}
 }
@@ -403,11 +403,11 @@ func (walker *fileWalker) logInfo(res Result, recNum int) {
 func (walker *fileWalker) logError(res Result, recordNumber int) {
 	recordNumberLogString := res.Log(recordNumber)
 	errorString := strings.ReplaceAll(res.Error(), "\n", "\n  ")
-	if walker.logConsoleTypes&err != 0 {
+	if walker.logConsoleTypes&errorLogType != 0 {
 		fmt.Println(recordNumberLogString)
 		fmt.Println(errorString)
 	}
-	if walker.logFile != nil && walker.logfileTypes&err != 0 {
+	if walker.logFile != nil && walker.logfileTypes&errorLogType != 0 {
 		_, _ = fmt.Fprintln(walker.logFile, recordNumberLogString)
 		_, _ = fmt.Fprintln(walker.logFile, errorString)
 	}
