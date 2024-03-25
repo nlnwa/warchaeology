@@ -249,35 +249,7 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 	allResults := &sync.WaitGroup{}
 	allResults.Add(1)
 	defer closePool(walker, pool, resultChan, allResults, startTime, stats)
-	go func() {
-		count := 0
-		for {
-			result := <-resultChan
-			if result == nil {
-				allResults.Done()
-				break
-			}
-			count++
-			if result.ErrorCount() > 0 && walker.isLog(err) {
-				walker.logError(result, count)
-			} else if walker.isLog(info) {
-				walker.logInfo(result, count)
-			}
-
-			stats.Merge(result.GetStats())
-			if result.Fatal() != nil {
-				fmt.Printf("ERROR: %s\n", result.Fatal())
-			}
-
-			if walker.isLog(progress) {
-				fmt.Printf("  %s %s\r", string(anim[animPos]), stats.String())
-				animPos++
-				if animPos >= len(anim) {
-					animPos = 0
-				}
-			}
-		}
-	}()
+	go printResultsAndProgress(walker, resultChan, allResults, stats)
 	for _, path := range walker.paths {
 		if !walker.processedPaths.Contains(path) {
 			if err := walker.walkDir(ctx, path, path, submitJobFunction); err != nil {
@@ -325,6 +297,36 @@ func closePool(walker *fileWalker, pool *workerPool.WorkerPool, resultChan chan 
 		walker.logSummary(fmt.Sprintf("Total time: %v, %s", timeSpent, stats))
 	} else if walker.isLog(progress) {
 		fmt.Printf("                                                                                     \r")
+	}
+}
+
+func printResultsAndProgress(walker *fileWalker, resultChan chan Result, allResults *sync.WaitGroup, stats Stats) {
+	count := 0
+	for {
+		result := <-resultChan
+		if result == nil {
+			allResults.Done()
+			break
+		}
+		count++
+		if result.ErrorCount() > 0 && walker.isLog(err) {
+			walker.logError(result, count)
+		} else if walker.isLog(info) {
+			walker.logInfo(result, count)
+		}
+
+		stats.Merge(result.GetStats())
+		if result.Fatal() != nil {
+			fmt.Printf("ERROR: %s\n", result.Fatal())
+		}
+
+		if walker.isLog(progress) {
+			fmt.Printf("  %s %s\r", string(anim[animPos]), stats.String())
+			animPos++
+			if animPos >= len(anim) {
+				animPos = 0
+			}
+		}
 	}
 }
 
