@@ -30,54 +30,54 @@ type field struct {
 }
 
 func NewRecordWriter(format, separator string) (*RecordWriter, error) {
-	rw := &RecordWriter{
+	recordWriter := &RecordWriter{
 		sep: separator,
 	}
 
-	re := regexp.MustCompile(`([abBeghikmMNrsSTV])([+-]?)(\d*)`)
-	m := re.FindAllStringSubmatch(format, -1)
-	for _, sm := range m {
-		t := &field{name: sm[1][0]}
-		if sm[2] == "-" {
-			t.align = -1
+	pattern := regexp.MustCompile(`([abBeghikmMNrsSTV])([+-]?)(\d*)`)
+	matches := pattern.FindAllStringSubmatch(format, -1)
+	for _, subMatch := range matches {
+		field := &field{name: subMatch[1][0]}
+		if subMatch[2] == "-" {
+			field.align = -1
 		}
-		if sm[2] == "+" {
-			t.align = 1
+		if subMatch[2] == "+" {
+			field.align = 1
 		}
-		if len(sm[3]) > 0 {
-			n, err := strconv.ParseInt(sm[3], 10, 32)
+		if len(subMatch[3]) > 0 {
+			length, err := strconv.ParseInt(subMatch[3], 10, 32)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse field length, original error: '%w'", err)
 			}
-			t.length = int(n)
+			field.length = int(length)
 		}
-		rw.createFieldFunc(t)
-		rw.fields = append(rw.fields, t)
+		recordWriter.createFieldFunc(field)
+		recordWriter.fields = append(recordWriter.fields, field)
 	}
 
-	return rw, nil
+	return recordWriter, nil
 }
 
 // FormatRecord writes the configured fields for the record to a string. Size is written with a place holder
 // since it is not available until the next record is read.
-func (rw *RecordWriter) FormatRecord(wr gowarc.WarcRecord, fileName string, offset int64) string {
-	s := &strings.Builder{}
-	for i, t := range rw.fields {
-		if i > 0 {
-			s.WriteString(rw.sep)
+func (recordWriter *RecordWriter) FormatRecord(wr gowarc.WarcRecord, fileName string, offset int64) string {
+	stringBuilder := &strings.Builder{}
+	for index, field := range recordWriter.fields {
+		if index > 0 {
+			stringBuilder.WriteString(recordWriter.sep)
 		}
-		s.WriteString(t.fn(wr, fileName, offset))
+		stringBuilder.WriteString(field.fn(wr, fileName, offset))
 	}
-	return s.String()
+	return stringBuilder.String()
 }
 
 // Write takes a string produced by FormatRecord, replaces eventual size place holders with actual values and
 // writes it to stdout.
-func (rw *RecordWriter) Write(line string, size int64) {
+func (recordWriter *RecordWriter) Write(line string, size int64) {
 	var v []interface{}
-	for _, sf := range rw.sizeFields {
-		if sf.length > 0 && sf.align != 0 {
-			v = append(v, sf.length)
+	for _, sizeField := range recordWriter.sizeFields {
+		if sizeField.length > 0 && sizeField.align != 0 {
+			v = append(v, sizeField.length)
 		}
 		v = append(v, size)
 	}
@@ -89,23 +89,21 @@ func createInt64Fn(align, length int, valueFn toInt64Fn) writerFn {
 	if length > 0 {
 		switch {
 		case align < 0:
-			l := length
-			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return fmt.Sprintf("%-*d", l, valueFn(wr, fileName, offset))
+			return func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+				return fmt.Sprintf("%-*d", length, valueFn(warcRecord, fileName, offset))
 			}
 		case align > 0:
-			l := length
-			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return fmt.Sprintf("%*d", l, valueFn(wr, fileName, offset))
+			return func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+				return fmt.Sprintf("%*d", length, valueFn(warcRecord, fileName, offset))
 			}
 		default:
-			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return fmt.Sprintf("%d", valueFn(wr, fileName, offset))
+			return func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+				return fmt.Sprintf("%d", valueFn(warcRecord, fileName, offset))
 			}
 		}
 	} else {
-		return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			return fmt.Sprintf("%d", valueFn(wr, fileName, offset))
+		return func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			return fmt.Sprintf("%d", valueFn(warcRecord, fileName, offset))
 		}
 	}
 }
@@ -114,99 +112,97 @@ func createStringFn(align, length int, valueFn toStringFn) writerFn {
 	if length > 0 {
 		switch {
 		case align < 0:
-			l := length
-			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return fmt.Sprintf("%-*s", l, utils.CropString(valueFn(wr, fileName, offset), length))
+			return func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+				return fmt.Sprintf("%-*s", length, utils.CropString(valueFn(warcRecord, fileName, offset), length))
 			}
 		case align > 0:
-			l := length
-			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return fmt.Sprintf("%*s", l, utils.CropString(valueFn(wr, fileName, offset), length))
+			return func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+				return fmt.Sprintf("%*s", length, utils.CropString(valueFn(warcRecord, fileName, offset), length))
 			}
 		default:
-			return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-				return utils.CropString(valueFn(wr, fileName, offset), length)
+			return func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+				return utils.CropString(valueFn(warcRecord, fileName, offset), length)
 			}
 		}
 	} else {
-		return func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			return valueFn(wr, fileName, offset)
+		return func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			return valueFn(warcRecord, fileName, offset)
 		}
 	}
 }
 
-func (rw *RecordWriter) createFieldFunc(t *field) {
+func (recordWriter *RecordWriter) createFieldFunc(t *field) {
 	switch t.name {
 	case 'a':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			return wr.WarcHeader().Get(gowarc.WarcTargetURI)
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			return warcRecord.WarcHeader().Get(gowarc.WarcTargetURI)
 		})
 	case 'b':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			if s, err := internal.To14(wr.WarcHeader().Get(gowarc.WarcDate)); err == nil {
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			if s, err := internal.To14(warcRecord.WarcHeader().Get(gowarc.WarcDate)); err == nil {
 				return s
 			}
 			return "              "
 		})
 	case 'B':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			return wr.WarcHeader().Get(gowarc.WarcDate)
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			return warcRecord.WarcHeader().Get(gowarc.WarcDate)
 		})
 	case 'e':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			return wr.WarcHeader().Get(gowarc.WarcIPAddress)
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			return warcRecord.WarcHeader().Get(gowarc.WarcIPAddress)
 		})
 	case 'g':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
 			return fileName
 		})
 	case 'h':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			if u, err := url.Parse(wr.WarcHeader().Get(gowarc.WarcTargetURI)); err == nil {
-				return u.Hostname()
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			if url, err := url.Parse(warcRecord.WarcHeader().Get(gowarc.WarcTargetURI)); err == nil {
+				return url.Hostname()
 			}
 			return ""
 		})
 	case 'i':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			return wr.WarcHeader().Get(gowarc.WarcRecordID)
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			return warcRecord.WarcHeader().Get(gowarc.WarcRecordID)
 		})
 	case 'k':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			return wr.WarcHeader().Get(gowarc.WarcBlockDigest)
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			return warcRecord.WarcHeader().Get(gowarc.WarcBlockDigest)
 		})
 	case 'm':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			if v, ok := wr.Block().(gowarc.HttpResponseBlock); ok {
-				return v.HttpHeader().Get(gowarc.ContentType)
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			if httpResponseBlock, ok := warcRecord.Block().(gowarc.HttpResponseBlock); ok {
+				return httpResponseBlock.HttpHeader().Get(gowarc.ContentType)
 			}
-			if v, ok := wr.Block().(gowarc.HttpRequestBlock); ok {
-				return v.HttpHeader().Get(gowarc.ContentType)
+			if httpRequestBlock, ok := warcRecord.Block().(gowarc.HttpRequestBlock); ok {
+				return httpRequestBlock.HttpHeader().Get(gowarc.ContentType)
 			}
 			return ""
 		})
 	case 'M':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
 			return "-"
 		})
 	case 'N':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
 			return "-"
 		})
 	case 'r':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
 			return "-"
 		})
 	case 's':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			if v, ok := wr.Block().(gowarc.HttpResponseBlock); ok {
-				return strconv.Itoa(v.HttpStatusCode())
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			if httpResponseBlock, ok := warcRecord.Block().(gowarc.HttpResponseBlock); ok {
+				return strconv.Itoa(httpResponseBlock.HttpStatusCode())
 			}
 			return "   "
 		})
 	case 'S':
 		// Size has special handling since value can't be calculated before next record is read.
-		t.fn = func(wr gowarc.WarcRecord, fileName string, offset int64) string {
+		t.fn = func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
 			if t.length > 0 {
 				switch {
 				case t.align < 0:
@@ -220,13 +216,13 @@ func (rw *RecordWriter) createFieldFunc(t *field) {
 				return "%d"
 			}
 		}
-		rw.sizeFields = append(rw.sizeFields, t)
+		recordWriter.sizeFields = append(recordWriter.sizeFields, t)
 	case 'T':
-		t.fn = createStringFn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) string {
-			return wr.Type().String()
+		t.fn = createStringFn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) string {
+			return warcRecord.Type().String()
 		})
 	case 'V':
-		t.fn = createInt64Fn(t.align, t.length, func(wr gowarc.WarcRecord, fileName string, offset int64) int64 {
+		t.fn = createInt64Fn(t.align, t.length, func(warcRecord gowarc.WarcRecord, fileName string, offset int64) int64 {
 			return offset
 		})
 	}
