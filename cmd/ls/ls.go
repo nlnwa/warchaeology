@@ -168,7 +168,10 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 	if c.fields == "" {
 		c.fields = "V+11iT-8a100"
 	}
-	c.writer = NewRecordWriter(c.fields, c.delimiter)
+	c.writer, err = NewRecordWriter(c.fields, c.delimiter)
+	if err != nil {
+		panic(err)
+	}
 
 	count := 0
 	var lastOffset int64

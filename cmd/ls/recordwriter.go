@@ -29,7 +29,7 @@ type field struct {
 	fn     writerFn
 }
 
-func NewRecordWriter(format, separator string) *RecordWriter {
+func NewRecordWriter(format, separator string) (*RecordWriter, error) {
 	rw := &RecordWriter{
 		sep: separator,
 	}
@@ -47,7 +47,7 @@ func NewRecordWriter(format, separator string) *RecordWriter {
 		if len(sm[3]) > 0 {
 			n, err := strconv.ParseInt(sm[3], 10, 32)
 			if err != nil {
-				panic(err)
+				return nil, fmt.Errorf("failed to parse field length, original error: '%w'", err)
 			}
 			t.length = int(n)
 		}
@@ -55,7 +55,7 @@ func NewRecordWriter(format, separator string) *RecordWriter {
 		rw.fields = append(rw.fields, t)
 	}
 
-	return rw
+	return rw, nil
 }
 
 // FormatRecord writes the configured fields for the record to a string. Size is written with a place holder
