@@ -93,10 +93,10 @@ func parseArgumentsAndCallValidate(cmd *cobra.Command, args []string) error {
 func runE(cmd string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		<-sigs
+		<-signalChannel
 		cancel()
 	}()
 
@@ -108,34 +108,34 @@ func runE(cmd string) error {
 	return fileWalker.Walk(ctx, stats)
 }
 
-func validateFile(fs afero.Fs, file string) filewalker.Result {
+func validateFile(fileSystem afero.Fs, file string) filewalker.Result {
 	result := filewalker.NewResult(file)
 	var warcInfoId string
 
-	r, err := newTeeReader(fs, file)
+	teeReader, err := newTeeReader(fileSystem, file)
 	if err != nil {
 		result.AddError(err)
 		return result
 	}
 
 	defer func() {
-		_ = r.Close(&warcInfoId, result)
+		_ = teeReader.Close(&warcInfoId, result)
 	}()
 
-	wf, err := gowarc.NewWarcFileReaderFromStream(r, 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
+	warcFileReader, err := gowarc.NewWarcFileReaderFromStream(teeReader, 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
 		result.AddError(err)
 		return result
 	}
-	defer func() { _ = wf.Close() }()
+	defer func() { _ = warcFileReader.Close() }()
 
 	for {
-		wr, currentOffset, validation, err := wf.Next()
+		warcRecord, currentOffset, validation, err := warcFileReader.Next()
 		if err == io.EOF {
 			break
 		}
-		if wr.Type() == gowarc.Warcinfo {
-			warcInfoId = wr.WarcHeader().GetId(gowarc.WarcRecordID)
+		if warcRecord.Type() == gowarc.Warcinfo {
+			warcInfoId = warcRecord.WarcHeader().GetId(gowarc.WarcRecordID)
 		}
 		result.IncrRecords()
 		result.IncrProcessed()
@@ -144,18 +144,18 @@ func validateFile(fs afero.Fs, file string) filewalker.Result {
 			break
 		}
 
-		err = wr.ValidateDigest(validation)
+		err = warcRecord.ValidateDigest(validation)
 		if err != nil {
 			result.AddError(fmt.Errorf("rec num: %d, offset: %d, cause: %w", result.Records(), currentOffset, err))
 			break
 		}
 
-		if err := wr.Close(); err != nil {
+		if err := warcRecord.Close(); err != nil {
 			*validation = append(*validation, err)
 		}
 
 		if !validation.Valid() {
-			result.AddError(fmt.Errorf("rec num: %d, offset: %d, record: %s, cause: %w", result.Records(), currentOffset, wr, validation))
+			result.AddError(fmt.Errorf("rec num: %d, offset: %d, record: %s, cause: %w", result.Records(), currentOffset, warcRecord, validation))
 		}
 	}
 	return result
@@ -163,10 +163,10 @@ func validateFile(fs afero.Fs, file string) filewalker.Result {
 
 type teeReader struct {
 	io.Reader
-	r     afero.File
-	w     *os.File
-	rName string
-	wName string
+	r              afero.File
+	w              *os.File
+	inputFileName  string
+	outputFileName string
 }
 
 func newTeeReader(fs afero.Fs, file string) (*teeReader, error) {
@@ -174,44 +174,44 @@ func newTeeReader(fs afero.Fs, file string) (*teeReader, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := &teeReader{
-		r:     f,
-		rName: file,
+	teeReader := &teeReader{
+		r:             f,
+		inputFileName: file,
 	}
 
 	if config.warcDir != "" {
-		t.wName = config.warcDir + "/" + path.Base(file)
-		if err := config.openOutputFileHook.WithSrcFileName(file).Run(t.wName); err != nil {
+		teeReader.outputFileName = config.warcDir + "/" + path.Base(file)
+		if err := config.openOutputFileHook.WithSrcFileName(file).Run(teeReader.outputFileName); err != nil {
 			_ = f.Close()
 			return nil, err
 		}
-		of, err := os.Create(t.wName)
+		file, err := os.Create(teeReader.outputFileName)
 		if err != nil {
 			_ = f.Close()
 			return nil, err
 		}
-		t.w = of
-		t.Reader = io.TeeReader(f, t.w)
+		teeReader.w = file
+		teeReader.Reader = io.TeeReader(f, teeReader.w)
 	} else {
-		t.Reader = f
+		teeReader.Reader = f
 	}
-	t.Reader = CountingReader(t.Reader)
-	return t, nil
+	teeReader.Reader = CountingReader(teeReader.Reader)
+	return teeReader, nil
 }
 
-func (t *teeReader) Close(warcInfoId *string, result filewalker.Result) (err error) {
-	if t.r != nil {
-		_ = t.r.Close()
-		t.r = nil
+func (reader *teeReader) Close(warcInfoId *string, result filewalker.Result) (err error) {
+	if reader.r != nil {
+		_ = reader.r.Close()
+		reader.r = nil
 	}
-	if t.w != nil {
-		_ = t.w.Close()
+	if reader.w != nil {
+		_ = reader.w.Close()
 
 		if err := config.closeOutputFileHook.
-			WithSrcFileName(t.rName).
-			WithHash(t.Hash()).
+			WithSrcFileName(reader.inputFileName).
+			WithHash(reader.Hash()).
 			WithErrorCount(result.ErrorCount()).
-			Run(t.wName, t.Size(), *warcInfoId); err != nil {
+			Run(reader.outputFileName, reader.Size(), *warcInfoId); err != nil {
 			panic(err)
 		}
 	}
@@ -219,33 +219,33 @@ func (t *teeReader) Close(warcInfoId *string, result filewalker.Result) (err err
 	return
 }
 
-func (t *teeReader) Size() int64 {
-	if r, ok := t.Reader.(*countingReader); ok {
-		return r.size
+func (reader *teeReader) Size() int64 {
+	if countingReader, ok := reader.Reader.(*countingReader); ok {
+		return countingReader.size
 	}
 	return 0
 }
 
-func (t *teeReader) Hash() string {
-	if r, ok := t.Reader.(*countingReader); ok && r.hash != nil {
-		return fmt.Sprintf("%0x", r.hash.Sum(nil))
+func (reader *teeReader) Hash() string {
+	if countingReader, ok := reader.Reader.(*countingReader); ok && countingReader.hash != nil {
+		return fmt.Sprintf("%0x", countingReader.hash.Sum(nil))
 	}
 	return ""
 }
 
-func CountingReader(r io.Reader) io.Reader {
-	c := &countingReader{Reader: r}
+func CountingReader(ioReader io.Reader) io.Reader {
+	countingReader := &countingReader{Reader: ioReader}
 	switch viper.GetString(flag.CalculateHash) {
 	case "md5":
-		c.hash = crypto.MD5.New()
+		countingReader.hash = crypto.MD5.New()
 	case "sha1":
-		c.hash = crypto.SHA1.New()
+		countingReader.hash = crypto.SHA1.New()
 	case "sha256":
-		c.hash = crypto.SHA256.New()
+		countingReader.hash = crypto.SHA256.New()
 	case "sha512":
-		c.hash = crypto.SHA512.New()
+		countingReader.hash = crypto.SHA512.New()
 	}
-	return c
+	return countingReader
 }
 
 type countingReader struct {
@@ -254,11 +254,11 @@ type countingReader struct {
 	hash hash.Hash
 }
 
-func (c *countingReader) Read(p []byte) (n int, err error) {
-	n, err = c.Reader.Read(p)
-	c.size += int64(n)
-	if c.hash != nil {
-		c.hash.Write(p[:n])
+func (reader *countingReader) Read(byteSlice []byte) (length int, err error) {
+	length, err = reader.Reader.Read(byteSlice)
+	reader.size += int64(length)
+	if reader.hash != nil {
+		reader.hash.Write(byteSlice[:length])
 	}
 	return
 }
