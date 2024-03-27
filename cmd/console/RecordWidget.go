@@ -31,271 +31,271 @@ func NewRecordWidget(name, prev, next string) *RecordWidget {
 	}
 }
 
-func (w *RecordWidget) Layout(g *gocui.Gui) error {
-	maxX, maxY := g.Size()
+func (recordWidget *RecordWidget) Layout(gui *gocui.Gui) error {
+	maxX, maxY := gui.Size()
 	dynamicColumnWidth := maxX - 60
 	if dynamicColumnWidth < 51 {
 		dynamicColumnWidth = 51
 	}
 
-	if v, err := g.SetView(w.headerView, 50, 10, dynamicColumnWidth, 30, gocui.BOTTOM|gocui.RIGHT); err != nil {
+	if view, err := gui.SetView(recordWidget.headerView, 50, 10, dynamicColumnWidth, 30, gocui.BOTTOM|gocui.RIGHT); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
-		v.FgColor = gocui.ColorDefault
-		v.BgColor = gocui.ColorDefault
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
-		v.Wrap = true
-		v.Title = "WARC header"
+		view.FgColor = gocui.ColorDefault
+		view.BgColor = gocui.ColorDefault
+		view.SelBgColor = gocui.ColorWhite
+		view.SelFgColor = gocui.ColorBlack
+		view.Highlight = false
+		view.Wrap = true
+		view.Title = "WARC header"
 	}
 
-	if v, err := g.SetView(w.contentView, 50, 30, dynamicColumnWidth, maxY-2, gocui.TOP|gocui.RIGHT); err != nil {
+	if view, err := gui.SetView(recordWidget.contentView, 50, 30, dynamicColumnWidth, maxY-2, gocui.TOP|gocui.RIGHT); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
-		v.FgColor = gocui.ColorDefault
-		v.BgColor = gocui.ColorDefault
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
-		v.Wrap = true
-		v.Title = "WARC content"
+		view.FgColor = gocui.ColorDefault
+		view.BgColor = gocui.ColorDefault
+		view.SelBgColor = gocui.ColorWhite
+		view.SelFgColor = gocui.ColorBlack
+		view.Highlight = false
+		view.Wrap = true
+		view.Title = "WARC content"
 	}
 
-	if v, err := g.SetView(w.errorView, dynamicColumnWidth, 10, maxX-1, maxY-2, gocui.LEFT); err != nil {
+	if view, err := gui.SetView(recordWidget.errorView, dynamicColumnWidth, 10, maxX-1, maxY-2, gocui.LEFT); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
-		v.FgColor = gocui.ColorRed
-		v.BgColor = gocui.ColorDefault
-		v.SelBgColor = gocui.ColorWhite
-		v.SelFgColor = gocui.ColorBlack
-		v.Highlight = false
-		v.Wrap = true
-		v.Title = "Errors"
+		view.FgColor = gocui.ColorRed
+		view.BgColor = gocui.ColorDefault
+		view.SelBgColor = gocui.ColorWhite
+		view.SelFgColor = gocui.ColorBlack
+		view.Highlight = false
+		view.Wrap = true
+		view.Title = "Errors"
 	}
 
-	_ = w.addKeybindings(g, w.headerView)
-	_ = w.addKeybindings(g, w.contentView)
-	_ = w.addKeybindings(g, w.errorView)
+	_ = recordWidget.addKeybindings(gui, recordWidget.headerView)
+	_ = recordWidget.addKeybindings(gui, recordWidget.contentView)
+	_ = recordWidget.addKeybindings(gui, recordWidget.errorView)
 
 	return nil
 }
 
-func (w *RecordWidget) addKeybindings(g *gocui.Gui, widget string) error {
-	if err := g.SetKeybinding(widget, gocui.KeyArrowDown, gocui.ModNone, w.cursorDown); err != nil {
+func (recordWidget *RecordWidget) addKeybindings(gui *gocui.Gui, widget string) error {
+	if err := gui.SetKeybinding(widget, gocui.KeyArrowDown, gocui.ModNone, recordWidget.cursorDown); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding(widget, gocui.KeyArrowUp, gocui.ModNone, w.cursorUp); err != nil {
+	if err := gui.SetKeybinding(widget, gocui.KeyArrowUp, gocui.ModNone, recordWidget.cursorUp); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding(widget, gocui.KeyHome, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
+	if err := gui.SetKeybinding(widget, gocui.KeyHome, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
 		if view != nil {
-			return w.scroll(view, -view.ViewLinesHeight())
+			return recordWidget.scroll(view, -view.ViewLinesHeight())
 		}
 		return nil
 	}); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding(widget, gocui.KeyEnd, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
+	if err := gui.SetKeybinding(widget, gocui.KeyEnd, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
 		if view != nil {
-			return w.scroll(view, view.ViewLinesHeight())
+			return recordWidget.scroll(view, view.ViewLinesHeight())
 		}
 		return nil
 	}); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding(widget, gocui.KeyPgdn, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
-		if view != nil {
-			_, h := view.Size()
-			h--
-			return w.scroll(view, h)
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-	if err := g.SetKeybinding(widget, gocui.KeyPgup, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
+	if err := gui.SetKeybinding(widget, gocui.KeyPgdn, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
 		if view != nil {
 			_, h := view.Size()
 			h--
-			return w.scroll(view, -h)
+			return recordWidget.scroll(view, h)
 		}
 		return nil
 	}); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding(widget, gocui.MouseWheelDown, gocui.ModNone, w.cursorDown); err != nil {
+	if err := gui.SetKeybinding(widget, gocui.KeyPgup, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
+		if view != nil {
+			_, h := view.Size()
+			h--
+			return recordWidget.scroll(view, -h)
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding(widget, gocui.MouseWheelUp, gocui.ModNone, w.cursorUp); err != nil {
+	if err := gui.SetKeybinding(widget, gocui.MouseWheelDown, gocui.ModNone, recordWidget.cursorDown); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding(widget, gocui.KeyEnter, gocui.ModNone, w.nextView); err != nil {
+	if err := gui.SetKeybinding(widget, gocui.MouseWheelUp, gocui.ModNone, recordWidget.cursorUp); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding(widget, gocui.KeyEsc, gocui.ModNone, w.prevView); err != nil {
+	if err := gui.SetKeybinding(widget, gocui.KeyEnter, gocui.ModNone, recordWidget.nextView); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding(widget, gocui.MouseLeft, gocui.ModNone, w.currentView); err != nil {
+	if err := gui.SetKeybinding(widget, gocui.KeyEsc, gocui.ModNone, recordWidget.prevView); err != nil {
+		return err
+	}
+	if err := gui.SetKeybinding(widget, gocui.MouseLeft, gocui.ModNone, recordWidget.currentView); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (w *RecordWidget) readRecord(g *gocui.Gui, widget *ListWidget) {
-	r, err := gowarc.NewWarcFileReader(state.dir+"/"+state.file, widget.filteredRecords[widget.selected].(record).offset,
+func (recordWidget *RecordWidget) readRecord(gui *gocui.Gui, widget *ListWidget) {
+	warcFileReader, err := gowarc.NewWarcFileReader(state.dir+"/"+state.file, widget.filteredRecords[widget.selected].(record).offset,
 		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
 		panic(err)
 	}
-	defer func() { _ = r.Close() }()
+	defer func() { _ = warcFileReader.Close() }()
 
-	rec, offset, val, err := r.Next()
+	warcRecord, offset, validation, err := warcFileReader.Next()
 	if err != nil {
 		panic(err)
 	}
-	defer func() { _ = rec.Close() }()
+	defer func() { _ = warcRecord.Close() }()
 
-	w.poopulateHeader(g, rec, offset)
-	w.poopulateContent(g, rec)
+	recordWidget.poopulateHeader(gui, warcRecord, offset)
+	recordWidget.poopulateContent(gui, warcRecord)
 
-	if err := rec.ValidateDigest(val); err != nil {
-		*val = append(*val, err)
+	if err := warcRecord.ValidateDigest(validation); err != nil {
+		*validation = append(*validation, err)
 	}
 
-	if err := rec.Close(); err != nil {
-		*val = append(*val, err)
+	if err := warcRecord.Close(); err != nil {
+		*validation = append(*validation, err)
 	}
 
-	ev, err := g.View(w.errorView)
+	view, err := gui.View(recordWidget.errorView)
 	if err != nil {
 		panic(err)
 	}
-	ev.Clear()
-	_, _ = fmt.Fprintf(ev, "%s\n", val)
+	view.Clear()
+	_, _ = fmt.Fprintf(view, "%s\n", validation)
 }
 
-func (w *RecordWidget) poopulateHeader(g *gocui.Gui, rec gowarc.WarcRecord, offset int64) {
-	view, err := g.View(w.headerView)
+func (recordWidget *RecordWidget) poopulateHeader(gui *gocui.Gui, warcRecord gowarc.WarcRecord, offset int64) {
+	view, err := gui.View(recordWidget.headerView)
 	if err != nil {
 		panic(err)
 	}
 	view.Clear()
 	view.Subtitle = fmt.Sprintf("Offset: %d", offset)
-	f := &visibleLineEndingFilter{view}
-	_, _ = f.Write([]byte(rec.Version().String() + "\r\n"))
-	_, _ = rec.WarcHeader().Write(f)
+	visibleLineEndingFilter := &visibleLineEndingFilter{view}
+	_, _ = visibleLineEndingFilter.Write([]byte(warcRecord.Version().String() + "\r\n"))
+	_, _ = warcRecord.WarcHeader().Write(visibleLineEndingFilter)
 }
 
-func (w *RecordWidget) poopulateContent(g *gocui.Gui, rec gowarc.WarcRecord) {
-	view, err := g.View(w.contentView)
+func (recordWidget *RecordWidget) poopulateContent(gui *gocui.Gui, warcRecord gowarc.WarcRecord) {
+	view, err := gui.View(recordWidget.contentView)
 	if err != nil {
 		panic(err)
 	}
 	view.Clear()
-	if _, ok := rec.Block().(gowarc.PayloadBlock); ok {
+	if _, ok := warcRecord.Block().(gowarc.PayloadBlock); ok {
 		// Cache block when there is a defined payload so that we can get the payload size later.
-		_ = rec.Block().Cache()
+		_ = warcRecord.Block().Cache()
 	}
-	f := &visibleLineEndingFilter{view}
-	rr, err := rec.Block().RawBytes()
+	visibleLineEndingFilter := &visibleLineEndingFilter{view}
+	ioReader, err := warcRecord.Block().RawBytes()
 	if err != nil {
 		panic(err)
 	}
-	content, err := io.ReadAll(rr)
+	content, err := io.ReadAll(ioReader)
 	if err != nil {
 		panic(err)
 	}
-	_, _ = f.Write(content)
+	_, _ = visibleLineEndingFilter.Write(content)
 
 	subtitle := fmt.Sprintf("Blocksize: %d", len(content))
-	if p, ok := rec.Block().(gowarc.PayloadBlock); ok {
-		rr, err := p.PayloadBytes()
+	if payloadblock, ok := warcRecord.Block().(gowarc.PayloadBlock); ok {
+		ioReader, err := payloadblock.PayloadBytes()
 		if err != nil {
 			panic(err)
 		}
-		n, err := io.Copy(io.Discard, rr)
+		bytesWritten, err := io.Copy(io.Discard, ioReader)
 		if err != nil {
 			panic(err)
 		}
-		subtitle = fmt.Sprintf("%s, PayloadSize: %d", subtitle, n)
+		subtitle = fmt.Sprintf("%s, PayloadSize: %d", subtitle, bytesWritten)
 	}
 	view.Subtitle = subtitle
 }
 
 type visibleLineEndingFilter struct {
-	w io.Writer
+	ioWriter io.Writer
 }
 
-func (f *visibleLineEndingFilter) Write(p []byte) (n int, err error) {
-	p = colorizeReplaceAll(p, []byte("\r"), []byte("\\r"))
-	p = colorizeReplaceAll(p, []byte("\n"), []byte("\\n\n"))
-	return f.w.Write(p)
+func (visiblelineEndingFilter *visibleLineEndingFilter) Write(content []byte) (bytesWritten int, err error) {
+	content = colorizeReplaceAll(content, []byte("\r"), []byte("\\r"))
+	content = colorizeReplaceAll(content, []byte("\n"), []byte("\\n\n"))
+	return visiblelineEndingFilter.ioWriter.Write(content)
 }
 
 func colorizeReplaceAll(source, old, replacement []byte) []byte {
 	reset := escapeFgColor(gocui.ColorDefault)
-	v := fmt.Sprintf("%s%s%s", escapeFgColor(gocui.ColorGreen), replacement, reset)
-	return bytes.ReplaceAll(source, old, []byte(v))
+	coloredString := fmt.Sprintf("%s%s%s", escapeFgColor(gocui.ColorGreen), replacement, reset)
+	return bytes.ReplaceAll(source, old, []byte(coloredString))
 }
 
-func (w *RecordWidget) cursorDown(g *gocui.Gui, v *gocui.View) error {
-	return w.scroll(v, 1)
+func (recordWidget *RecordWidget) cursorDown(gui *gocui.Gui, view *gocui.View) error {
+	return recordWidget.scroll(view, 1)
 }
 
-func (w *RecordWidget) cursorUp(g *gocui.Gui, v *gocui.View) error {
-	return w.scroll(v, -1)
+func (recordWidget *RecordWidget) cursorUp(gui *gocui.Gui, view *gocui.View) error {
+	return recordWidget.scroll(view, -1)
 }
 
-func (w *RecordWidget) scroll(v *gocui.View, delta int) error {
-	if v != nil {
-		_, viewHeight := v.Size()
-		contentHeight := v.ViewLinesHeight()
+func (recordWidget *RecordWidget) scroll(view *gocui.View, ScrollDelta int) error {
+	if view != nil {
+		_, viewHeight := view.Size()
+		contentHeight := view.ViewLinesHeight()
 		if viewHeight >= contentHeight {
 			return nil
 		}
 
-		ox, oy := v.Origin()
-		ny := oy + delta
-		if ny < 0 {
-			ny = 0
+		originX, originY := view.Origin()
+		scrollDestinationY := originY + ScrollDelta
+		if scrollDestinationY < 0 {
+			scrollDestinationY = 0
 		}
-		if contentHeight-viewHeight < ny {
-			ny = contentHeight - viewHeight
+		if contentHeight-viewHeight < scrollDestinationY {
+			scrollDestinationY = contentHeight - viewHeight
 		}
-		_ = v.SetOrigin(ox, ny)
+		_ = view.SetOrigin(originX, scrollDestinationY)
 	}
 	return nil
 }
 
-func (w *RecordWidget) prevView(g *gocui.Gui, v *gocui.View) error {
+func (recordWidget *RecordWidget) prevView(gui *gocui.Gui, view *gocui.View) error {
 	switch state.curView {
-	case w.errorView:
-		state.curView = w.contentView
-	case w.contentView:
-		state.curView = w.headerView
-	case w.headerView:
-		state.curView = w.prev
+	case recordWidget.errorView:
+		state.curView = recordWidget.contentView
+	case recordWidget.contentView:
+		state.curView = recordWidget.headerView
+	case recordWidget.headerView:
+		state.curView = recordWidget.prev
 	}
 	return nil
 }
 
-func (w *RecordWidget) nextView(g *gocui.Gui, v *gocui.View) error {
+func (recordWidget *RecordWidget) nextView(gui *gocui.Gui, view *gocui.View) error {
 	switch state.curView {
-	case w.headerView:
-		state.curView = w.contentView
-	case w.contentView:
-		state.curView = w.errorView
-	case w.errorView:
-		state.curView = w.next
+	case recordWidget.headerView:
+		state.curView = recordWidget.contentView
+	case recordWidget.contentView:
+		state.curView = recordWidget.errorView
+	case recordWidget.errorView:
+		state.curView = recordWidget.next
 	}
 	return nil
 }
 
-func (w *RecordWidget) currentView(g *gocui.Gui, v *gocui.View) error {
-	state.curView = v.Name()
+func (recordWidget *RecordWidget) currentView(gui *gocui.Gui, view *gocui.View) error {
+	state.curView = view.Name()
 	return nil
 }
