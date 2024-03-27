@@ -1,14 +1,16 @@
 package cat
 
 import (
+	"path/filepath"
 	"testing"
-	"time"
 )
 
-func BenchmarkDummy(b *testing.B) {
-	// This is a dummy test, it should be replaced with something more
-	// meaningful in a later commit
+func BenchmarkListRecords(b *testing.B) {
+	testDataDir := filepath.Join("..", "..", "test-data")
+	catConfig := &config{}
+	fileName := filepath.Join(testDataDir, "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz")
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		time.Sleep(1 * time.Nanosecond)
+		listRecords(catConfig, fileName)
 	}
 }
