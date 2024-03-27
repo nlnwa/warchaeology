@@ -22,14 +22,14 @@ func escapeFgColor(color gocui.Attribute) string {
 	if color == gocui.ColorDefault {
 		return "\x1b[0m"
 	}
-	ir, ig, ib := color.RGB()
-	return fmt.Sprintf("\x1b[38;2;%d;%d;%dm", ir, ig, ib)
+	red, green, blue := color.RGB()
+	return fmt.Sprintf("\x1b[38;2;%d;%d;%dm", red, green, blue)
 }
 
 func escapeBgColor(color gocui.Attribute) string {
 	if color == gocui.ColorDefault {
 		return "\x1b[0m"
 	}
-	ir, ig, ib := color.RGB()
-	return fmt.Sprintf("\x1b[48;2;%d;%d;%dm", ir, ig, ib)
+	red, green, blue := color.RGB()
+	return fmt.Sprintf("\x1b[48;2;%d;%d;%dm", red, green, blue)
 }
