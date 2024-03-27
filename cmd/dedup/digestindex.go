@@ -35,20 +35,20 @@ func NewDigestIndex(newIndex bool, subdir string) (idx *DigestIndex, err error) 
 	return
 }
 
-func (idx *DigestIndex) IsRevisit(key string, revisitRef *gowarc.RevisitRef) (*gowarc.RevisitRef, error) {
-	if utils.DiskFree(idx.dir) < minIndexDiskFree {
-		return nil, utils.NewOutOfSpaceError("almost no space left for index in directory '%s'", idx.dir)
+func (digestIndex *DigestIndex) IsRevisit(key string, revisitRef *gowarc.RevisitRef) (*gowarc.RevisitRef, error) {
+	if utils.DiskFree(digestIndex.dir) < minIndexDiskFree {
+		return nil, utils.NewOutOfSpaceError("almost no space left for index in directory '%s'", digestIndex.dir)
 	}
-	var r *gowarc.RevisitRef
-	err := idx.db.Update(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(key))
+	var revisitReference *gowarc.RevisitRef
+	err := digestIndex.db.Update(func(transaction *badger.Txn) error {
+		item, err := transaction.Get([]byte(key))
 		if err != nil {
 			if err == badger.ErrKeyNotFound {
 				val, err := MarshalRevisitRef(revisitRef)
 				if err != nil {
 					return err
 				}
-				err = txn.Set([]byte(key), val)
+				err = transaction.Set([]byte(key), val)
 				if err != nil {
 					fmt.Printf("111 %v\n", err)
 					return err
@@ -60,7 +60,7 @@ func (idx *DigestIndex) IsRevisit(key string, revisitRef *gowarc.RevisitRef) (*g
 		} else {
 			err = item.Value(func(val []byte) error {
 				rr, err := UnmarshalRevisitRef(val)
-				r = rr
+				revisitReference = rr
 				return err
 			})
 			if err != nil {
@@ -72,12 +72,12 @@ func (idx *DigestIndex) IsRevisit(key string, revisitRef *gowarc.RevisitRef) (*g
 	})
 	if err != nil {
 		if err == badger.ErrConflict {
-			return idx.IsRevisit(key, revisitRef)
+			return digestIndex.IsRevisit(key, revisitRef)
 		}
 		fmt.Printf("XXX %v\n", err)
 		return nil, err
 	}
-	return r, nil
+	return revisitReference, nil
 }
 
 func (idx *DigestIndex) Close() {
