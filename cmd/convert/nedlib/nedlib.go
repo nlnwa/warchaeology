@@ -74,25 +74,25 @@ func parseArgumentsAndCallNedlib(cmd *cobra.Command, args []string) error {
 	// When we request a new warcwriter, we submit a synthetic fromFilename based on the date of the first record.
 	viper.Set(flag.NameGenerator, "nedlib")
 
-	if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
+	if warcWriterConfig, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
 		return err
 	} else {
-		wc.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
+		warcWriterConfig.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
 			payload := &gowarc.WarcFields{}
 			payload.Set("software", cmdversion.SoftwareVersion()+" https://github.com/nlnwa/warchaeology")
-			payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", wc.WarcVersion.Minor(), wc.WarcVersion.Minor()))
+			payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", warcWriterConfig.WarcVersion.Minor(), warcWriterConfig.WarcVersion.Minor()))
 			payload.Set("description", "Converted from Nedlib")
-			h, e := os.Hostname()
-			if e != nil {
-				return e
+			hostname, errInner := os.Hostname()
+			if errInner != nil {
+				return errInner
 			}
-			payload.Set("host", h)
+			payload.Set("host", hostname)
 
 			_, err := recordBuilder.WriteString(payload.String())
 			return err
 		}
 
-		config.writerConf = wc
+		config.writerConf = warcWriterConfig
 	}
 	config.concurrency = viper.GetInt(flag.Concurrency)
 
@@ -104,19 +104,19 @@ func parseArgumentsAndCallNedlib(cmd *cobra.Command, args []string) error {
 
 }
 
-func runE(cmd string, c *conf) error {
+func runE(cmd string, config *conf) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		<-sigs
+		<-signalChannel
 		cancel()
 	}()
 
-	defer c.writerConf.Close()
+	defer config.writerConf.Close()
 
-	fileWalker, err := filewalker.NewFromViper(cmd, c.files, c.readFile)
+	fileWalker, err := filewalker.NewFromViper(cmd, config.files, config.readFile)
 	if err != nil {
 		return err
 	}
@@ -124,11 +124,11 @@ func runE(cmd string, c *conf) error {
 	return fileWalker.Walk(ctx, stats)
 }
 
-func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
+func (config *conf) readFile(fileSystem afero.Fs, fileName string) filewalker.Result {
 	result := filewalker.NewResult(fileName)
 
-	r, err := nedlibreader.NewNedlibReader(fs, fileName, c.writerConf.DefaultTime,
-		gowarc.WithVersion(c.writerConf.WarcVersion),
+	nedlibReader, err := nedlibreader.NewNedlibReader(fileSystem, fileName, config.writerConf.DefaultTime,
+		gowarc.WithVersion(config.writerConf.WarcVersion),
 		gowarc.WithAddMissingDigest(true),
 		gowarc.WithFixDigest(true),
 		gowarc.WithFixContentLength(true),
@@ -138,9 +138,9 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 		result.AddError(err)
 		return result
 	}
-	defer func() { _ = r.Close() }()
+	defer func() { _ = nedlibReader.Close() }()
 
-	_, err = handleRecord(c, r, fileName, result)
+	_, err = handleRecord(config, nedlibReader, fileName, result)
 	if err != nil {
 		result.AddError(fmt.Errorf("error: %v, rec num: %d", err.Error(), result.Records()))
 	}
@@ -148,32 +148,30 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 }
 
 // handleRecord processes one record
-func handleRecord(c *conf, wf *nedlibreader.NedlibReader, fileName string, result filewalker.Result) (offset int64, err error) {
-	wr, currentOffset, validation, e := wf.Next()
-	offset = currentOffset
-	if e != nil {
-		err = e
-		return
+func handleRecord(config *conf, nedlibReader *nedlibreader.NedlibReader, fileName string, result filewalker.Result) (int64, error) {
+	warcRecord, offset, validation, err := nedlibReader.Next()
+	if err != nil {
+		return offset, err
 	}
 	result.IncrRecords()
 	result.IncrProcessed()
 	if !validation.Valid() {
-		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), currentOffset, validation))
+		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), offset, validation))
 	}
 
-	defer func() { _ = wr.Close() }()
+	defer func() { _ = warcRecord.Close() }()
 
-	syntheticFileName, err := internal.To14(wr.WarcHeader().Get(gowarc.WarcDate))
+	syntheticFileName, err := internal.To14(warcRecord.WarcHeader().Get(gowarc.WarcDate))
 	if err != nil {
 		panic(err)
 	}
 
-	writer := c.writerConf.GetWarcWriter(syntheticFileName, wr.WarcHeader().Get(gowarc.WarcDate))
+	writer := config.writerConf.GetWarcWriter(syntheticFileName, warcRecord.WarcHeader().Get(gowarc.WarcDate))
 
-	if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
-		fmt.Printf("Offset: %d\n", currentOffset)
-		_, _ = wr.WarcHeader().Write(os.Stdout)
-		panic(rr[0].Err)
+	if writeResponse := writer.Write(warcRecord); writeResponse != nil && writeResponse[0].Err != nil {
+		fmt.Printf("Offset: %d\n", offset)
+		_, _ = warcRecord.WarcHeader().Write(os.Stdout)
+		panic(writeResponse[0].Err)
 	}
-	return
+	return offset, err
 }
