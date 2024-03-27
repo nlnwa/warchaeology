@@ -15,41 +15,41 @@ const (
 )
 
 func UnmarshalRevisitRef(data []byte) (*gowarc.RevisitRef, error) {
-	r := &gowarc.RevisitRef{}
+	revisitReference := &gowarc.RevisitRef{}
 	switch data[0] {
 	case 1:
-		r.Profile = gowarc.ProfileIdenticalPayloadDigestV1_0
+		revisitReference.Profile = gowarc.ProfileIdenticalPayloadDigestV1_0
 	case 2:
-		r.Profile = gowarc.ProfileIdenticalPayloadDigestV1_1
+		revisitReference.Profile = gowarc.ProfileIdenticalPayloadDigestV1_1
 	case 3:
-		r.Profile = gowarc.ProfileServerNotModifiedV1_0
+		revisitReference.Profile = gowarc.ProfileServerNotModifiedV1_0
 	case 4:
-		r.Profile = gowarc.ProfileServerNotModifiedV1_1
+		revisitReference.Profile = gowarc.ProfileServerNotModifiedV1_1
 	}
-	r.TargetRecordId = "<urn:uuid:" + string(data[oId:oDate]) + ">"
-	t := time.Time{}
-	if err := t.UnmarshalBinary(data[oDate:oUri]); err != nil {
+	revisitReference.TargetRecordId = "<urn:uuid:" + string(data[oId:oDate]) + ">"
+	now := time.Time{}
+	if err := now.UnmarshalBinary(data[oDate:oUri]); err != nil {
 		return nil, err
 	}
-	r.TargetDate = t.Format(time.RFC3339)
-	r.TargetUri = string(data[oUri:])
-	return r, nil
+	revisitReference.TargetDate = now.Format(time.RFC3339)
+	revisitReference.TargetUri = string(data[oUri:])
+	return revisitReference, nil
 }
 
-func MarshalRevisitRef(r *gowarc.RevisitRef) (data []byte, err error) {
-	id := strings.Trim(r.TargetRecordId, "<>")[9:]
-	uri := r.TargetUri
-	d, err := time.Parse(time.RFC3339, r.TargetDate)
+func MarshalRevisitRef(revisitReference *gowarc.RevisitRef) (data []byte, err error) {
+	id := strings.Trim(revisitReference.TargetRecordId, "<>")[9:]
+	uri := revisitReference.TargetUri
+	time, err := time.Parse(time.RFC3339, revisitReference.TargetDate)
 	if err != nil {
 		return nil, err
 	}
-	date, err := d.MarshalBinary()
+	date, err := time.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 
 	var profile byte
-	switch r.Profile {
+	switch revisitReference.Profile {
 	case gowarc.ProfileIdenticalPayloadDigestV1_0:
 		profile = 1
 	case gowarc.ProfileIdenticalPayloadDigestV1_1:
