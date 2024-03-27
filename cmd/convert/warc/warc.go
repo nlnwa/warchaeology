@@ -189,11 +189,10 @@ func (config *conf) readFile(fileSystem afero.Fs, fileName string) filewalker.Re
 // The input parameter writer and output parameter writerOut is only used for identity transformation. In this case there is one writer
 // per file which should be closed by readFile when the file is processed. But since we need the warc date of the first record to open
 // the writer, it must be opened in this function. These parameters are used for giving readFile access to the writer.
-func handleRecord(config *conf, warcFileReader *gowarc.WarcFileReader, fileName string, result filewalker.Result, warcFileWriter *gowarc.WarcFileWriter) (offset int64, writerOut *gowarc.WarcFileWriter, err error) {
-	writerOut = warcFileWriter
+func handleRecord(config *conf, warcFileReader *gowarc.WarcFileReader, fileName string, result filewalker.Result, warcFileWriter *gowarc.WarcFileWriter) (int64, *gowarc.WarcFileWriter, error) {
+	writerOut := warcFileWriter
 
-	warcRecord, currentOffset, validation, e := warcFileReader.Next()
-	offset = currentOffset
+	warcRecord, offset, validation, err := warcFileReader.Next()
 	result.IncrRecords()
 	result.IncrProcessed()
 	defer func() {
@@ -201,12 +200,11 @@ func handleRecord(config *conf, warcFileReader *gowarc.WarcFileReader, fileName 
 			_ = warcRecord.Close()
 		}
 	}()
-	if e != nil {
-		err = e
-		return
+	if err != nil {
+		return offset, writerOut, err
 	}
 	if !validation.Valid() {
-		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), currentOffset, validation))
+		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), offset, validation))
 		fmt.Printf("%T -- %s\n", warcRecord.Block(), validation)
 		warcRecordBuilder := gowarc.NewRecordBuilder(warcRecord.Type(), gowarc.WithFixContentLength(false), gowarc.WithFixDigest(false))
 		warcFields := warcRecord.WarcHeader()
@@ -236,9 +234,9 @@ func handleRecord(config *conf, warcFileReader *gowarc.WarcFileReader, fileName 
 		}
 	}
 	if writeResponse := warcFileWriter.Write(warcRecord); writeResponse != nil && writeResponse[0].Err != nil {
-		fmt.Printf("Offset: %d\n", currentOffset)
+		fmt.Printf("Offset: %d\n", offset)
 		_, _ = warcRecord.WarcHeader().Write(os.Stdout)
 		panic(writeResponse[0].Err)
 	}
-	return
+	return offset, writerOut, err
 }
