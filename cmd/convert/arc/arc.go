@@ -76,31 +76,31 @@ func NewCommand() *cobra.Command {
 
 func parseArgumentsAndCallArc(cmd *cobra.Command, args []string) error {
 	config := &conf{}
-	wc, err := warcwriterconfig.NewFromViper(cmd.Name())
+	warcRecordWriter, err := warcwriterconfig.NewFromViper(cmd.Name())
 	if err != nil {
 		return err
 	}
 
-	wc.OneToOneWriter = true
+	warcRecordWriter.OneToOneWriter = true
 
-	if wc.OneToOneWriter {
-		wc.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
+	if warcRecordWriter.OneToOneWriter {
+		warcRecordWriter.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
 			payload := &gowarc.WarcFields{}
 			payload.Set("software", cmdversion.SoftwareVersion()+" https://github.com/nlnwa/warchaeology")
-			payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", wc.WarcVersion.Minor(), wc.WarcVersion.Minor()))
+			payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", warcRecordWriter.WarcVersion.Minor(), warcRecordWriter.WarcVersion.Minor()))
 			payload.Set("description", "Converted from ARC")
-			h, e := os.Hostname()
-			if e != nil {
-				return e
+			hostname, errInner := os.Hostname()
+			if errInner != nil {
+				return errInner
 			}
-			payload.Set("host", h)
+			payload.Set("host", hostname)
 
 			_, err := recordBuilder.WriteString(payload.String())
 			return err
 		}
 	}
 
-	config.writerConf = wc
+	config.writerConf = warcRecordWriter
 	config.concurrency = viper.GetInt(flag.Concurrency)
 
 	if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
@@ -111,18 +111,18 @@ func parseArgumentsAndCallArc(cmd *cobra.Command, args []string) error {
 
 }
 
-func runE(cmd string, c *conf) error {
+func runE(cmd string, config *conf) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		<-sigs
+		<-signalChannel
 		cancel()
 	}()
 
-	defer c.writerConf.Close()
-	fileWalker, err := filewalker.NewFromViper(cmd, c.files, c.readFile)
+	defer config.writerConf.Close()
+	fileWalker, err := filewalker.NewFromViper(cmd, config.files, config.readFile)
 	if err != nil {
 		return err
 	}
@@ -130,11 +130,11 @@ func runE(cmd string, c *conf) error {
 	return fileWalker.Walk(ctx, stats)
 }
 
-func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
+func (config *conf) readFile(fileSystem afero.Fs, fileName string) filewalker.Result {
 	result := filewalker.NewResult(fileName)
 
-	a, err := arcreader.NewArcFileReader(fs, fileName, 0,
-		gowarc.WithVersion(c.writerConf.WarcVersion),
+	arcFileReader, err := arcreader.NewArcFileReader(fileSystem, fileName, 0,
+		gowarc.WithVersion(config.writerConf.WarcVersion),
 		gowarc.WithAddMissingDigest(true),
 		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)),
 	)
@@ -142,13 +142,13 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 		result.AddError(err)
 		return result
 	}
-	defer func() { _ = a.Close() }()
+	defer func() { _ = arcFileReader.Close() }()
 
-	var writer *gowarc.WarcFileWriter
+	var warcFileWriter *gowarc.WarcFileWriter
 
 	for {
 		var currentOffset int64
-		currentOffset, writer, err = handleRecord(c, a, fileName, result, writer)
+		currentOffset, warcFileWriter, err = handleRecord(config, arcFileReader, fileName, result, warcFileWriter)
 		if err == io.EOF {
 			break
 		}
@@ -157,8 +157,8 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 		}
 	}
 
-	if writer != nil {
-		_ = writer.Close()
+	if warcFileWriter != nil {
+		_ = warcFileWriter.Close()
 	}
 
 	return result
@@ -168,13 +168,13 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 // The input parameter writer and output parameter writerOut is only used for identity transformation. In this case there is one writer
 // per file which should be closed by readFile when the file is processed. But since we need the warc date of the first record to open
 // the writer, it must be opened in this function. These parameters are used for giving readFile access to the writer.
-func handleRecord(c *conf, wf *arcreader.ArcFileReader, fileName string, result filewalker.Result, writer *gowarc.WarcFileWriter) (offset int64, writerOut *gowarc.WarcFileWriter, err error) {
-	writerOut = writer
+func handleRecord(config *conf, arcFileReader *arcreader.ArcFileReader, fileName string, result filewalker.Result, warcFileWriter *gowarc.WarcFileWriter) (offset int64, writerOut *gowarc.WarcFileWriter, err error) {
+	writerOut = warcFileWriter
 
-	wr, currentOffset, validation, e := wf.Next()
+	warcRecord, currentOffset, validation, e := arcFileReader.Next()
 	defer func() {
-		if wr != nil {
-			_ = wr.Close()
+		if warcRecord != nil {
+			_ = warcRecord.Close()
 		}
 	}()
 
@@ -190,16 +190,16 @@ func handleRecord(c *conf, wf *arcreader.ArcFileReader, fileName string, result 
 		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), currentOffset, validation))
 	}
 
-	if writer == nil {
-		writer = c.writerConf.GetWarcWriter(fileName, wr.WarcHeader().Get(gowarc.WarcDate))
-		if c.writerConf.OneToOneWriter {
-			writerOut = writer
+	if warcFileWriter == nil {
+		warcFileWriter = config.writerConf.GetWarcWriter(fileName, warcRecord.WarcHeader().Get(gowarc.WarcDate))
+		if config.writerConf.OneToOneWriter {
+			writerOut = warcFileWriter
 		}
 	}
-	if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
+	if writeResponse := warcFileWriter.Write(warcRecord); writeResponse != nil && writeResponse[0].Err != nil {
 		fmt.Printf("Offset: %d\n", currentOffset)
-		_, _ = wr.WarcHeader().Write(os.Stdout)
-		panic(rr[0].Err)
+		_, _ = warcRecord.WarcHeader().Write(os.Stdout)
+		panic(writeResponse[0].Err)
 	}
 	return
 }
