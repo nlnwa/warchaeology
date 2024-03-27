@@ -7,6 +7,10 @@ import (
 	"github.com/nlnwa/whatwg-url/url"
 )
 
+// SSURT stands for Superior SURT. Sensible SURT. Smug SURT.
+// SURT stands for Sort-friendly URI Reordering Transform
+// For more information, see https://github.com/iipc/urlcanon/blob/master/ssurt.rst
+
 func SsurtUrl(u *url.Url, includeScheme bool) (string, error) {
 	u.SearchParams().Sort()
 
