@@ -13,45 +13,45 @@ import (
 )
 
 type NedlibReader struct {
-	fs           afero.Fs
-	metaFilename string
-	defaultTime  time.Time
-	opts         []gowarc.WarcRecordOption
-	done         bool
+	fileSystem        afero.Fs
+	metaFilename      string
+	defaultTime       time.Time
+	warcRecordOptions []gowarc.WarcRecordOption
+	done              bool
 }
 
-func NewNedlibReader(fs afero.Fs, metaFilename string, defaultTime time.Time, opts ...gowarc.WarcRecordOption) (*NedlibReader, error) {
-	n := &NedlibReader{
-		fs:           fs,
-		metaFilename: metaFilename,
-		defaultTime:  defaultTime,
-		opts:         opts,
+func NewNedlibReader(fileSystem afero.Fs, metaFilename string, defaultTime time.Time, warcRecordOptions ...gowarc.WarcRecordOption) (*NedlibReader, error) {
+	nedlibReader := &NedlibReader{
+		fileSystem:        fileSystem,
+		metaFilename:      metaFilename,
+		defaultTime:       defaultTime,
+		warcRecordOptions: warcRecordOptions,
 	}
-	return n, nil
+	return nedlibReader, nil
 }
 
-func (n *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Validation, error) {
+func (nedlibReader *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Validation, error) {
 	var validation *gowarc.Validation
-	if n.done {
+	if nedlibReader.done {
 		return nil, 0, validation, io.EOF
 	}
-	defer func() { n.done = true }()
+	defer func() { nedlibReader.done = true }()
 
-	f, err := n.fs.Open(n.metaFilename)
+	file, err := nedlibReader.fileSystem.Open(nedlibReader.metaFilename)
 	if err != nil {
 		return nil, 0, validation, err
 	}
 
-	response, err := http.ReadResponse(bufio.NewReader(io.MultiReader(f, bytes.NewReader([]byte{'\r', '\n'}))), nil)
-	_ = f.Close()
+	response, err := http.ReadResponse(bufio.NewReader(io.MultiReader(file, bytes.NewReader([]byte{'\r', '\n'}))), nil)
+	_ = file.Close()
 	if err != nil {
 		return nil, 0, validation, err
 	}
 	defer response.Body.Close()
 
-	rb := gowarc.NewRecordBuilder(gowarc.Response, n.opts...)
+	warcRecordBuilder := gowarc.NewRecordBuilder(gowarc.Response, nedlibReader.warcRecordOptions...)
 
-	rb.AddWarcHeader(gowarc.ContentType, "application/http;msgtype=response")
+	warcRecordBuilder.AddWarcHeader(gowarc.ContentType, "application/http;msgtype=response")
 
 	header := response.Header
 	dateString := header.Get("Date")
@@ -60,48 +60,48 @@ func (n *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Validation, err
 		if err != nil {
 			return nil, 0, validation, err
 		}
-		rb.AddWarcHeaderTime(gowarc.WarcDate, t)
+		warcRecordBuilder.AddWarcHeaderTime(gowarc.WarcDate, t)
 	} else {
-		rb.AddWarcHeaderTime(gowarc.WarcDate, n.defaultTime)
+		warcRecordBuilder.AddWarcHeaderTime(gowarc.WarcDate, nedlibReader.defaultTime)
 	}
 
-	for i := range header {
-		if strings.HasPrefix(i, "Arc") {
-			switch i {
+	for field := range header {
+		if strings.HasPrefix(field, "Arc") {
+			switch field {
 			case "Arc-Url":
-				rb.AddWarcHeader(gowarc.WarcTargetURI, header.Get(i))
+				warcRecordBuilder.AddWarcHeader(gowarc.WarcTargetURI, header.Get(field))
 			case "Arc-Length":
-				header.Set(gowarc.ContentLength, header.Get(i))
+				header.Set(gowarc.ContentLength, header.Get(field))
 			}
-			header.Del(i)
+			header.Del(field)
 		}
 	}
-	if _, err = rb.WriteString(response.Proto + " " + response.Status + "\n"); err != nil {
+	if _, err = warcRecordBuilder.WriteString(response.Proto + " " + response.Status + "\n"); err != nil {
 		return nil, 0, validation, err
 	}
-	if err = header.Write(rb); err != nil {
-		return nil, 0, validation, err
-	}
-
-	if _, err = rb.WriteString("\r\n"); err != nil {
+	if err = header.Write(warcRecordBuilder); err != nil {
 		return nil, 0, validation, err
 	}
 
-	p, err := n.fs.Open(strings.TrimSuffix(n.metaFilename, ".meta"))
+	if _, err = warcRecordBuilder.WriteString("\r\n"); err != nil {
+		return nil, 0, validation, err
+	}
+
+	metaFile, err := nedlibReader.fileSystem.Open(strings.TrimSuffix(nedlibReader.metaFilename, ".meta"))
 	if err != nil {
 		return nil, 0, validation, err
 	}
-	defer func() { _ = p.Close() }()
+	defer func() { _ = metaFile.Close() }()
 
-	if _, err = rb.ReadFrom(p); err != nil {
+	if _, err = warcRecordBuilder.ReadFrom(metaFile); err != nil {
 		return nil, 0, validation, err
 	}
 
-	var wr gowarc.WarcRecord
-	wr, validation, err = rb.Build()
-	return wr, 0, validation, err
+	var warcRecord gowarc.WarcRecord
+	warcRecord, validation, err = warcRecordBuilder.Build()
+	return warcRecord, 0, validation, err
 }
 
-func (n *NedlibReader) Close() error {
+func (nedlibReader *NedlibReader) Close() error {
 	return nil
 }
