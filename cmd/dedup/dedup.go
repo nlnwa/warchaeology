@@ -113,10 +113,10 @@ func parseArgumentsAndCallDeduplication(cmd *cobra.Command, args []string) error
 	config := &conf{}
 	utils.CheckFileDescriptorLimit(utils.BadgerRecommendedMaxFileDescr)
 
-	if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
+	if warcWriterConfig, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
 		return err
 	} else {
-		config.writerConf = wc
+		config.writerConf = warcWriterConfig
 	}
 
 	config.concurrency = viper.GetInt(flag.Concurrency)
@@ -141,36 +141,36 @@ func parseArgumentsAndCallDeduplication(cmd *cobra.Command, args []string) error
 	return runE(cmd.Name(), config)
 }
 
-func runE(cmd string, c *conf) error {
+func runE(cmd string, config *conf) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		<-sigs
+		<-signalChannel
 		cancel()
 	}()
 
-	defer c.writerConf.Close()
+	defer config.writerConf.Close()
 
-	fw, err := filewalker.NewFromViper(cmd, c.files, c.readFile)
+	walker, err := filewalker.NewFromViper(cmd, config.files, config.readFile)
 	if err != nil {
 		return err
 	}
 
 	stats := filewalker.NewStats()
-	return fw.Walk(ctx, stats)
+	return walker.Walk(ctx, stats)
 }
 
-func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
+func (config *conf) readFile(fileSystem afero.Fs, fileName string) filewalker.Result {
 	result := filewalker.NewResult(fileName)
 
-	opts := []gowarc.WarcRecordOption{
+	warcRecordOptions := []gowarc.WarcRecordOption{
 		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)),
 		gowarc.WithBufferMaxMemBytes(utils.ParseSizeInBytes(viper.GetString(flag.BufferMaxMem))),
 	}
-	if c.repair {
-		opts = append(opts,
+	if config.repair {
+		warcRecordOptions = append(warcRecordOptions,
 			gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
 			gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),
 			gowarc.WithAddMissingDigest(true),
@@ -182,7 +182,7 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 			gowarc.WithFixWarcFieldsBlockErrors(true),
 		)
 	} else {
-		opts = append(opts,
+		warcRecordOptions = append(warcRecordOptions,
 			gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
 			gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),
 			gowarc.WithAddMissingDigest(true),
@@ -194,21 +194,21 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 		)
 	}
 
-	f, err := fs.Open(fileName)
+	file, err := fileSystem.Open(fileName)
 	if err != nil {
 		panic(err)
 	}
-	defer func() { _ = f.Close() }()
-	wf, err := gowarc.NewWarcFileReaderFromStream(f, 0, opts...)
+	defer func() { _ = file.Close() }()
+	warcFileReader, err := gowarc.NewWarcFileReaderFromStream(file, 0, warcRecordOptions...)
 
 	if err != nil {
 		result.AddError(err)
 		return result
 	}
-	defer func() { _ = wf.Close() }()
+	defer func() { _ = warcFileReader.Close() }()
 
 	var writer *gowarc.WarcFileWriter
-	if c.writerConf.WarcFileNameGenerator == "identity" {
+	if config.writerConf.WarcFileNameGenerator == "identity" {
 		defer func() {
 			if writer != nil {
 				_ = writer.Close()
@@ -217,12 +217,12 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 	}
 
 	for {
-		if utils.DiskFree(c.writerConf.OutDir) < c.minWARCDiskFree {
-			result.SetFatal(utils.NewOutOfSpaceError("cannot write WARC file, almost no space left in directory '%s'\n", c.writerConf.OutDir))
+		if utils.DiskFree(config.writerConf.OutDir) < config.minWARCDiskFree {
+			result.SetFatal(utils.NewOutOfSpaceError("cannot write WARC file, almost no space left in directory '%s'\n", config.writerConf.OutDir))
 			break
 		}
 		var currentOffset int64
-		currentOffset, writer, err = handleRecord(c, wf, fileName, result, writer)
+		currentOffset, writer, err = handleRecord(config, warcFileReader, fileName, result, writer)
 		if err == io.EOF {
 			break
 		}
@@ -242,12 +242,12 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 // The input parameter writer and output parameter writerOut is only used for identity transformation. In this case there is one writer
 // per file which should be closed by readFile when the file is processed. But since we need the warc date of the first record to open
 // the writer, it must be opened in this function. These parameters are used for giving readFile access to the writer.
-func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, result filewalker.Result, writer *gowarc.WarcFileWriter) (offset int64, writerOut *gowarc.WarcFileWriter, err error) {
+func handleRecord(config *conf, warcFileReader *gowarc.WarcFileReader, fileName string, result filewalker.Result, writer *gowarc.WarcFileWriter) (offset int64, writerOut *gowarc.WarcFileWriter, err error) {
 	writerOut = writer
-	wr, currentOffset, validation, err := wf.Next()
-	if wr != nil {
+	warcRecord, currentOffset, validation, err := warcFileReader.Next()
+	if warcRecord != nil {
 		defer func() {
-			_ = wr.Close()
+			_ = warcRecord.Close()
 		}()
 	}
 
@@ -262,21 +262,21 @@ func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, result fi
 	}
 
 	if writer == nil {
-		writer = c.writerConf.GetWarcWriter(fileName, wr.WarcHeader().Get(gowarc.WarcDate))
-		if c.writerConf.WarcFileNameGenerator == "identity" {
+		writer = config.writerConf.GetWarcWriter(fileName, warcRecord.WarcHeader().Get(gowarc.WarcDate))
+		if config.writerConf.WarcFileNameGenerator == "identity" {
 			writerOut = writer
 		}
 	}
 
-	if c.filter.Accept(wr) {
+	if config.filter.Accept(warcRecord) {
 		result.IncrProcessed()
 
-		length := payloadLength(wr)
-		digest := getDigest(wr, validation, result)
-		profile := getRevisitProfile(wr)
-		revisitRef, _ := wr.CreateRevisitRef(profile)
+		length := payloadLength(warcRecord)
+		digest := getDigest(warcRecord, validation, result)
+		profile := getRevisitProfile(warcRecord)
+		revisitRef, _ := warcRecord.CreateRevisitRef(profile)
 
-		r, err := c.digestIndex.IsRevisit(digest, revisitRef)
+		revisitReference, err := config.digestIndex.IsRevisit(digest, revisitRef)
 		if err != nil {
 			if _, ok := err.(utils.OutOfSpaceError); ok {
 				result.SetFatal(err)
@@ -284,37 +284,37 @@ func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, result fi
 				result.AddError(fmt.Errorf("error getting revisit ref: %w", err))
 			}
 		}
-		if r != nil && int64(revisitRefSize(r)) < length-c.minimumSizeGain {
-			if r.Profile == "" {
-				panic(r)
+		if revisitReference != nil && int64(revisitRefSize(revisitReference)) < length-config.minimumSizeGain {
+			if revisitReference.Profile == "" {
+				panic(revisitReference)
 			}
 
-			if revisit, err := wr.ToRevisitRecord(r); err != nil {
+			if revisit, err := warcRecord.ToRevisitRecord(revisitReference); err != nil {
 				result.AddError(fmt.Errorf("error creating revisit record: %w", err))
-				writeRecord(writer, currentOffset, wr)
+				writeRecord(writer, currentOffset, warcRecord)
 			} else {
 				writeRecord(writer, currentOffset, revisit)
 				result.IncrDuplicates()
 			}
 		} else {
-			writeRecord(writer, currentOffset, wr)
+			writeRecord(writer, currentOffset, warcRecord)
 		}
 	} else {
-		writeRecord(writer, currentOffset, wr)
+		writeRecord(writer, currentOffset, warcRecord)
 	}
 	return
 }
 
-func writeRecord(writer *gowarc.WarcFileWriter, offset int64, wr gowarc.WarcRecord) {
-	if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
+func writeRecord(writer *gowarc.WarcFileWriter, offset int64, warcRecord gowarc.WarcRecord) {
+	if writeResponse := writer.Write(warcRecord); writeResponse != nil && writeResponse[0].Err != nil {
 		fmt.Printf("Offset: %d\n", offset)
-		_, _ = wr.WarcHeader().Write(os.Stdout)
-		panic(rr[0].Err)
+		_, _ = warcRecord.WarcHeader().Write(os.Stdout)
+		panic(writeResponse[0].Err)
 	}
 }
 
-func getRevisitProfile(wr gowarc.WarcRecord) string {
-	switch wr.Version() {
+func getRevisitProfile(warcRecord gowarc.WarcRecord) string {
+	switch warcRecord.Version() {
 	case gowarc.V1_0:
 		return gowarc.ProfileIdenticalPayloadDigestV1_0
 	default:
@@ -322,49 +322,49 @@ func getRevisitProfile(wr gowarc.WarcRecord) string {
 	}
 }
 
-func getDigest(wr gowarc.WarcRecord, validation *gowarc.Validation, result filewalker.Result) string {
+func getDigest(warcRecord gowarc.WarcRecord, validation *gowarc.Validation, result filewalker.Result) string {
 	var digest string
-	if wr.WarcHeader().Has(gowarc.WarcPayloadDigest) {
-		digest = wr.WarcHeader().Get(gowarc.WarcPayloadDigest)
-	} else if wr.WarcHeader().Has(gowarc.WarcBlockDigest) {
-		digest = wr.WarcHeader().Get(gowarc.WarcBlockDigest)
+	if warcRecord.WarcHeader().Has(gowarc.WarcPayloadDigest) {
+		digest = warcRecord.WarcHeader().Get(gowarc.WarcPayloadDigest)
+	} else if warcRecord.WarcHeader().Has(gowarc.WarcBlockDigest) {
+		digest = warcRecord.WarcHeader().Get(gowarc.WarcBlockDigest)
 	} else {
-		if err := wr.Block().Cache(); err != nil {
+		if err := warcRecord.Block().Cache(); err != nil {
 			panic("Could not cache record: " + err.Error())
 		}
-		if err := wr.ValidateDigest(validation); err != nil {
+		if err := warcRecord.ValidateDigest(validation); err != nil {
 			panic("Validate error: " + err.Error())
 		}
-		return getDigest(wr, validation, result)
+		return getDigest(warcRecord, validation, result)
 	}
 	return digest
 }
 
-func payloadLength(wr gowarc.WarcRecord) int64 {
+func payloadLength(warcRecord gowarc.WarcRecord) int64 {
 	var length int64
-	switch v := wr.Block().(type) {
+	switch block := warcRecord.Block().(type) {
 	case gowarc.ProtocolHeaderBlock:
-		length, _ = wr.ContentLength()
-		length -= int64(len(v.ProtocolHeaderBytes()))
+		length, _ = warcRecord.ContentLength()
+		length -= int64(len(block.ProtocolHeaderBytes()))
 	case gowarc.WarcFieldsBlock:
-		length = v.Size()
+		length = block.Size()
 	}
 	return length
 }
 
-func revisitRefSize(r *gowarc.RevisitRef) int {
-	s := 0
-	if r.TargetRecordId != "" {
-		s += len(gowarc.WarcRefersTo) + len(r.TargetRecordId)
+func revisitRefSize(revisitReference *gowarc.RevisitRef) int {
+	length := 0
+	if revisitReference.TargetRecordId != "" {
+		length += len(gowarc.WarcRefersTo) + len(revisitReference.TargetRecordId)
 	}
-	if r.Profile != "" {
-		s += len(gowarc.WarcProfile) + len(r.Profile)
+	if revisitReference.Profile != "" {
+		length += len(gowarc.WarcProfile) + len(revisitReference.Profile)
 	}
-	if r.TargetUri != "" {
-		s += len(gowarc.WarcRefersToTargetURI) + len(r.TargetUri)
+	if revisitReference.TargetUri != "" {
+		length += len(gowarc.WarcRefersToTargetURI) + len(revisitReference.TargetUri)
 	}
-	if r.TargetDate != "" {
-		s += len(gowarc.WarcRefersToDate) + len(r.TargetDate)
+	if revisitReference.TargetDate != "" {
+		length += len(gowarc.WarcRefersToDate) + len(revisitReference.TargetDate)
 	}
-	return s
+	return length
 }
