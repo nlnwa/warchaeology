@@ -148,17 +148,15 @@ func (config *conf) readFile(fileSystem afero.Fs, fileName string) filewalker.Re
 }
 
 // handleRecord processes one record
-func handleRecord(config *conf, nedlibReader *nedlibreader.NedlibReader, fileName string, result filewalker.Result) (offset int64, err error) {
-	warcRecord, currentOffset, validation, e := nedlibReader.Next()
-	offset = currentOffset
-	if e != nil {
-		err = e
-		return
+func handleRecord(config *conf, nedlibReader *nedlibreader.NedlibReader, fileName string, result filewalker.Result) (int64, error) {
+	warcRecord, offset, validation, err := nedlibReader.Next()
+	if err != nil {
+		return offset, err
 	}
 	result.IncrRecords()
 	result.IncrProcessed()
 	if !validation.Valid() {
-		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), currentOffset, validation))
+		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), offset, validation))
 	}
 
 	defer func() { _ = warcRecord.Close() }()
@@ -171,9 +169,9 @@ func handleRecord(config *conf, nedlibReader *nedlibreader.NedlibReader, fileNam
 	writer := config.writerConf.GetWarcWriter(syntheticFileName, warcRecord.WarcHeader().Get(gowarc.WarcDate))
 
 	if writeResponse := writer.Write(warcRecord); writeResponse != nil && writeResponse[0].Err != nil {
-		fmt.Printf("Offset: %d\n", currentOffset)
+		fmt.Printf("Offset: %d\n", offset)
 		_, _ = warcRecord.WarcHeader().Write(os.Stdout)
 		panic(writeResponse[0].Err)
 	}
-	return
+	return offset, err
 }
