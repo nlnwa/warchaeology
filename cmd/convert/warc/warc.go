@@ -75,10 +75,10 @@ This is an experimental feature.`,
 
 func parseArgumentsAndCallWarc(cmd *cobra.Command, args []string) error {
 	config := &conf{}
-	if wc, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
+	if warcWriterConfig, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
 		return err
 	} else {
-		config.writerConf = wc
+		config.writerConf = warcWriterConfig
 	}
 	config.concurrency = viper.GetInt(flag.Concurrency)
 	config.minWARCDiskFree = utils.ParseSizeInBytes(viper.GetString(flag.MinFreeDisk))
@@ -92,18 +92,18 @@ func parseArgumentsAndCallWarc(cmd *cobra.Command, args []string) error {
 
 }
 
-func runE(cmd string, c *conf) error {
+func runE(cmd string, config *conf) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		<-sigs
+		<-signalChannel
 		cancel()
 	}()
 
-	defer c.writerConf.Close()
-	fileWalker, err := filewalker.NewFromViper(cmd, c.files, c.readFile)
+	defer config.writerConf.Close()
+	fileWalker, err := filewalker.NewFromViper(cmd, config.files, config.readFile)
 	if err != nil {
 		return err
 	}
@@ -111,15 +111,15 @@ func runE(cmd string, c *conf) error {
 	return fileWalker.Walk(ctx, stats)
 }
 
-func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
+func (config *conf) readFile(fileSystem afero.Fs, fileName string) filewalker.Result {
 	result := filewalker.NewResult(fileName)
 
-	opts := []gowarc.WarcRecordOption{
-		gowarc.WithVersion(c.writerConf.WarcVersion),
+	warcRecordOptions := []gowarc.WarcRecordOption{
+		gowarc.WithVersion(config.writerConf.WarcVersion),
 		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)),
 	}
-	if c.repair {
-		opts = append(opts,
+	if config.repair {
+		warcRecordOptions = append(warcRecordOptions,
 			gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
 			gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),
 			gowarc.WithAddMissingDigest(true),
@@ -131,7 +131,7 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 			gowarc.WithFixWarcFieldsBlockErrors(true),
 		)
 	} else {
-		opts = append(opts,
+		warcRecordOptions = append(warcRecordOptions,
 			gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
 			gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),
 			gowarc.WithAddMissingDigest(false),
@@ -143,34 +143,34 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 		)
 	}
 
-	f, err := fs.Open(fileName)
+	file, err := fileSystem.Open(fileName)
 	if err != nil {
 		panic(err)
 	}
-	defer func() { _ = f.Close() }()
-	a, err := gowarc.NewWarcFileReaderFromStream(f, 0, opts...)
+	defer func() { _ = file.Close() }()
+	warcFileReader, err := gowarc.NewWarcFileReaderFromStream(file, 0, warcRecordOptions...)
 	if err != nil {
 		result.AddError(err)
 		return result
 	}
-	defer func() { _ = a.Close() }()
+	defer func() { _ = warcFileReader.Close() }()
 
-	var writer *gowarc.WarcFileWriter
-	if c.writerConf.WarcFileNameGenerator == "identity" {
+	var warcFileWriter *gowarc.WarcFileWriter
+	if config.writerConf.WarcFileNameGenerator == "identity" {
 		defer func() {
-			if writer != nil {
-				_ = writer.Close()
+			if warcFileWriter != nil {
+				_ = warcFileWriter.Close()
 			}
 		}()
 	}
 
 	for {
-		if utils.DiskFree(c.writerConf.OutDir) < c.minWARCDiskFree {
-			result.SetFatal(utils.NewOutOfSpaceError("cannot write WARC file, almost no space left in directory '%s'\n", c.writerConf.OutDir))
+		if utils.DiskFree(config.writerConf.OutDir) < config.minWARCDiskFree {
+			result.SetFatal(utils.NewOutOfSpaceError("cannot write WARC file, almost no space left in directory '%s'\n", config.writerConf.OutDir))
 			break
 		}
 		var currentOffset int64
-		currentOffset, writer, err = handleRecord(c, a, fileName, result, writer)
+		currentOffset, warcFileWriter, err = handleRecord(config, warcFileReader, fileName, result, warcFileWriter)
 		if err == io.EOF {
 			break
 		}
@@ -189,16 +189,16 @@ func (c *conf) readFile(fs afero.Fs, fileName string) filewalker.Result {
 // The input parameter writer and output parameter writerOut is only used for identity transformation. In this case there is one writer
 // per file which should be closed by readFile when the file is processed. But since we need the warc date of the first record to open
 // the writer, it must be opened in this function. These parameters are used for giving readFile access to the writer.
-func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, result filewalker.Result, writer *gowarc.WarcFileWriter) (offset int64, writerOut *gowarc.WarcFileWriter, err error) {
-	writerOut = writer
+func handleRecord(config *conf, warcFileReader *gowarc.WarcFileReader, fileName string, result filewalker.Result, warcFileWriter *gowarc.WarcFileWriter) (offset int64, writerOut *gowarc.WarcFileWriter, err error) {
+	writerOut = warcFileWriter
 
-	wr, currentOffset, validation, e := wf.Next()
+	warcRecord, currentOffset, validation, e := warcFileReader.Next()
 	offset = currentOffset
 	result.IncrRecords()
 	result.IncrProcessed()
 	defer func() {
-		if wr != nil {
-			_ = wr.Close()
+		if warcRecord != nil {
+			_ = warcRecord.Close()
 		}
 	}()
 	if e != nil {
@@ -207,38 +207,38 @@ func handleRecord(c *conf, wf *gowarc.WarcFileReader, fileName string, result fi
 	}
 	if !validation.Valid() {
 		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), currentOffset, validation))
-		fmt.Printf("%T -- %s\n", wr.Block(), validation)
-		rb := gowarc.NewRecordBuilder(wr.Type(), gowarc.WithFixContentLength(false), gowarc.WithFixDigest(false))
-		wf := wr.WarcHeader()
-		for _, f := range *wf {
-			if f.Name != gowarc.WarcType {
-				rb.AddWarcHeader(f.Name, f.Value)
+		fmt.Printf("%T -- %s\n", warcRecord.Block(), validation)
+		warcRecordBuilder := gowarc.NewRecordBuilder(warcRecord.Type(), gowarc.WithFixContentLength(false), gowarc.WithFixDigest(false))
+		warcFields := warcRecord.WarcHeader()
+		for _, warcField := range *warcFields {
+			if warcField.Name != gowarc.WarcType {
+				warcRecordBuilder.AddWarcHeader(warcField.Name, warcField.Value)
 			}
 		}
-		r, err := wr.Block().RawBytes()
+		ioReader, err := warcRecord.Block().RawBytes()
 		if err != nil {
 			panic(err)
 		}
-		_, err = rb.ReadFrom(r)
+		_, err = warcRecordBuilder.ReadFrom(ioReader)
 		if err != nil {
 			panic(err)
 		}
-		wr, _, err = rb.Build()
+		warcRecord, _, err = warcRecordBuilder.Build()
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	if writer == nil {
-		writer = c.writerConf.GetWarcWriter(fileName, wr.WarcHeader().Get(gowarc.WarcDate))
-		if c.writerConf.WarcFileNameGenerator == "identity" {
-			writerOut = writer
+	if warcFileWriter == nil {
+		warcFileWriter = config.writerConf.GetWarcWriter(fileName, warcRecord.WarcHeader().Get(gowarc.WarcDate))
+		if config.writerConf.WarcFileNameGenerator == "identity" {
+			writerOut = warcFileWriter
 		}
 	}
-	if rr := writer.Write(wr); rr != nil && rr[0].Err != nil {
+	if writeResponse := warcFileWriter.Write(warcRecord); writeResponse != nil && writeResponse[0].Err != nil {
 		fmt.Printf("Offset: %d\n", currentOffset)
-		_, _ = wr.WarcHeader().Write(os.Stdout)
-		panic(rr[0].Err)
+		_, _ = warcRecord.WarcHeader().Write(os.Stdout)
+		panic(writeResponse[0].Err)
 	}
 	return
 }
