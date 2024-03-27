@@ -18,6 +18,8 @@ const (
 	EnvHookType    = "WARC_HOOK_TYPE"
 )
 
+var ErrSkipFile = fmt.Errorf("skip file")
+
 type OpenInputFileHook struct {
 	cmd  string
 	hook string
@@ -33,45 +35,45 @@ func NewOpenInputFileHook(cmd, hook string) (OpenInputFileHook, error) {
 		return OpenInputFileHook{}, ErrCommandNotFound{"OpenInputFile", hook}
 	}
 
-	h := OpenInputFileHook{
+	openInputFileHook := OpenInputFileHook{
 		hook: hook,
 		cmd:  cmd,
 	}
-	return h, nil
+	return openInputFileHook, nil
 }
 
-func (h OpenInputFileHook) Run(fileName string) error {
-	if h.hook == "" {
+func (openInputFileHook OpenInputFileHook) Run(fileName string) error {
+	if openInputFileHook.hook == "" {
 		return nil
 	}
-	b, err := h.Output(fileName)
-	if len(b) > 0 {
-		_, _ = fmt.Fprintln(os.Stderr, string(b))
+	outputBytes, err := openInputFileHook.Output(fileName)
+	if len(outputBytes) > 0 {
+		_, _ = fmt.Fprintln(os.Stderr, string(outputBytes))
 	}
 	return err
 }
 
-func (h OpenInputFileHook) Output(fileName string) ([]byte, error) {
-	if h.hook == "" {
+func (openInputFileHook OpenInputFileHook) Output(fileName string) ([]byte, error) {
+	if openInputFileHook.hook == "" {
 		return nil, nil
 	}
 
-	c := exec.Command(h.hook)
-	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
-	c.Env = append(c.Environ(), EnvHookType+"=OpenInputFile")
-	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
+	cmd := exec.Command(openInputFileHook.hook)
+	cmd.Env = append(cmd.Environ(), EnvCommand+"="+openInputFileHook.cmd)
+	cmd.Env = append(cmd.Environ(), EnvHookType+"=OpenInputFile")
+	cmd.Env = append(cmd.Environ(), EnvFileName+"="+fileName)
 
-	b, err := c.CombinedOutput()
-	b = bytes.TrimSpace(b)
-	if e, ok := err.(*exec.ExitError); ok {
-		switch e.ExitCode() {
+	outputBytes, err := cmd.CombinedOutput()
+	outputBytes = bytes.TrimSpace(outputBytes)
+	if exitError, ok := err.(*exec.ExitError); ok {
+		switch exitError.ExitCode() {
 		case 1:
-			return nil, fmt.Errorf("%s", b)
+			return nil, fmt.Errorf("%s", outputBytes)
 		case 10:
 			return nil, ErrSkipFile
 		}
 	}
-	return b, err
+	return outputBytes, err
 }
 
 type CloseInputFileHook struct {
@@ -90,54 +92,54 @@ func NewCloseInputFileHook(cmd, hook string) (CloseInputFileHook, error) {
 		return CloseInputFileHook{}, ErrCommandNotFound{"CloseInputFile", hook}
 	}
 
-	h := CloseInputFileHook{
+	closeInputFileHook := CloseInputFileHook{
 		cmd:  cmd,
 		hook: hook,
 	}
-	return h, nil
+	return closeInputFileHook, nil
 }
 
-func (h CloseInputFileHook) WithHash(hash string) CloseInputFileHook {
-	h.hash = hash
-	return h
+func (closeInputFileHook CloseInputFileHook) WithHash(hash string) CloseInputFileHook {
+	closeInputFileHook.hash = hash
+	return closeInputFileHook
 }
 
-func (h CloseInputFileHook) Run(fileName string, errorCount int64) error {
-	if h.hook == "" {
+func (closeInputFileHook CloseInputFileHook) Run(fileName string, errorCount int64) error {
+	if closeInputFileHook.hook == "" {
 		return nil
 	}
-	b, err := h.Output(fileName, errorCount)
-	if len(b) > 0 {
-		_, _ = fmt.Fprintln(os.Stderr, string(b))
+	outputBytes, err := closeInputFileHook.Output(fileName, errorCount)
+	if len(outputBytes) > 0 {
+		_, _ = fmt.Fprintln(os.Stderr, string(outputBytes))
 	}
 	return err
 }
 
-func (h CloseInputFileHook) Output(fileName string, errorCount int64) ([]byte, error) {
-	if h.hook == "" {
+func (closeInputFileHook CloseInputFileHook) Output(fileName string, errorCount int64) ([]byte, error) {
+	if closeInputFileHook.hook == "" {
 		return nil, nil
 	}
 
-	c := exec.Command(h.hook)
-	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
-	c.Env = append(c.Environ(), EnvHookType+"=CloseInputFile")
-	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
+	cmd := exec.Command(closeInputFileHook.hook)
+	cmd.Env = append(cmd.Environ(), EnvCommand+"="+closeInputFileHook.cmd)
+	cmd.Env = append(cmd.Environ(), EnvHookType+"=CloseInputFile")
+	cmd.Env = append(cmd.Environ(), EnvFileName+"="+fileName)
 	if errorCount > 0 {
-		c.Env = append(c.Environ(), fmt.Sprintf("%s=%d", EnvErrorCount, errorCount))
+		cmd.Env = append(cmd.Environ(), fmt.Sprintf("%s=%d", EnvErrorCount, errorCount))
 	}
-	if h.hash != "" {
-		c.Env = append(c.Environ(), EnvHash+"="+h.hash)
+	if closeInputFileHook.hash != "" {
+		cmd.Env = append(cmd.Environ(), EnvHash+"="+closeInputFileHook.hash)
 	}
 
-	b, err := c.CombinedOutput()
-	b = bytes.TrimSpace(b)
-	if e, ok := err.(*exec.ExitError); ok {
-		switch e.ExitCode() {
+	outputBytes, err := cmd.CombinedOutput()
+	outputBytes = bytes.TrimSpace(outputBytes)
+	if exitError, ok := err.(*exec.ExitError); ok {
+		switch exitError.ExitCode() {
 		case 1:
-			return nil, fmt.Errorf("%s", b)
+			return nil, fmt.Errorf("%s", outputBytes)
 		}
 	}
-	return b, err
+	return outputBytes, err
 }
 
 type OpenOutputFileHook struct {
@@ -156,51 +158,51 @@ func NewOpenOutputFileHook(cmd, hook string) (OpenOutputFileHook, error) {
 		return OpenOutputFileHook{}, ErrCommandNotFound{"OpenOutputFile", hook}
 	}
 
-	h := OpenOutputFileHook{
+	openOutputFileHook := OpenOutputFileHook{
 		cmd:  cmd,
 		hook: hook,
 	}
-	return h, nil
+	return openOutputFileHook, nil
 }
 
-func (h OpenOutputFileHook) WithSrcFileName(srcFileName string) OpenOutputFileHook {
-	h.srcFileName = srcFileName
-	return h
+func (openOutputFileHook OpenOutputFileHook) WithSrcFileName(srcFileName string) OpenOutputFileHook {
+	openOutputFileHook.srcFileName = srcFileName
+	return openOutputFileHook
 }
 
-func (h OpenOutputFileHook) Run(fileName string) error {
-	if h.hook == "" {
+func (openOutputFileHook OpenOutputFileHook) Run(fileName string) error {
+	if openOutputFileHook.hook == "" {
 		return nil
 	}
-	b, err := h.Output(fileName)
-	if len(b) > 0 {
-		_, _ = fmt.Fprintln(os.Stderr, string(b))
+	outputBytes, err := openOutputFileHook.Output(fileName)
+	if len(outputBytes) > 0 {
+		_, _ = fmt.Fprintln(os.Stderr, string(outputBytes))
 	}
 	return err
 }
 
-func (h OpenOutputFileHook) Output(fileName string) ([]byte, error) {
-	if h.hook == "" {
+func (openOutputFileHook OpenOutputFileHook) Output(fileName string) ([]byte, error) {
+	if openOutputFileHook.hook == "" {
 		return nil, nil
 	}
 
-	c := exec.Command(h.hook)
-	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
-	c.Env = append(c.Environ(), EnvHookType+"=OpenOutputFile")
-	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
-	if h.srcFileName != "" {
-		c.Env = append(c.Environ(), EnvSrcFileName+"="+h.srcFileName)
+	cmd := exec.Command(openOutputFileHook.hook)
+	cmd.Env = append(cmd.Environ(), EnvCommand+"="+openOutputFileHook.cmd)
+	cmd.Env = append(cmd.Environ(), EnvHookType+"=OpenOutputFile")
+	cmd.Env = append(cmd.Environ(), EnvFileName+"="+fileName)
+	if openOutputFileHook.srcFileName != "" {
+		cmd.Env = append(cmd.Environ(), EnvSrcFileName+"="+openOutputFileHook.srcFileName)
 	}
 
-	b, err := c.CombinedOutput()
-	b = bytes.TrimSpace(b)
-	if e, ok := err.(*exec.ExitError); ok {
-		switch e.ExitCode() {
+	outputBytes, err := cmd.CombinedOutput()
+	outputBytes = bytes.TrimSpace(outputBytes)
+	if exitError, ok := err.(*exec.ExitError); ok {
+		switch exitError.ExitCode() {
 		case 1:
-			return nil, fmt.Errorf("%s", b)
+			return nil, fmt.Errorf("%s", outputBytes)
 		}
 	}
-	return b, err
+	return outputBytes, err
 }
 
 type CloseOutputFileHook struct {
@@ -221,71 +223,71 @@ func NewCloseOutputFileHook(cmd, hook string) (CloseOutputFileHook, error) {
 		return CloseOutputFileHook{}, ErrCommandNotFound{"CloseOutputFile", hook}
 	}
 
-	h := CloseOutputFileHook{
+	closeOutputFileHook := CloseOutputFileHook{
 		cmd:  cmd,
 		hook: hook,
 	}
-	return h, nil
+	return closeOutputFileHook, nil
 }
 
-func (h CloseOutputFileHook) WithSrcFileName(srcFileName string) CloseOutputFileHook {
-	h.srcFileName = srcFileName
-	return h
+func (closeOutputFileHook CloseOutputFileHook) WithSrcFileName(srcFileName string) CloseOutputFileHook {
+	closeOutputFileHook.srcFileName = srcFileName
+	return closeOutputFileHook
 }
 
-func (h CloseOutputFileHook) WithHash(hash string) CloseOutputFileHook {
-	h.hash = hash
-	return h
+func (closeOutputFileHook CloseOutputFileHook) WithHash(hash string) CloseOutputFileHook {
+	closeOutputFileHook.hash = hash
+	return closeOutputFileHook
 }
 
-func (h CloseOutputFileHook) WithErrorCount(errorCount int64) CloseOutputFileHook {
-	h.errorCount = errorCount
-	return h
+func (closeOutputFileHook CloseOutputFileHook) WithErrorCount(errorCount int64) CloseOutputFileHook {
+	closeOutputFileHook.errorCount = errorCount
+	return closeOutputFileHook
 }
 
-func (h CloseOutputFileHook) Run(fileName string, size int64, warcInfoId string) error {
-	if h.hook == "" {
+func (closeOutputFileHook CloseOutputFileHook) Run(fileName string, size int64, warcInfoId string) error {
+	if closeOutputFileHook.hook == "" {
 		return nil
 	}
-	b, err := h.Output(fileName, size, warcInfoId)
-	if len(b) > 0 {
-		_, _ = fmt.Fprintln(os.Stderr, string(b))
+	outputBytes, err := closeOutputFileHook.Output(fileName, size, warcInfoId)
+	if len(outputBytes) > 0 {
+		_, _ = fmt.Fprintln(os.Stderr, string(outputBytes))
 	}
 	return err
 }
 
-func (h CloseOutputFileHook) Output(fileName string, size int64, warcInfoId string) ([]byte, error) {
-	if h.hook == "" {
+func (closeOutputFileHook CloseOutputFileHook) Output(fileName string, size int64, warcInfoId string) ([]byte, error) {
+	if closeOutputFileHook.hook == "" {
 		return nil, nil
 	}
 
-	c := exec.Command(h.hook)
-	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
-	c.Env = append(c.Environ(), EnvHookType+"=CloseOutputFile")
-	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
-	c.Env = append(c.Environ(), fmt.Sprintf("%s=%d", EnvFileSize, size))
+	cmd := exec.Command(closeOutputFileHook.hook)
+	cmd.Env = append(cmd.Environ(), EnvCommand+"="+closeOutputFileHook.cmd)
+	cmd.Env = append(cmd.Environ(), EnvHookType+"=CloseOutputFile")
+	cmd.Env = append(cmd.Environ(), EnvFileName+"="+fileName)
+	cmd.Env = append(cmd.Environ(), fmt.Sprintf("%s=%d", EnvFileSize, size))
 	if warcInfoId != "" {
-		c.Env = append(c.Environ(), EnvWarcInfoId+"="+warcInfoId)
+		cmd.Env = append(cmd.Environ(), EnvWarcInfoId+"="+warcInfoId)
 	}
-	if h.srcFileName != "" {
-		c.Env = append(c.Environ(), EnvSrcFileName+"="+h.srcFileName)
+	if closeOutputFileHook.srcFileName != "" {
+		cmd.Env = append(cmd.Environ(), EnvSrcFileName+"="+closeOutputFileHook.srcFileName)
 	}
-	if h.hash != "" {
-		c.Env = append(c.Environ(), EnvHash+"="+h.hash)
+	if closeOutputFileHook.hash != "" {
+		cmd.Env = append(cmd.Environ(), EnvHash+"="+closeOutputFileHook.hash)
 	}
-	if h.errorCount > 0 {
-		c.Env = append(c.Environ(), fmt.Sprintf("%s=%d", EnvErrorCount, h.errorCount))
+	if closeOutputFileHook.errorCount > 0 {
+		cmd.Env = append(cmd.Environ(), fmt.Sprintf("%s=%d", EnvErrorCount, closeOutputFileHook.errorCount))
 	}
 
-	b, err := c.CombinedOutput()
-	b = bytes.TrimSpace(b)
-	if e, ok := err.(*exec.ExitError); ok {
-		switch e.ExitCode() {
+	outputBytes, err := cmd.CombinedOutput()
+	outputBytes = bytes.TrimSpace(outputBytes)
+	if exitError, ok := err.(*exec.ExitError); ok {
+		switch exitError.ExitCode() {
 		case 1:
-			return nil, fmt.Errorf("%s", b)
+			return nil, fmt.Errorf("%s", outputBytes)
 		}
 	}
-	return b, err
+	return outputBytes, err
 }
 
 func checkExists(command string) bool {
@@ -301,8 +303,6 @@ type ErrCommandNotFound struct {
 	command  string
 }
 
-func (e ErrCommandNotFound) Error() string {
-	return fmt.Sprintf("executable file '%s' not found in $PATH for %sHook", e.command, e.hookType)
+func (errCommandNotFound ErrCommandNotFound) Error() string {
+	return fmt.Sprintf("executable file '%s' not found in $PATH for %sHook", errCommandNotFound.command, errCommandNotFound.hookType)
 }
-
-var ErrSkipFile = fmt.Errorf("skip file")
