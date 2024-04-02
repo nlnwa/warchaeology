@@ -17,3 +17,14 @@ func TestConfigReadFileWithError(t *testing.T) {
 	_ = config.readFile(afero.NewOsFs(), warcWithErrors)
 	// TODO: check that the result contains the expected values
 }
+
+func BenchmarkReadFileWithError(b *testing.B) {
+	testDataDir := filepath.Join("..", "..", "test-data")
+	warcWithErrors := filepath.Join(testDataDir, "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz")
+	config := &conf{}
+	config.filter = filter.NewFromViper()
+	config.files = []string{warcWithErrors}
+	for i := 0; i < b.N; i++ {
+		_ = config.readFile(afero.NewOsFs(), warcWithErrors)
+	}
+}
