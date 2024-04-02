@@ -1,0 +1,19 @@
+package ls
+
+import (
+	"path/filepath"
+	"testing"
+
+	"github.com/nlnwa/warchaeology/internal/filter"
+	"github.com/spf13/afero"
+)
+
+func TestConfigReadFileWithError(t *testing.T) {
+	testDataDir := filepath.Join("..", "..", "test-data")
+	warcWithErrors := filepath.Join(testDataDir, "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz")
+	config := &conf{}
+	config.filter = filter.NewFromViper()
+	config.files = []string{warcWithErrors}
+	_ = config.readFile(afero.NewOsFs(), warcWithErrors)
+	// TODO: check that the result contains the expected values
+}
