@@ -24,6 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+          lfs: true
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -63,6 +64,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: benchmark-results
+          lfs: true
       - name: Download artifact for previous benchmark results
         uses: actions/download-artifact@v4
         with:
