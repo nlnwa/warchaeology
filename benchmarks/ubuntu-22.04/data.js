@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712060931630,
+  "lastUpdate": 1712072226676,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -660,6 +660,36 @@ window.BENCHMARK_DATA = {
             "value": 187.9,
             "unit": "ns/op",
             "extra": "5595846 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b4801c3b252b9a5e1dafdbb886a13b3aa957b026",
+          "message": "Merge pull request #123 from nlnwa/refactor/delete-unused-code\n\nrefactor: delete unused code",
+          "timestamp": "2024-04-02T17:36:39+02:00",
+          "tree_id": "ccb6f5e250916fb33137fdb6eb0cdf91d70aad62",
+          "url": "https://github.com/nlnwa/warchaeology/commit/b4801c3b252b9a5e1dafdbb886a13b3aa957b026"
+        },
+        "date": 1712072225959,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 191.3,
+            "unit": "ns/op",
+            "extra": "5736332 times\n4 procs"
           }
         ]
       }
