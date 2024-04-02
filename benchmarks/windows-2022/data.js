@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712074842682,
+  "lastUpdate": 1712075082470,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -180,6 +180,36 @@ window.BENCHMARK_DATA = {
             "value": 10458629,
             "unit": "ns/op",
             "extra": "100 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7e02a7d8308a33f2d2cf64167a278f9a9e448e52",
+          "message": "Merge pull request #121 from nlnwa/refactor/nedlibreader.go\n\nrefactor: rename variables in `nedlibreader.go`",
+          "timestamp": "2024-04-02T18:21:43+02:00",
+          "tree_id": "dbc1460e91172ba9d9d407f9cc0c87432321e5dc",
+          "url": "https://github.com/nlnwa/warchaeology/commit/7e02a7d8308a33f2d2cf64167a278f9a9e448e52"
+        },
+        "date": 1712075072868,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 10041537,
+            "unit": "ns/op",
+            "extra": "146 times\n4 procs"
           }
         ]
       }
