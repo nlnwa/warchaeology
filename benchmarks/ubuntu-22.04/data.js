@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712051852674,
+  "lastUpdate": 1712053234710,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -558,6 +558,42 @@ window.BENCHMARK_DATA = {
             "value": 19084,
             "unit": "ns/op",
             "extra": "66228 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c0c38a87a1dd391d999f5c0afb354e81705a932f",
+          "message": "Merge pull request #113 from nlnwa/fix/add-record-writer-error-handling\n\nfix: error handling for `ls.RecordWriter`",
+          "timestamp": "2024-04-02T12:19:59+02:00",
+          "tree_id": "3c216349e9bc003fe8c44bab614daec3a77920c7",
+          "url": "https://github.com/nlnwa/warchaeology/commit/c0c38a87a1dd391d999f5c0afb354e81705a932f"
+        },
+        "date": 1712053233619,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 187.9,
+            "unit": "ns/op",
+            "extra": "6293996 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 18081,
+            "unit": "ns/op",
+            "extra": "65130 times\n4 procs"
           }
         ]
       }
