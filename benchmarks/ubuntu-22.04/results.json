@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1712053236447,
+  "lastUpdate": 1712059743571,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,26 +16,26 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "c0c38a87a1dd391d999f5c0afb354e81705a932f",
-          "message": "Merge pull request #113 from nlnwa/fix/add-record-writer-error-handling\n\nfix: error handling for `ls.RecordWriter`",
-          "timestamp": "2024-04-02T12:19:59+02:00",
-          "tree_id": "3c216349e9bc003fe8c44bab614daec3a77920c7",
-          "url": "https://github.com/nlnwa/warchaeology/commit/c0c38a87a1dd391d999f5c0afb354e81705a932f"
+          "id": "c2fd256728fcefec6ef8dfcd792e9671744e24be",
+          "message": "Merge pull request #122 from nlnwa/refactor/ssurt.go\n\nrefactor: `ssurt.go`",
+          "timestamp": "2024-04-02T14:08:35+02:00",
+          "tree_id": "d9a87969f4ae14c4e0afb04cee59def5a64b48c3",
+          "url": "https://github.com/nlnwa/warchaeology/commit/c2fd256728fcefec6ef8dfcd792e9671744e24be"
         },
-        "date": 1712053236447,
+        "date": 1712059743570,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 187.9,
+            "value": 186,
             "unit": "ns/op",
-            "extra": "6293996 times\n4 procs"
+            "extra": "6124966 times\n4 procs"
           },
           {
             "name": "BenchmarkReadFileWithError",
-            "value": 18081,
+            "value": 18107,
             "unit": "ns/op",
-            "extra": "65130 times\n4 procs"
+            "extra": "66494 times\n4 procs"
           }
         ]
       }
