@@ -12,23 +12,33 @@ permissions:
   # contents permission to update benchmark contents in gh-pages branch
   contents: write
 
+env:
+  DEFAULT_BRANCH: main
+
 jobs:
   publish-benchmarks:
     name: Publish benchmark results
     strategy:
       matrix:
-        os: [ubuntu-22.04]
+        os: [ubuntu-22.04, windows-2022]
     runs-on: ${{ matrix.os }}
+    concurrency:
+        group: push-to-benchmark-branch
+        cancel-in-progress: false
     steps:
       - name: Code Checkout
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ env.DEFAULT_BRANCH }}
           lfs: true
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.21"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Run benchmarks
         run: go test ./... -bench="Bench" | tee benchmark-result.txt
       - name: Publish benchmark results
@@ -44,7 +54,7 @@ jobs:
           alert-threshold: "150%"
 
       - name: Create benchmark result directory
-        run: mkdir --parents benchmarks/${{ matrix.os }}/
+        run: python continuous-integration/create_dir.py --path benchmarks/${{ matrix.os }}/
       - name: Create benchmark results json
         uses: benchmark-action/github-action-benchmark@v1
         with:
@@ -79,9 +89,9 @@ jobs:
           new_branch: benchmark-results
           pathspec_error_handling: exitImmediately
           push: true
+      - name: Code Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEFAULT_BRANCH }}
       - name: Verify that a commit has been pushed
-        run: |
-          if [ "${{ steps.commit-and-push.outputs.pushed }}" != "true" ]; then
-            echo "Commit failed"
-            exit 1
-          fi
+        run: python continuous-integration/check_push_status.py --push-status "${{ steps.commit-and-push.outputs.pushed }}"
