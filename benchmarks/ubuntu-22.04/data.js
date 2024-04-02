@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712048944733,
+  "lastUpdate": 1712051852674,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -522,6 +522,42 @@ window.BENCHMARK_DATA = {
             "value": 18494,
             "unit": "ns/op",
             "extra": "66234 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "30066c26909b1ad65dd78f153e38cc6d62f8004e",
+          "message": "Merge pull request #116 from nlnwa/refactor/dedup\n\nrefactor: dedup",
+          "timestamp": "2024-04-02T11:57:02+02:00",
+          "tree_id": "49e4efd41a15de119c6edb9878c4fad9749bfab7",
+          "url": "https://github.com/nlnwa/warchaeology/commit/30066c26909b1ad65dd78f153e38cc6d62f8004e"
+        },
+        "date": 1712051851367,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 191.5,
+            "unit": "ns/op",
+            "extra": "6397131 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 19084,
+            "unit": "ns/op",
+            "extra": "66228 times\n4 procs"
           }
         ]
       }
