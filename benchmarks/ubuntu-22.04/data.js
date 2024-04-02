@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712059742174,
+  "lastUpdate": 1712060931630,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -630,6 +630,36 @@ window.BENCHMARK_DATA = {
             "value": 18107,
             "unit": "ns/op",
             "extra": "66494 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d8d316a6707a8f3e2234e5c483250ab7b99943de",
+          "message": "Merge pull request #115 from nlnwa/fix/validate-go-error-handling\n\ntest: add initial test for `validate.go`",
+          "timestamp": "2024-04-02T14:28:19+02:00",
+          "tree_id": "75dc3e150d167be3ac0b0b0cef8dd4701d22d060",
+          "url": "https://github.com/nlnwa/warchaeology/commit/d8d316a6707a8f3e2234e5c483250ab7b99943de"
+        },
+        "date": 1712060930474,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 187.9,
+            "unit": "ns/op",
+            "extra": "5595846 times\n4 procs"
           }
         ]
       }
