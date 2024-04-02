@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712073701586,
+  "lastUpdate": 1712074145855,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -120,6 +120,36 @@ window.BENCHMARK_DATA = {
             "value": 9510578,
             "unit": "ns/op",
             "extra": "120 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c8bde4ddf62dc5a6166113bfe9604cafc167faec",
+          "message": "Merge pull request #119 from nlnwa/refactor/nedlib.go\n\nrefactor: `nedlib.go`",
+          "timestamp": "2024-04-02T18:06:07+02:00",
+          "tree_id": "e7bb21cb292bce32fa63709b01feb5128ed647f0",
+          "url": "https://github.com/nlnwa/warchaeology/commit/c8bde4ddf62dc5a6166113bfe9604cafc167faec"
+        },
+        "date": 1712074127712,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 9543388,
+            "unit": "ns/op",
+            "extra": "147 times\n4 procs"
           }
         ]
       }
