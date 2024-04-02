@@ -4,57 +4,61 @@ import (
 	"net"
 	"strings"
 
-	"github.com/nlnwa/whatwg-url/url"
+	whatwgUrl "github.com/nlnwa/whatwg-url/url"
 )
 
-func SsurtUrl(u *url.Url, includeScheme bool) (string, error) {
-	u.SearchParams().Sort()
+// SSURT stands for Superior SURT. Sensible SURT. Smug SURT.
+// SURT stands for Sort-friendly URI Reordering Transform
+// For more information, see https://github.com/iipc/urlcanon/blob/master/ssurt.rst
+
+func SsurtUrl(url *whatwgUrl.Url, includeScheme bool) (string, error) {
+	url.SearchParams().Sort()
 
 	var result strings.Builder
-	hostname := u.Hostname()
+	hostname := url.Hostname()
 	if hostname != "" {
 		if hostname[0] == '[' {
 			result.WriteString(hostname)
 		} else if net.ParseIP(hostname).To4() != nil {
 			result.WriteString(hostname)
 		} else {
-			t := strings.Split(hostname, ".")
-			for i := len(t) - 1; i >= 0; i-- {
-				result.WriteString(t[i])
+			splitOnDot := strings.Split(hostname, ".")
+			for partIndex := len(splitOnDot) - 1; partIndex >= 0; partIndex-- {
+				result.WriteString(splitOnDot[partIndex])
 				result.WriteByte(',')
 			}
 		}
 		result.WriteString("//")
 	}
 	if includeScheme {
-		if u.Port() != "" {
-			result.WriteString(u.Port())
+		if url.Port() != "" {
+			result.WriteString(url.Port())
 			result.WriteByte(':')
 		}
-		result.WriteString(strings.TrimSuffix(u.Protocol(), ":"))
-		if u.Username() != "" {
+		result.WriteString(strings.TrimSuffix(url.Protocol(), ":"))
+		if url.Username() != "" {
 			result.WriteByte('@')
-			result.WriteString(u.Username())
+			result.WriteString(url.Username())
 		}
-		if u.Password() != "" {
+		if url.Password() != "" {
 			result.WriteByte(':')
-			result.WriteString(u.Password())
+			result.WriteString(url.Password())
 		}
 		result.WriteByte(':')
 	}
-	result.WriteString(u.Pathname())
-	result.WriteString(u.Search())
-	result.WriteString(u.Hash())
+	result.WriteString(url.Pathname())
+	result.WriteString(url.Search())
+	result.WriteString(url.Hash())
 
 	return result.String(), nil
 }
 
-var surtParser = url.NewParser(url.WithSkipEqualsForEmptySearchParamsValue())
+var surtParser = whatwgUrl.NewParser(whatwgUrl.WithSkipEqualsForEmptySearchParamsValue())
 
-func SsurtString(u string, includeScheme bool) (string, error) {
-	u2, err := surtParser.Parse(u)
+func SsurtString(urlAsString string, includeScheme bool) (string, error) {
+	url, err := surtParser.Parse(urlAsString)
 	if err != nil {
 		return "", err
 	}
-	return SsurtUrl(u2, includeScheme)
+	return SsurtUrl(url, includeScheme)
 }
