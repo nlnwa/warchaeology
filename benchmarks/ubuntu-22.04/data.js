@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712045577942,
+  "lastUpdate": 1712045873919,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -450,6 +450,42 @@ window.BENCHMARK_DATA = {
             "value": 188.6,
             "unit": "ns/op",
             "extra": "6358020 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e57d13003a90e0017f7682abf748be8ca428eed9",
+          "message": "Merge pull request #112 from nlnwa/test/ls-benchmark\n\ntest: initial benchmark for `ls`",
+          "timestamp": "2024-04-02T10:17:34+02:00",
+          "tree_id": "cd99ba2f33b90450d59b1690eb99f9e3dc7c83d1",
+          "url": "https://github.com/nlnwa/warchaeology/commit/e57d13003a90e0017f7682abf748be8ca428eed9"
+        },
+        "date": 1712045873405,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 187.6,
+            "unit": "ns/op",
+            "extra": "6371232 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 18029,
+            "unit": "ns/op",
+            "extra": "66028 times\n4 procs"
           }
         ]
       }
