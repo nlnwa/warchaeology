@@ -39,15 +39,14 @@ func parseArgumentsAndCallConsole(cmd *cobra.Command, args []string) error {
 	if state.dir, err = filepath.EvalSymlinks(state.dir); err != nil {
 		return err
 	}
-	var f os.FileInfo
-	f, err = os.Lstat(state.dir)
+	var fileInfo os.FileInfo
+	fileInfo, err = os.Lstat(state.dir)
 	if err != nil {
 		return err
 	}
-	if !f.IsDir() {
-		f := path.Base(state.dir)
+	if !fileInfo.IsDir() {
 		state.dir = path.Dir(state.dir)
-		state.files = append(state.files, f)
+		state.files = append(state.files, path.Base(state.dir))
 	}
 	if state.suffixes, err = cmd.Flags().GetStringSlice(flag.Suffixes); err != nil {
 		return err
@@ -61,26 +60,26 @@ var state = &State{curView: "dir"}
 
 func runE() error {
 	os.Setenv("COLORTERM", "truecolor")
-	g, err := gocui.NewGui(gocui.OutputTrue, true)
+	gui, err := gocui.NewGui(gocui.OutputTrue, true)
 	if err != nil {
 		log.Panicln(err)
 	}
-	defer g.Close()
+	defer gui.Close()
 
-	state.g = g
+	state.gui = gui
 
-	g.Cursor = false
-	g.Highlight = true
-	g.FgColor = gocui.ColorYellow
-	g.BgColor = gocui.ColorDefault
-	g.SelFgColor = gocui.ColorCyan
-	g.SelBgColor = gocui.ColorDefault
-	g.SelFrameColor = gocui.ColorCyan
-	g.SupportOverlaps = true
-	g.Mouse = true
+	gui.Cursor = false
+	gui.Highlight = true
+	gui.FgColor = gocui.ColorYellow
+	gui.BgColor = gocui.ColorDefault
+	gui.SelFgColor = gocui.ColorCyan
+	gui.SelBgColor = gocui.ColorDefault
+	gui.SelFrameColor = gocui.ColorCyan
+	gui.SupportOverlaps = true
+	gui.Mouse = true
 
 	nonWidgets := gocui.ManagerFunc(layout)
-	fl := gocui.ManagerFunc(flowLayout)
+	flowLayout := gocui.ManagerFunc(flowLayout)
 
 	filesWidget := NewListWidget("dir", "Content_error", "Records", readFile, populateFiles)
 
@@ -90,61 +89,61 @@ func runE() error {
 	state.filter = &recordFilter{}
 	recordsWidget.filterFunc = state.filter.filterFunc
 
-	g.SetManager(filesWidget, recordsWidget, viewRecordWidget, nonWidgets, fl)
+	gui.SetManager(filesWidget, recordsWidget, viewRecordWidget, nonWidgets, flowLayout)
 
-	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+	if err := gui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
 	}
 
-	if err := g.SetKeybinding("", 'e', gocui.ModNone, state.filter.toggleErrorFilter); err != nil {
+	if err := gui.SetKeybinding("", 'e', gocui.ModNone, state.filter.toggleErrorFilter); err != nil {
 		log.Panicln(err)
 	}
-	if err := g.SetKeybinding("help", gocui.MouseLeft, gocui.ModNone, state.filter.mouseToggleFilter); err != nil {
+	if err := gui.SetKeybinding("help", gocui.MouseLeft, gocui.ModNone, state.filter.mouseToggleFilter); err != nil {
 		log.Panicln(err)
 	}
-	if err := g.SetKeybinding("", 'i', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(g, gowarc.Warcinfo)
+	if err := gui.SetKeybinding("", 'i', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
+		return state.filter.toggleRecordTypeFilter(gui, gowarc.Warcinfo)
 	}); err != nil {
 		log.Panicln(err)
 	}
-	if err := g.SetKeybinding("", 'q', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(g, gowarc.Request)
+	if err := gui.SetKeybinding("", 'q', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
+		return state.filter.toggleRecordTypeFilter(gui, gowarc.Request)
 	}); err != nil {
 		log.Panicln(err)
 	}
-	if err := g.SetKeybinding("", 'r', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(g, gowarc.Response)
+	if err := gui.SetKeybinding("", 'r', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
+		return state.filter.toggleRecordTypeFilter(gui, gowarc.Response)
 	}); err != nil {
 		log.Panicln(err)
 	}
-	if err := g.SetKeybinding("", 'm', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(g, gowarc.Metadata)
+	if err := gui.SetKeybinding("", 'm', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
+		return state.filter.toggleRecordTypeFilter(gui, gowarc.Metadata)
 	}); err != nil {
 		log.Panicln(err)
 	}
-	if err := g.SetKeybinding("", 's', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(g, gowarc.Resource)
+	if err := gui.SetKeybinding("", 's', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
+		return state.filter.toggleRecordTypeFilter(gui, gowarc.Resource)
 	}); err != nil {
 		log.Panicln(err)
 	}
-	if err := g.SetKeybinding("", 'v', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(g, gowarc.Revisit)
+	if err := gui.SetKeybinding("", 'v', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
+		return state.filter.toggleRecordTypeFilter(gui, gowarc.Revisit)
 	}); err != nil {
 		log.Panicln(err)
 	}
-	if err := g.SetKeybinding("", 'c', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(g, gowarc.Continuation)
+	if err := gui.SetKeybinding("", 'c', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
+		return state.filter.toggleRecordTypeFilter(gui, gowarc.Continuation)
 	}); err != nil {
 		log.Panicln(err)
 	}
-	if err := g.SetKeybinding("", 'n', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(g, gowarc.Conversion)
+	if err := gui.SetKeybinding("", 'n', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
+		return state.filter.toggleRecordTypeFilter(gui, gowarc.Conversion)
 	}); err != nil {
 		log.Panicln(err)
 	}
-	if err := g.SetKeybinding("", 'h', gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
-		v := NewShortcutHelpWidget()
-		return v.Layout(g)
+	if err := gui.SetKeybinding("", 'h', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
+		shortcutHelpWidget := NewShortcutHelpWidget()
+		return shortcutHelpWidget.Layout(gui)
 	}); err != nil {
 		log.Panicln(err)
 	}
@@ -159,22 +158,22 @@ func runE() error {
 		}
 	}
 	time.AfterFunc(100*time.Millisecond, func() {
-		filesWidget.Init(g, state.dir)
+		filesWidget.Init(gui, state.dir)
 	})
 
-	if err := g.MainLoop(); err != nil && !errors.Is(err, gocui.ErrQuit) {
+	if err := gui.MainLoop(); err != nil && !errors.Is(err, gocui.ErrQuit) {
 		panic(err)
 	}
 	return nil
 }
 
-func flowLayout(g *gocui.Gui) error {
-	maxX, maxY := g.Size()
-	views := g.Views()
+func flowLayout(gui *gocui.Gui) error {
+	maxX, maxY := gui.Size()
+	views := gui.Views()
 
-	for _, v := range views {
+	for _, view := range views {
 		var x0, y0, x1, y1 int
-		switch v.Name() {
+		switch view.Name() {
 		case "Records":
 			x0 = 0
 			y0 = 10
@@ -188,7 +187,7 @@ func flowLayout(g *gocui.Gui) error {
 		default:
 			continue
 		}
-		_, err := g.SetView(v.Name(), x0, y0, x1, y1, 0)
+		_, err := gui.SetView(view.Name(), x0, y0, x1, y1, 0)
 		if err != nil && !errors.Is(err, gocui.ErrUnknownView) {
 			return err
 		}
@@ -196,42 +195,42 @@ func flowLayout(g *gocui.Gui) error {
 	return nil
 }
 
-func layout(g *gocui.Gui) error {
-	maxX, maxY := g.Size()
+func layout(gui *gocui.Gui) error {
+	maxX, maxY := gui.Size()
 
-	if v, err := g.SetView("help", 0, maxY-2, maxX, maxY, 0); err != nil {
+	if view, err := gui.SetView("help", 0, maxY-2, maxX, maxY, 0); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
-		v.Frame = false
-		v.Editable = false
+		view.Frame = false
+		view.Editable = false
 	}
-	state.filter.refreshHelp(g)
+	state.filter.refreshHelp(gui)
 
-	v := state.curView
+	newView := state.curView
 	if state.modalView != "" {
-		v = state.modalView
+		newView = state.modalView
 	}
-	if _, err := g.SetCurrentView(v); err != nil {
+	if _, err := gui.SetCurrentView(newView); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func quit(g *gocui.Gui, v *gocui.View) error {
+func quit(gui *gocui.Gui, v *gocui.View) error {
 	return gocui.ErrQuit
 }
 
-func readFile(g *gocui.Gui, widget *ListWidget) {
+func readFile(gui *gocui.Gui, widget *ListWidget) {
 	if len(widget.filteredRecords) > 0 {
 		state.file = widget.filteredRecords[widget.selected].(string)
-		state.records.Init(g, state.dir+"/"+state.file)
+		state.records.Init(gui, state.dir+"/"+state.file)
 	}
 }
 
 type State struct {
-	g         *gocui.Gui
+	gui       *gocui.Gui
 	curView   string
 	modalView string
 	suffixes  []string

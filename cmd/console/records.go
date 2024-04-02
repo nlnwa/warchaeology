@@ -21,88 +21,88 @@ type record struct {
 	hasError   bool
 }
 
-func (r record) String() string {
-	sb := strings.Builder{}
-	if r.hasError {
-		sb.WriteString(escapeFgColor(ErrorColor))
-		sb.WriteString(r.id)
-		sb.WriteString(escapeFgColor(gocui.ColorDefault))
+func (warcRecordRecord record) String() string {
+	result := strings.Builder{}
+	if warcRecordRecord.hasError {
+		result.WriteString(escapeFgColor(ErrorColor))
+		result.WriteString(warcRecordRecord.id)
+		result.WriteString(escapeFgColor(gocui.ColorDefault))
 	} else {
 		reset := escapeFgColor(gocui.ColorDefault)
-		switch r.recordType {
+		switch warcRecordRecord.recordType {
 		case gowarc.Warcinfo:
-			sb.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(WarcInfoColor), r.id, reset))
+			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(WarcInfoColor), warcRecordRecord.id, reset))
 		case gowarc.Request:
-			sb.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(RequestColor), r.id, reset))
+			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(RequestColor), warcRecordRecord.id, reset))
 		case gowarc.Response:
-			sb.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ResponseColor), r.id, reset))
+			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ResponseColor), warcRecordRecord.id, reset))
 		case gowarc.Metadata:
-			sb.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(MetadataColor), r.id, reset))
+			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(MetadataColor), warcRecordRecord.id, reset))
 		case gowarc.Resource:
-			sb.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ResourceColor), r.id, reset))
+			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ResourceColor), warcRecordRecord.id, reset))
 		case gowarc.Revisit:
-			sb.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(RevisitColor), r.id, reset))
+			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(RevisitColor), warcRecordRecord.id, reset))
 		case gowarc.Continuation:
-			sb.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ContinuationColor), r.id, reset))
+			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ContinuationColor), warcRecordRecord.id, reset))
 		case gowarc.Conversion:
-			sb.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ConversionColor), r.id, reset))
+			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ConversionColor), warcRecordRecord.id, reset))
 		default:
-			sb.WriteString(r.id)
+			result.WriteString(warcRecordRecord.id)
 		}
 	}
-	return sb.String()
+	return result.String()
 }
 
-func populateRecords(g *gocui.Gui, ctx context.Context, finishedCb func(), widget *ListWidget, data interface{}) {
-	r, err := gowarc.NewWarcFileReader(data.(string), 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
+func populateRecords(gui *gocui.Gui, ctx context.Context, finishedCb func(), widgetList *ListWidget, data interface{}) {
+	warcFileReader, err := gowarc.NewWarcFileReader(data.(string), 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
 		panic(err)
 	}
-	defer r.Close()
+	defer warcFileReader.Close()
 
 	for {
 		select {
 		case <-ctx.Done():
 			goto end
 		default:
-			rec, offset, validate, err := r.Next()
+			warcRecord, offset, validate, err := warcFileReader.Next()
 			if err == io.EOF {
 				goto end
 			}
 			if err != nil {
 				goto end
 			}
-			_ = rec.ValidateDigest(validate)
+			_ = warcRecord.ValidateDigest(validate)
 
-			wr := record{
-				id:         rec.WarcHeader().Get(gowarc.WarcRecordID),
+			warcRecordRecord := record{
+				id:         warcRecord.WarcHeader().Get(gowarc.WarcRecordID),
 				offset:     offset,
-				recordType: rec.Type(),
+				recordType: warcRecord.Type(),
 			}
 
-			if err := rec.Close(); err != nil {
+			if err := warcRecord.Close(); err != nil {
 				*validate = append(*validate, err)
 			}
-			wr.hasError = !validate.Valid()
+			warcRecordRecord.hasError = !validate.Valid()
 
-			widget.records = append(widget.records, wr)
+			widgetList.records = append(widgetList.records, warcRecordRecord)
 		}
 	}
 end:
 	finishedCb()
 }
 
-func populateFiles(g *gocui.Gui, ctx context.Context, finishedCb func(), widget *ListWidget, data interface{}) {
+func populateFiles(gui *gocui.Gui, ctx context.Context, finishedCb func(), widgetList *ListWidget, data interface{}) {
 	state.dir = data.(string)
-	if v, err := g.View("dir"); err == nil {
-		v.Title = state.dir
+	if view, err := gui.View("dir"); err == nil {
+		view.Title = state.dir
 	}
 
 	if len(state.files) > 0 {
-		for _, f := range state.files {
-			for _, suf := range state.suffixes {
-				if strings.HasSuffix(f, suf) {
-					widget.records = append(widget.records, f)
+		for _, file := range state.files {
+			for _, suffix := range state.suffixes {
+				if strings.HasSuffix(file, suffix) {
+					widgetList.records = append(widgetList.records, file)
 				}
 			}
 		}
@@ -115,13 +115,13 @@ func populateFiles(g *gocui.Gui, ctx context.Context, finishedCb func(), widget 
 		panic(err)
 	}
 
-	for _, e := range entries {
+	for _, entry := range entries {
 		select {
 		case <-ctx.Done():
 			goto end
 		default:
-			if strings.HasSuffix(e.Name(), ".warc") || strings.HasSuffix(e.Name(), ".warc.gz") {
-				widget.records = append(widget.records, e.Name())
+			if strings.HasSuffix(entry.Name(), ".warc") || strings.HasSuffix(entry.Name(), ".warc.gz") {
+				widgetList.records = append(widgetList.records, entry.Name())
 			}
 		}
 	}
@@ -135,27 +135,27 @@ type dirInfo struct {
 	fileInfo fs.FileInfo
 }
 
-func (di dirInfo) IsDir() bool {
-	return di.fileInfo.IsDir()
+func (directoryInfo dirInfo) IsDir() bool {
+	return directoryInfo.fileInfo.IsDir()
 }
 
-func (di dirInfo) Type() fs.FileMode {
-	return di.fileInfo.Mode().Type()
+func (directoryInfo dirInfo) Type() fs.FileMode {
+	return directoryInfo.fileInfo.Mode().Type()
 }
 
-func (di dirInfo) Info() (fs.FileInfo, error) {
-	return di.fileInfo, nil
+func (directoryInfo dirInfo) Info() (fs.FileInfo, error) {
+	return directoryInfo.fileInfo, nil
 }
 
-func (di dirInfo) Name() string {
-	return di.fileInfo.Name()
+func (directoryInfo dirInfo) Name() string {
+	return directoryInfo.fileInfo.Name()
 }
 
 // FileInfoToDirEntry returns a DirEntry that returns information from info.
 // If info is nil, FileInfoToDirEntry returns nil.
-func FileInfoToDirEntry(info fs.FileInfo) fs.DirEntry {
-	if info == nil {
+func FileInfoToDirEntry(fileInfo fs.FileInfo) fs.DirEntry {
+	if fileInfo == nil {
 		return nil
 	}
-	return dirInfo{fileInfo: info}
+	return dirInfo{fileInfo: fileInfo}
 }

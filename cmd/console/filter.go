@@ -13,25 +13,25 @@ type recordFilter struct {
 	recType gowarc.RecordType
 }
 
-func (r *recordFilter) filterFunc(rec interface{}) bool {
+func (recordfilter *recordFilter) filterFunc(rec interface{}) bool {
 	if rec == nil {
 		return false
 	}
-	if !r.error && r.recType == 0 {
+	if !recordfilter.error && recordfilter.recType == 0 {
 		return true
 	}
-	if r.error && rec.(record).hasError {
+	if recordfilter.error && rec.(record).hasError {
 		return true
 	}
-	if r.recType&rec.(record).recordType != 0 {
+	if recordfilter.recType&rec.(record).recordType != 0 {
 		return true
 	}
 	return false
 }
 
-func (r *recordFilter) mouseToggleFilter(g *gocui.Gui, v *gocui.View) error {
-	x, y := v.Cursor()
-	str, _ := v.Line(y)
+func (recordfilter *recordFilter) mouseToggleFilter(gui *gocui.Gui, view *gocui.View) error {
+	x, y := view.Cursor()
+	str, _ := view.Line(y)
 
 	nl := strings.LastIndexFunc(str[:x], indexFunc)
 	if nl == -1 {
@@ -49,79 +49,79 @@ func (r *recordFilter) mouseToggleFilter(g *gocui.Gui, v *gocui.View) error {
 
 	switch strings.ToLower(word) {
 	case "error":
-		_ = r.toggleErrorFilter(g, v)
+		_ = recordfilter.toggleErrorFilter(gui, view)
 	case "warcinfo":
-		_ = r.toggleRecordTypeFilter(g, gowarc.Warcinfo)
+		_ = recordfilter.toggleRecordTypeFilter(gui, gowarc.Warcinfo)
 	case "request":
-		_ = r.toggleRecordTypeFilter(g, gowarc.Request)
+		_ = recordfilter.toggleRecordTypeFilter(gui, gowarc.Request)
 	case "response":
-		_ = r.toggleRecordTypeFilter(g, gowarc.Response)
+		_ = recordfilter.toggleRecordTypeFilter(gui, gowarc.Response)
 	case "metadata":
-		_ = r.toggleRecordTypeFilter(g, gowarc.Metadata)
+		_ = recordfilter.toggleRecordTypeFilter(gui, gowarc.Metadata)
 	case "revisit":
-		_ = r.toggleRecordTypeFilter(g, gowarc.Revisit)
+		_ = recordfilter.toggleRecordTypeFilter(gui, gowarc.Revisit)
 	case "resource":
-		_ = r.toggleRecordTypeFilter(g, gowarc.Resource)
+		_ = recordfilter.toggleRecordTypeFilter(gui, gowarc.Resource)
 	case "continuation":
-		_ = r.toggleRecordTypeFilter(g, gowarc.Continuation)
+		_ = recordfilter.toggleRecordTypeFilter(gui, gowarc.Continuation)
 	case "conversion":
-		_ = r.toggleRecordTypeFilter(g, gowarc.Conversion)
+		_ = recordfilter.toggleRecordTypeFilter(gui, gowarc.Conversion)
 	}
 
 	return nil
 }
 
-func indexFunc(r rune) bool {
-	return r == ' ' || r == 0 || r == '|'
+func indexFunc(recordfilter rune) bool {
+	return recordfilter == ' ' || recordfilter == 0 || recordfilter == '|'
 }
 
-func (r *recordFilter) toggleErrorFilter(g *gocui.Gui, v *gocui.View) error {
-	r.error = !r.error
-	v2, err := g.View("Records")
+func (recordfilter *recordFilter) toggleErrorFilter(gui *gocui.Gui, view *gocui.View) error {
+	recordfilter.error = !recordfilter.error
+	recordView, err := gui.View("Records")
 	if err != nil {
 		return err
 	}
-	r.refreshHelp(g)
-	return state.records.refreshFilter(g, v2)
+	recordfilter.refreshHelp(gui)
+	return state.records.refreshFilter(gui, recordView)
 }
 
-func (r *recordFilter) toggleRecordTypeFilter(g *gocui.Gui, recType gowarc.RecordType) error {
-	r.recType = r.recType ^ recType
-	v2, err := g.View("Records")
+func (recordfilter *recordFilter) toggleRecordTypeFilter(gui *gocui.Gui, recType gowarc.RecordType) error {
+	recordfilter.recType = recordfilter.recType ^ recType
+	recordView, err := gui.View("Records")
 	if err != nil {
 		return err
 	}
-	r.refreshHelp(g)
-	return state.records.refreshFilter(g, v2)
+	recordfilter.refreshHelp(gui)
+	return state.records.refreshFilter(gui, recordView)
 }
 
-func (r *recordFilter) refreshHelp(g *gocui.Gui) {
-	sb := strings.Builder{}
-	sb.WriteString("|")
-	sb.WriteString(filterString("Error", ErrorColor, r.error))
-	sb.WriteString(filterString("warcInfo", WarcInfoColor, r.recType&gowarc.Warcinfo != 0))
-	sb.WriteString(filterString("reQuest", RequestColor, r.recType&gowarc.Request != 0))
-	sb.WriteString(filterString("Response", ResponseColor, r.recType&gowarc.Response != 0))
-	sb.WriteString(filterString("Metadata", MetadataColor, r.recType&gowarc.Metadata != 0))
-	sb.WriteString(filterString("reVisit", RevisitColor, r.recType&gowarc.Revisit != 0))
-	sb.WriteString(filterString("reSource", ResourceColor, r.recType&gowarc.Resource != 0))
-	sb.WriteString(filterString("Continuation", ContinuationColor, r.recType&gowarc.Continuation != 0))
-	sb.WriteString(filterString("coNversion", ConversionColor, r.recType&gowarc.Conversion != 0))
-	if v, err := g.View("help"); err == nil {
-		v.Clear()
-		txt := "h: help"
-		width, _ := v.Size()
+func (recordfilter *recordFilter) refreshHelp(gui *gocui.Gui) {
+	toolbarString := strings.Builder{}
+	toolbarString.WriteString("|")
+	toolbarString.WriteString(filterString("Error", ErrorColor, recordfilter.error))
+	toolbarString.WriteString(filterString("warcInfo", WarcInfoColor, recordfilter.recType&gowarc.Warcinfo != 0))
+	toolbarString.WriteString(filterString("reQuest", RequestColor, recordfilter.recType&gowarc.Request != 0))
+	toolbarString.WriteString(filterString("Response", ResponseColor, recordfilter.recType&gowarc.Response != 0))
+	toolbarString.WriteString(filterString("Metadata", MetadataColor, recordfilter.recType&gowarc.Metadata != 0))
+	toolbarString.WriteString(filterString("reVisit", RevisitColor, recordfilter.recType&gowarc.Revisit != 0))
+	toolbarString.WriteString(filterString("reSource", ResourceColor, recordfilter.recType&gowarc.Resource != 0))
+	toolbarString.WriteString(filterString("Continuation", ContinuationColor, recordfilter.recType&gowarc.Continuation != 0))
+	toolbarString.WriteString(filterString("coNversion", ConversionColor, recordfilter.recType&gowarc.Conversion != 0))
+	if view, err := gui.View("help"); err == nil {
+		view.Clear()
+		helpText := "h: help"
+		width, _ := view.Size()
 		space := width - 85
-		fmt.Fprintf(v, "%[1]s%[2]*[3]s", sb.String(), space, txt)
+		fmt.Fprintf(view, "%[1]s%[2]*[3]s", toolbarString.String(), space, helpText)
 	}
 }
 
-func filterString(s string, color gocui.Attribute, on bool) string {
-	fg := escapeFgColor(gocui.NewRGBColor(0, 0, 0))
-	bg := escapeBgColor(gocui.NewRGBColor(0, 0, 0))
-	if on {
-		return fmt.Sprintf("%s%s%s%s|", escapeBgColor(color), fg, s, escapeFgColor(gocui.ColorDefault))
+func filterString(s string, color gocui.Attribute, enabled bool) string {
+	foreground := escapeFgColor(gocui.NewRGBColor(0, 0, 0))
+	background := escapeBgColor(gocui.NewRGBColor(0, 0, 0))
+	if enabled {
+		return fmt.Sprintf("%s%s%s%s|", escapeBgColor(color), foreground, s, escapeFgColor(gocui.ColorDefault))
 	} else {
-		return fmt.Sprintf("%s%s%s%s|", escapeFgColor(color), bg, s, escapeFgColor(gocui.ColorDefault))
+		return fmt.Sprintf("%s%s%s%s|", escapeFgColor(color), background, s, escapeFgColor(gocui.ColorDefault))
 	}
 }
