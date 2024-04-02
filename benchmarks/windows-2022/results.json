@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1712075088172,
+  "lastUpdate": 1712081585870,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,20 +16,20 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "7e02a7d8308a33f2d2cf64167a278f9a9e448e52",
-          "message": "Merge pull request #121 from nlnwa/refactor/nedlibreader.go\n\nrefactor: rename variables in `nedlibreader.go`",
-          "timestamp": "2024-04-02T18:21:43+02:00",
-          "tree_id": "dbc1460e91172ba9d9d407f9cc0c87432321e5dc",
-          "url": "https://github.com/nlnwa/warchaeology/commit/7e02a7d8308a33f2d2cf64167a278f9a9e448e52"
+          "id": "30f82bc4a4619681196aafa97845f9ea5d7c008a",
+          "message": "Merge pull request #124 from nlnwa/test/add-goleak-to-relevant-tests\n\ntest: avoid leaking goroutines",
+          "timestamp": "2024-04-02T20:08:55+02:00",
+          "tree_id": "41fb0c3f965d35eac666f476f15705cabe4837e1",
+          "url": "https://github.com/nlnwa/warchaeology/commit/30f82bc4a4619681196aafa97845f9ea5d7c008a"
         },
-        "date": 1712075088171,
+        "date": 1712081585868,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 10041537,
+            "value": 9407778,
             "unit": "ns/op",
-            "extra": "146 times\n4 procs"
+            "extra": "160 times\n4 procs"
           }
         ]
       }
