@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1712073382895,
+  "lastUpdate": 1712073706268,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,20 +16,20 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "d527b41c8ee8e45c5124693c82cbc1eb12bd8976",
-          "message": "Merge pull request #117 from nlnwa/refactor/console\n\nrefactor: `console`",
-          "timestamp": "2024-04-02T17:52:51+02:00",
-          "tree_id": "54e155d4a737af23c1df0c70162b66cf2a3d051d",
-          "url": "https://github.com/nlnwa/warchaeology/commit/d527b41c8ee8e45c5124693c82cbc1eb12bd8976"
+          "id": "f5ec65751b9a21cf48f443da8fdcc659ac983614",
+          "message": "Merge pull request #118 from nlnwa/refactor/arc.go\n\nrefactor: `arc.go`",
+          "timestamp": "2024-04-02T17:57:34+02:00",
+          "tree_id": "4502391692edfb6b7ab337cef7e274fe0152b1ea",
+          "url": "https://github.com/nlnwa/warchaeology/commit/f5ec65751b9a21cf48f443da8fdcc659ac983614"
         },
-        "date": 1712073382894,
+        "date": 1712073706267,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 9932291,
+            "value": 9510578,
             "unit": "ns/op",
-            "extra": "128 times\n4 procs"
+            "extra": "120 times\n4 procs"
           }
         ]
       }
