@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712074145855,
+  "lastUpdate": 1712074842682,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -150,6 +150,36 @@ window.BENCHMARK_DATA = {
             "value": 9543388,
             "unit": "ns/op",
             "extra": "147 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb1a801b4df95620771efb3946a3c35c9d03de2c",
+          "message": "Merge pull request #120 from nlnwa/refactor/warc.go\n\nrefactor: `warc.go`",
+          "timestamp": "2024-04-02T18:13:30+02:00",
+          "tree_id": "a43b326b9bd166c868892ae578fe0c273469e2db",
+          "url": "https://github.com/nlnwa/warchaeology/commit/bb1a801b4df95620771efb3946a3c35c9d03de2c"
+        },
+        "date": 1712074823790,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 10458629,
+            "unit": "ns/op",
+            "extra": "100 times\n4 procs"
           }
         ]
       }
