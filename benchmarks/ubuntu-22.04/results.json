@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1712081365826,
+  "lastUpdate": 1712120966325,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -22,14 +22,14 @@
           "tree_id": "41fb0c3f965d35eac666f476f15705cabe4837e1",
           "url": "https://github.com/nlnwa/warchaeology/commit/30f82bc4a4619681196aafa97845f9ea5d7c008a"
         },
-        "date": 1712081365826,
+        "date": 1712120966325,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 187.2,
+            "value": 188.7,
             "unit": "ns/op",
-            "extra": "6268713 times\n4 procs"
+            "extra": "6320646 times\n4 procs"
           }
         ]
       }
