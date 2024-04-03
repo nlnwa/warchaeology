@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1712120966325,
+  "lastUpdate": 1712154892061,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,20 +16,26 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "30f82bc4a4619681196aafa97845f9ea5d7c008a",
-          "message": "Merge pull request #124 from nlnwa/test/add-goleak-to-relevant-tests\n\ntest: avoid leaking goroutines",
-          "timestamp": "2024-04-02T20:08:55+02:00",
-          "tree_id": "41fb0c3f965d35eac666f476f15705cabe4837e1",
-          "url": "https://github.com/nlnwa/warchaeology/commit/30f82bc4a4619681196aafa97845f9ea5d7c008a"
+          "id": "df554c450042d378eae7c0fd5059f0c4bc9f9c54",
+          "message": "Merge pull request #126 from nlnwa/fix/silence-benchmark-output\n\nfix: silence benchmark output",
+          "timestamp": "2024-04-03T16:34:24+02:00",
+          "tree_id": "5794d48512a044624bf771a35191afcb0472df86",
+          "url": "https://github.com/nlnwa/warchaeology/commit/df554c450042d378eae7c0fd5059f0c4bc9f9c54"
         },
-        "date": 1712120966325,
+        "date": 1712154892061,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 188.7,
+            "value": 187.3,
             "unit": "ns/op",
-            "extra": "6320646 times\n4 procs"
+            "extra": "5824404 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8557725,
+            "unit": "ns/op",
+            "extra": "141 times\n4 procs"
           }
         ]
       }
