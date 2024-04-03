@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712120965344,
+  "lastUpdate": 1712154890894,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -930,6 +930,42 @@ window.BENCHMARK_DATA = {
             "value": 188.7,
             "unit": "ns/op",
             "extra": "6320646 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "df554c450042d378eae7c0fd5059f0c4bc9f9c54",
+          "message": "Merge pull request #126 from nlnwa/fix/silence-benchmark-output\n\nfix: silence benchmark output",
+          "timestamp": "2024-04-03T16:34:24+02:00",
+          "tree_id": "5794d48512a044624bf771a35191afcb0472df86",
+          "url": "https://github.com/nlnwa/warchaeology/commit/df554c450042d378eae7c0fd5059f0c4bc9f9c54"
+        },
+        "date": 1712154890194,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 187.3,
+            "unit": "ns/op",
+            "extra": "5824404 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8557725,
+            "unit": "ns/op",
+            "extra": "141 times\n4 procs"
           }
         ]
       }
