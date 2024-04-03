@@ -1,6 +1,7 @@
 package ls
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -19,6 +20,10 @@ func TestConfigReadFileWithError(t *testing.T) {
 }
 
 func BenchmarkReadFileWithError(b *testing.B) {
+	// Stdout is redirected to /dev/null since the benchmarking tool
+	// `github-action-benchmark` is unable to handle some of the output in the
+	// benchmark result files.
+	os.Stdout = nil
 	testDataDir := filepath.Join("..", "..", "test-data")
 	warcWithErrors := filepath.Join(testDataDir, "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz")
 	config := &conf{}
