@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1712568330055,
+  "lastUpdate": 1712571561027,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,26 +16,26 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "4aeda997f2269bcec6768e7d318d2d0242d3b14b",
-          "message": "Merge pull request #128 from nlnwa/refactor/walk\n\nrefactor: split functions in `filewalker.go`",
-          "timestamp": "2024-04-08T11:22:17+02:00",
-          "tree_id": "2ff19b218bb1923bbec6aa7f6ced0ea170bf3488",
-          "url": "https://github.com/nlnwa/warchaeology/commit/4aeda997f2269bcec6768e7d318d2d0242d3b14b"
+          "id": "06d89440b19eb57db2a7866da9f5041ca7805d93",
+          "message": "Merge pull request #129 from nlnwa/refactor/walk-part-2\n\ntest: add test for `Result` and `Stats`",
+          "timestamp": "2024-04-08T12:15:51+02:00",
+          "tree_id": "8680c222fa890bd44a2aa54d9cef666425b7c6bf",
+          "url": "https://github.com/nlnwa/warchaeology/commit/06d89440b19eb57db2a7866da9f5041ca7805d93"
         },
-        "date": 1712568330054,
+        "date": 1712571561026,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 8946135,
+            "value": 8901363,
             "unit": "ns/op",
-            "extra": "128 times\n4 procs"
+            "extra": "133 times\n4 procs"
           },
           {
             "name": "BenchmarkReadFileWithError",
-            "value": 8801304,
+            "value": 8674733,
             "unit": "ns/op",
-            "extra": "135 times\n4 procs"
+            "extra": "138 times\n4 procs"
           }
         ]
       }
