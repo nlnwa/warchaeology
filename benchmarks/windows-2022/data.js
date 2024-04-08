@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712567830860,
+  "lastUpdate": 1712568324146,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -342,6 +342,42 @@ window.BENCHMARK_DATA = {
             "value": 8683127,
             "unit": "ns/op",
             "extra": "140 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4aeda997f2269bcec6768e7d318d2d0242d3b14b",
+          "message": "Merge pull request #128 from nlnwa/refactor/walk\n\nrefactor: split functions in `filewalker.go`",
+          "timestamp": "2024-04-08T11:22:17+02:00",
+          "tree_id": "2ff19b218bb1923bbec6aa7f6ced0ea170bf3488",
+          "url": "https://github.com/nlnwa/warchaeology/commit/4aeda997f2269bcec6768e7d318d2d0242d3b14b"
+        },
+        "date": 1712568307866,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 8946135,
+            "unit": "ns/op",
+            "extra": "128 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8801304,
+            "unit": "ns/op",
+            "extra": "135 times\n4 procs"
           }
         ]
       }
