@@ -247,46 +247,9 @@ func (walker *fileWalker) Walk(ctx context.Context, stats Stats) error {
 
 	allResults := &sync.WaitGroup{}
 	allResults.Add(1)
-	defer func() {
-		pool.CloseWait()
-		resultChan <- nil
-		allResults.Wait()
-		timeSpent := time.Since(startTime)
-		if walker.isLog(summaryLogType) {
-			walker.logSummary(fmt.Sprintf("Total time: %v, %s", timeSpent, stats))
-		} else if walker.isLog(progressLogType) {
-			fmt.Printf("                                                                                     \r")
-		}
-	}()
-	go func() {
-		count := 0
-		for {
-			result := <-resultChan
-			if result == nil {
-				allResults.Done()
-				break
-			}
-			count++
-			if result.ErrorCount() > 0 && walker.isLog(errorLogType) {
-				walker.logError(result, count)
-			} else if walker.isLog(infoLogType) {
-				walker.logInfo(result, count)
-			}
+	defer closePool(walker, pool, resultChan, allResults, startTime, stats)
+	go printResultsAndProgress(walker, resultChan, allResults, stats)
 
-			stats.Merge(result.GetStats())
-			if result.Fatal() != nil {
-				fmt.Printf("ERROR: %s\n", result.Fatal())
-			}
-
-			if walker.isLog(progressLogType) {
-				fmt.Printf("  %s %s\r", string(anim[animPos]), stats.String())
-				animPos++
-				if animPos >= len(anim) {
-					animPos = 0
-				}
-			}
-		}
-	}()
 	for _, path := range walker.paths {
 		if !walker.processedPaths.Contains(path) {
 			if err := walker.walkDir(ctx, path, path, submitJobFunction); err != nil {
