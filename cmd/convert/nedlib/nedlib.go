@@ -2,7 +2,6 @@ package nedlib
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -68,38 +67,42 @@ func NewCommand() *cobra.Command {
 }
 
 func parseArgumentsAndCallNedlib(cmd *cobra.Command, args []string) error {
-	config := &conf{}
 	// The Nedlib data structure does not support direct filename transformations.
 	// Instead, we employ a custom generator that treats the input filename as a date.
 	// When we request a new warcwriter, we submit a synthetic fromFilename based on the date of the first record.
 	viper.Set(flag.NameGenerator, "nedlib")
 
-	if warcWriterConfig, err := warcwriterconfig.NewFromViper(cmd.Name()); err != nil {
-		return err
-	} else {
-		warcWriterConfig.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
-			payload := &gowarc.WarcFields{}
-			payload.Set("software", cmdversion.SoftwareVersion()+" https://github.com/nlnwa/warchaeology")
-			payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", warcWriterConfig.WarcVersion.Minor(), warcWriterConfig.WarcVersion.Minor()))
-			payload.Set("description", "Converted from Nedlib")
-			hostname, errInner := os.Hostname()
-			if errInner != nil {
-				return errInner
-			}
-			payload.Set("host", hostname)
-
-			_, err := recordBuilder.WriteString(payload.String())
-			return err
-		}
-
-		config.writerConf = warcWriterConfig
-	}
-	config.concurrency = viper.GetInt(flag.Concurrency)
-
 	if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
-		return errors.New("missing file or directory name")
+		return fmt.Errorf("missing file or directory name")
 	}
-	config.files = args
+
+	var warcWriterConfig *warcwriterconfig.WarcWriterConfig
+
+	warcWriterConfig, err := warcwriterconfig.NewFromViper(cmd.Name())
+	if err != nil {
+		return fmt.Errorf("error creating warc writer config, original error: '%w'", err)
+	}
+
+	warcWriterConfig.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
+		payload := &gowarc.WarcFields{}
+		payload.Set("software", cmdversion.SoftwareVersion()+" https://github.com/nlnwa/warchaeology")
+		payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", warcWriterConfig.WarcVersion.Minor(), warcWriterConfig.WarcVersion.Minor()))
+		payload.Set("description", "Converted from Nedlib")
+		hostname, errInner := os.Hostname()
+		if errInner != nil {
+			return errInner
+		}
+		payload.Set("host", hostname)
+
+		_, err := recordBuilder.WriteString(payload.String())
+		return err
+	}
+
+	config := &conf{
+		files:       args,
+		concurrency: viper.GetInt(flag.Concurrency),
+		writerConf:  warcWriterConfig,
+	}
 	return runE(cmd.Name(), config)
 
 }
