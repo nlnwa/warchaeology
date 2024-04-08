@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1712567835063,
+  "lastUpdate": 1712568330055,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,26 +16,26 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "145f3e44f2db9c88a6caf13cf3806b658f05a2c9",
-          "message": "Merge pull request #127 from nlnwa/refactor/nedlib\n\nrefactor: `nedlib.go` function",
-          "timestamp": "2024-04-08T11:14:52+02:00",
-          "tree_id": "f14879871b2da446fc0269e4c1d0bb9379b2d36f",
-          "url": "https://github.com/nlnwa/warchaeology/commit/145f3e44f2db9c88a6caf13cf3806b658f05a2c9"
+          "id": "4aeda997f2269bcec6768e7d318d2d0242d3b14b",
+          "message": "Merge pull request #128 from nlnwa/refactor/walk\n\nrefactor: split functions in `filewalker.go`",
+          "timestamp": "2024-04-08T11:22:17+02:00",
+          "tree_id": "2ff19b218bb1923bbec6aa7f6ced0ea170bf3488",
+          "url": "https://github.com/nlnwa/warchaeology/commit/4aeda997f2269bcec6768e7d318d2d0242d3b14b"
         },
-        "date": 1712567835062,
+        "date": 1712568330054,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 8882378,
+            "value": 8946135,
             "unit": "ns/op",
-            "extra": "133 times\n4 procs"
+            "extra": "128 times\n4 procs"
           },
           {
             "name": "BenchmarkReadFileWithError",
-            "value": 8683127,
+            "value": 8801304,
             "unit": "ns/op",
-            "extra": "140 times\n4 procs"
+            "extra": "135 times\n4 procs"
           }
         ]
       }
