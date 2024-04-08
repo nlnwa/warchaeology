@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712568165796,
+  "lastUpdate": 1712571388181,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -1038,6 +1038,42 @@ window.BENCHMARK_DATA = {
             "value": 8324538,
             "unit": "ns/op",
             "extra": "142 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "06d89440b19eb57db2a7866da9f5041ca7805d93",
+          "message": "Merge pull request #129 from nlnwa/refactor/walk-part-2\n\ntest: add test for `Result` and `Stats`",
+          "timestamp": "2024-04-08T12:15:51+02:00",
+          "tree_id": "8680c222fa890bd44a2aa54d9cef666425b7c6bf",
+          "url": "https://github.com/nlnwa/warchaeology/commit/06d89440b19eb57db2a7866da9f5041ca7805d93"
+        },
+        "date": 1712571386898,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 200.6,
+            "unit": "ns/op",
+            "extra": "5715788 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8708582,
+            "unit": "ns/op",
+            "extra": "135 times\n4 procs"
           }
         ]
       }
