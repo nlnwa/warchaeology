@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712571388181,
+  "lastUpdate": 1712640576199,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -1074,6 +1074,42 @@ window.BENCHMARK_DATA = {
             "value": 8708582,
             "unit": "ns/op",
             "extra": "135 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "38e8781763972bc7101ff74fcbf1e4482d221f39",
+          "message": "Merge pull request #131 from nlnwa/dependabot/go_modules/go.uber.org/goleak-1.3.0\n\nbuild(deps): bump go.uber.org/goleak from 1.2.0 to 1.3.0",
+          "timestamp": "2024-04-09T07:28:44+02:00",
+          "tree_id": "232eab9bbd14ab6548a7d4d6716dde40c2ed9473",
+          "url": "https://github.com/nlnwa/warchaeology/commit/38e8781763972bc7101ff74fcbf1e4482d221f39"
+        },
+        "date": 1712640575505,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 190.7,
+            "unit": "ns/op",
+            "extra": "6127288 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8251380,
+            "unit": "ns/op",
+            "extra": "145 times\n4 procs"
           }
         ]
       }
