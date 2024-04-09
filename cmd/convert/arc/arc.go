@@ -52,7 +52,7 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().IntP(flag.ConcurrentWriters, "C", 1, flag.ConcurrentWritersHelp)
 	cmd.Flags().Int64P(flag.FileSize, "S", 1024*1024*1024, flag.FileSizeHelp)
 	cmd.Flags().BoolP(flag.Compress, "z", false, flag.CompressHelp)
-	cmd.Flags().Bool(flag.CompressionLevel, false, flag.CompressionLevelHelp)
+	cmd.Flags().Int(flag.CompressionLevel, 0, flag.CompressionLevelHelp)
 	cmd.Flags().StringP(flag.FilePrefix, "p", "from_arc_", flag.FilePrefixHelp)
 	cmd.Flags().StringP(flag.WarcDir, "w", ".", flag.WarcDirHelp)
 	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
