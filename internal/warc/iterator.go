@@ -85,8 +85,12 @@ func (iterator Iterator) Iterate(ctx context.Context) {
 			Err:        previousErr,
 		}
 
-		if iterator.Filter != nil && !iterator.Filter.Accept(record.WarcRecord) {
-			continue
+		// TODO decide what should happen when a record with an error is encountered
+		// as of now, the record is treated as if passing the filter
+		if record.WarcRecord != nil {
+			if iterator.Filter != nil && !iterator.Filter.Accept(record.WarcRecord) {
+				continue
+			}
 		}
 
 		// keep track of the number of records accepted by the filter
