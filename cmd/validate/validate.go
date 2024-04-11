@@ -21,6 +21,7 @@ import (
 	"github.com/nlnwa/warchaeology/internal/filewalker"
 	"github.com/nlnwa/warchaeology/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/hooks"
+	"github.com/nlnwa/warchaeology/internal/warc"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -129,33 +130,40 @@ func validateFile(fileSystem afero.Fs, file string) filewalker.Result {
 	}
 	defer func() { _ = warcFileReader.Close() }()
 
-	for {
-		warcRecord, currentOffset, validation, err := warcFileReader.Next()
-		if err == io.EOF {
-			break
-		}
+	records := make(chan warc.Record)
+
+	iterator := warc.Iterator{
+		WarcFileReader: warcFileReader,
+		Records:        records,
+	}
+
+	go iterator.Iterate(context.Background())
+
+	for record := range records {
+		warcRecord := record.WarcRecord
+
 		if warcRecord.Type() == gowarc.Warcinfo {
 			warcInfoId = warcRecord.WarcHeader().GetId(gowarc.WarcRecordID)
 		}
 		result.IncrRecords()
 		result.IncrProcessed()
-		if err != nil {
-			result.AddError(fmt.Errorf("rec num: %d, offset: %d, cause: %w", result.Records(), currentOffset, err))
+		if record.Err != nil {
+			result.AddError(fmt.Errorf("rec num: %d, offset: %d, cause: %w", result.Records(), record.Offset, record.Err))
 			break
 		}
 
-		err = warcRecord.ValidateDigest(validation)
+		err = warcRecord.ValidateDigest(record.Validation)
 		if err != nil {
-			result.AddError(fmt.Errorf("rec num: %d, offset: %d, cause: %w", result.Records(), currentOffset, err))
+			result.AddError(fmt.Errorf("rec num: %d, offset: %d, cause: %w", result.Records(), record.Offset, err))
 			break
 		}
 
 		if err := warcRecord.Close(); err != nil {
-			*validation = append(*validation, err)
+			*record.Validation = append(*record.Validation, err)
 		}
 
-		if !validation.Valid() {
-			result.AddError(fmt.Errorf("rec num: %d, offset: %d, record: %s, cause: %w", result.Records(), currentOffset, warcRecord, validation))
+		if !record.Validation.Valid() {
+			result.AddError(fmt.Errorf("rec num: %d, offset: %d, record: %s, cause: %w", result.Records(), record.Offset, warcRecord, record.Validation))
 		}
 	}
 	return result
