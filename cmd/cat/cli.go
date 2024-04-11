@@ -64,6 +64,6 @@ func parseArgumentsAndCallCat(cmd *cobra.Command, args []string) error {
 		catConfig.showProtocolHeader = true
 		catConfig.showPayload = true
 	}
-	listRecords(catConfig, catConfig.fileName)
-	return nil
+	
+	return runCat(catConfig)
 }
