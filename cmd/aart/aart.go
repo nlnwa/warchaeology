@@ -2,6 +2,7 @@ package aart
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"image"
@@ -11,12 +12,12 @@ import (
 	_ "image/png"
 	"io"
 	"os"
-	"strconv"
 
 	"github.com/nfnt/resize"
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/internal/filter"
 	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/warc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -62,50 +63,59 @@ func parseArgumentsAndCallAsciiArt(cmd *cobra.Command, args []string) error {
 }
 
 func readFile(c *conf, fileName string) {
-	wf, err := gowarc.NewWarcFileReader(fileName, c.offset, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
-	defer func() { _ = wf.Close() }()
+	warcFileReader, err := gowarc.NewWarcFileReader(fileName, c.offset, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
 		return
 	}
+	defer func() { _ = warcFileReader.Close() }()
 
-	num := 0
+	records := make(chan warc.Record)
+
+	iterator := warc.Iterator{
+		WarcFileReader: warcFileReader,
+		Filter:         c.filter,
+		Nth:            c.recordNum,
+		Limit:          0,
+		Records:        records,
+	}
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	go iterator.Iterate(ctx)
+
 	count := 0
 
-	for {
-		wr, _, _, err := wf.Next()
-		if err == io.EOF {
+	for record := range records {
+		count++
+
+		fmt.Println("Record number:", count)
+		if record.Err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Error in record at offset %v: %v\n", c.offset, record.Err)
 			break
 		}
+
+		warcRecord := record.WarcRecord
+
+		b, ok := warcRecord.Block().(gowarc.HttpResponseBlock)
+		if !ok {
+			continue
+		}
+
+		fmt.Printf("\u001B[2J\u001B[HUrl: %s\n\n", warcRecord.WarcHeader().Get(gowarc.WarcTargetURI))
+		r, err := b.PayloadBytes()
 		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error: %v, rec num: %v, Offset %v\n", err.Error(), strconv.Itoa(count), c.offset)
-			break
+			fmt.Printf("Error: %v\n", err)
 		}
-
-		if !c.filter.Accept(wr) {
+		err = display(r, viper.GetInt("width"))
+		if err != nil {
+			fmt.Println("Couldn't decode image,\nError:", err.Error())
 			continue
 		}
 
-		// Find record number
-		if c.recordNum > 0 && num < c.recordNum {
-			num++
-			continue
-		}
-
-		if b, ok := wr.Block().(gowarc.HttpResponseBlock); ok {
-			fmt.Printf("\u001B[2J\u001B[HUrl: %s\n\n", wr.WarcHeader().Get(gowarc.WarcTargetURI))
-			r, err := b.PayloadBytes()
-			if err != nil {
-				fmt.Printf("Error: %v\n", err)
-			}
-			err = display(r, viper.GetInt("width"))
-			if err != nil {
-				fmt.Println("Couldn't decode image,\nError:", err.Error())
-				continue
-			}
-			fmt.Printf("Hit enter to continue\n")
-			_, _ = fmt.Scanln()
-		}
+		fmt.Printf("Hit enter to continue\n")
+		_, _ = fmt.Scanln()
 	}
 }
 
