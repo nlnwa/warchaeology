@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713179009280,
+  "lastUpdate": 1713181749365,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -1182,6 +1182,42 @@ window.BENCHMARK_DATA = {
             "value": 8210689,
             "unit": "ns/op",
             "extra": "144 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "61047223dfbe38a40decc11e33e06cb97b5d4649",
+          "message": "Merge pull request #138 from nlnwa/dependabot/github_actions/peaceiris/actions-gh-pages-4\n\nbuild(deps): bump peaceiris/actions-gh-pages from 3 to 4",
+          "timestamp": "2024-04-15T13:48:45+02:00",
+          "tree_id": "ee69af1086f9418b922c9eb15fc01b7680e7c5ac",
+          "url": "https://github.com/nlnwa/warchaeology/commit/61047223dfbe38a40decc11e33e06cb97b5d4649"
+        },
+        "date": 1713181748901,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 206.2,
+            "unit": "ns/op",
+            "extra": "4907506 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8215071,
+            "unit": "ns/op",
+            "extra": "145 times\n4 procs"
           }
         ]
       }
