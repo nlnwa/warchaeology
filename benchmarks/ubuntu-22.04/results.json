@@ -1,14 +1,14 @@
 {
-  "lastUpdate": 1713179010454,
+  "lastUpdate": 1713181750344,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
       {
         "commit": {
           "author": {
-            "email": "49699333+dependabot[bot]@users.noreply.github.com",
-            "name": "dependabot[bot]",
-            "username": "dependabot[bot]"
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
           },
           "committer": {
             "email": "noreply@github.com",
@@ -16,26 +16,26 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "c4a1f950beb7cd6e586d110f00fbe69b6113163b",
-          "message": "Merge pull request #137 from nlnwa/dependabot/go_modules/github.com/klauspost/compress-1.17.8",
-          "timestamp": "2024-04-15T11:02:42Z",
-          "tree_id": "e4ec8a6011316b357d9a1abac2682d6976dd9d0b",
-          "url": "https://github.com/nlnwa/warchaeology/commit/c4a1f950beb7cd6e586d110f00fbe69b6113163b"
+          "id": "61047223dfbe38a40decc11e33e06cb97b5d4649",
+          "message": "Merge pull request #138 from nlnwa/dependabot/github_actions/peaceiris/actions-gh-pages-4\n\nbuild(deps): bump peaceiris/actions-gh-pages from 3 to 4",
+          "timestamp": "2024-04-15T13:48:45+02:00",
+          "tree_id": "ee69af1086f9418b922c9eb15fc01b7680e7c5ac",
+          "url": "https://github.com/nlnwa/warchaeology/commit/61047223dfbe38a40decc11e33e06cb97b5d4649"
         },
-        "date": 1713179010453,
+        "date": 1713181750343,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 188,
+            "value": 206.2,
             "unit": "ns/op",
-            "extra": "6409720 times\n4 procs"
+            "extra": "4907506 times\n4 procs"
           },
           {
             "name": "BenchmarkReadFileWithError",
-            "value": 8210689,
+            "value": 8215071,
             "unit": "ns/op",
-            "extra": "144 times\n4 procs"
+            "extra": "145 times\n4 procs"
           }
         ]
       }
