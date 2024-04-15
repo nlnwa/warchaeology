@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712641102560,
+  "lastUpdate": 1713179185892,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -486,6 +486,42 @@ window.BENCHMARK_DATA = {
             "value": 8726236,
             "unit": "ns/op",
             "extra": "136 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c4a1f950beb7cd6e586d110f00fbe69b6113163b",
+          "message": "Merge pull request #137 from nlnwa/dependabot/go_modules/github.com/klauspost/compress-1.17.8",
+          "timestamp": "2024-04-15T11:02:42Z",
+          "tree_id": "e4ec8a6011316b357d9a1abac2682d6976dd9d0b",
+          "url": "https://github.com/nlnwa/warchaeology/commit/c4a1f950beb7cd6e586d110f00fbe69b6113163b"
+        },
+        "date": 1713179175156,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 11090921,
+            "unit": "ns/op",
+            "extra": "100 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8568460,
+            "unit": "ns/op",
+            "extra": "139 times\n4 procs"
           }
         ]
       }
