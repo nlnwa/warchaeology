@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1713181750344,
+  "lastUpdate": 1713261879027,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,26 +16,26 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "61047223dfbe38a40decc11e33e06cb97b5d4649",
-          "message": "Merge pull request #138 from nlnwa/dependabot/github_actions/peaceiris/actions-gh-pages-4\n\nbuild(deps): bump peaceiris/actions-gh-pages from 3 to 4",
-          "timestamp": "2024-04-15T13:48:45+02:00",
-          "tree_id": "ee69af1086f9418b922c9eb15fc01b7680e7c5ac",
-          "url": "https://github.com/nlnwa/warchaeology/commit/61047223dfbe38a40decc11e33e06cb97b5d4649"
+          "id": "b810e078c5760119d12c0023f2147279b2c90ee2",
+          "message": "Merge pull request #140 from nlnwa/test/nedlib-test-data\n\ntest: add initial test data for `nedlib`",
+          "timestamp": "2024-04-16T12:01:45+02:00",
+          "tree_id": "18fa043cc2c3ef4f415ca42351a5381620f37a6c",
+          "url": "https://github.com/nlnwa/warchaeology/commit/b810e078c5760119d12c0023f2147279b2c90ee2"
         },
-        "date": 1713181750343,
+        "date": 1713261879027,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 206.2,
+            "value": 189.3,
             "unit": "ns/op",
-            "extra": "4907506 times\n4 procs"
+            "extra": "6184744 times\n4 procs"
           },
           {
             "name": "BenchmarkReadFileWithError",
-            "value": 8215071,
+            "value": 8378303,
             "unit": "ns/op",
-            "extra": "145 times\n4 procs"
+            "extra": "141 times\n4 procs"
           }
         ]
       }
