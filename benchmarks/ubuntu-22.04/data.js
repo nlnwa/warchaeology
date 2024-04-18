@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713261876586,
+  "lastUpdate": 1713432425524,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -1254,6 +1254,42 @@ window.BENCHMARK_DATA = {
             "value": 8378303,
             "unit": "ns/op",
             "extra": "141 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1396171b8c416166b1e713fac567972463eb1351",
+          "message": "Merge pull request #142 from nlnwa/fix/github-pages-hugo-failure\n\nfix: set `hugo` version to `1.24.1`",
+          "timestamp": "2024-04-18T11:26:34+02:00",
+          "tree_id": "b44612b96f1141d37d020aa13185cff92d0101a2",
+          "url": "https://github.com/nlnwa/warchaeology/commit/1396171b8c416166b1e713fac567972463eb1351"
+        },
+        "date": 1713432424976,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 188.7,
+            "unit": "ns/op",
+            "extra": "5828116 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8240710,
+            "unit": "ns/op",
+            "extra": "144 times\n4 procs"
           }
         ]
       }
