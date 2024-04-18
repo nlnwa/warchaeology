@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1713261830614,
+  "lastUpdate": 1713432607548,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,26 +16,26 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "b810e078c5760119d12c0023f2147279b2c90ee2",
-          "message": "Merge pull request #140 from nlnwa/test/nedlib-test-data\n\ntest: add initial test data for `nedlib`",
-          "timestamp": "2024-04-16T12:01:45+02:00",
-          "tree_id": "18fa043cc2c3ef4f415ca42351a5381620f37a6c",
-          "url": "https://github.com/nlnwa/warchaeology/commit/b810e078c5760119d12c0023f2147279b2c90ee2"
+          "id": "1396171b8c416166b1e713fac567972463eb1351",
+          "message": "Merge pull request #142 from nlnwa/fix/github-pages-hugo-failure\n\nfix: set `hugo` version to `1.24.1`",
+          "timestamp": "2024-04-18T11:26:34+02:00",
+          "tree_id": "b44612b96f1141d37d020aa13185cff92d0101a2",
+          "url": "https://github.com/nlnwa/warchaeology/commit/1396171b8c416166b1e713fac567972463eb1351"
         },
-        "date": 1713261830613,
+        "date": 1713432607547,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 11933920,
+            "value": 10222542,
             "unit": "ns/op",
-            "extra": "124 times\n4 procs"
+            "extra": "100 times\n4 procs"
           },
           {
             "name": "BenchmarkReadFileWithError",
-            "value": 9133317,
+            "value": 8915801,
             "unit": "ns/op",
-            "extra": "138 times\n4 procs"
+            "extra": "135 times\n4 procs"
           }
         ]
       }
