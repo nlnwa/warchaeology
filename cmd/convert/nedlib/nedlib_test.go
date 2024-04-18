@@ -16,7 +16,7 @@ func (fileWalker *walker) dummyWalkFunction(_ afero.Fs, path string) filewalker.
 }
 
 func TestConvert(t *testing.T) {
-	testDataDir := filepath.Join("..", "..", "test-data")
+	testDataDir := filepath.Join("..", "..", "testdata")
 	nedlibDir := filepath.Join(testDataDir, "nedlib", "nb-image")
 
 	fileWalker := walker{}
