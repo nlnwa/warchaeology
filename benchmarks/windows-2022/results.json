@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1713432607548,
+  "lastUpdate": 1713852707840,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,26 +16,26 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "1396171b8c416166b1e713fac567972463eb1351",
-          "message": "Merge pull request #142 from nlnwa/fix/github-pages-hugo-failure\n\nfix: set `hugo` version to `1.24.1`",
-          "timestamp": "2024-04-18T11:26:34+02:00",
-          "tree_id": "b44612b96f1141d37d020aa13185cff92d0101a2",
-          "url": "https://github.com/nlnwa/warchaeology/commit/1396171b8c416166b1e713fac567972463eb1351"
+          "id": "bec21e2df27374421de2b58cb8847208a75346a1",
+          "message": "Merge pull request #143 from nlnwa/dependabot/go_modules/golang.org/x/net-0.23.0\n\nbuild(deps): bump golang.org/x/net from 0.19.0 to 0.23.0",
+          "timestamp": "2024-04-23T08:09:10+02:00",
+          "tree_id": "5bec5c30583a061497baa8d7b49c0c3f2cc5acc0",
+          "url": "https://github.com/nlnwa/warchaeology/commit/bec21e2df27374421de2b58cb8847208a75346a1"
         },
-        "date": 1713432607547,
+        "date": 1713852707839,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 10222542,
+            "value": 11047434,
             "unit": "ns/op",
             "extra": "100 times\n4 procs"
           },
           {
             "name": "BenchmarkReadFileWithError",
-            "value": 8915801,
+            "value": 8434304,
             "unit": "ns/op",
-            "extra": "135 times\n4 procs"
+            "extra": "139 times\n4 procs"
           }
         ]
       }
