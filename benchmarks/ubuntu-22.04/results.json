@@ -1,14 +1,14 @@
 {
-  "lastUpdate": 1714392423507,
+  "lastUpdate": 1714393199633,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
       {
         "commit": {
           "author": {
-            "email": "trym.bremnes@gmail.com",
-            "name": "Trym Bremnes",
-            "username": "trym-b"
+            "email": "skaterase@gmail.com",
+            "name": "Marius Elsfjordstrand Beck",
+            "username": "maeb"
           },
           "committer": {
             "email": "noreply@github.com",
@@ -16,24 +16,24 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "227d17216a5b5beee094e2bf42828a2120bf7842",
-          "message": "Merge pull request #144 from nlnwa/dependabot/github_actions/golangci/golangci-lint-action-5\n\nbuild(deps): bump golangci/golangci-lint-action from 4 to 5",
-          "timestamp": "2024-04-29T14:06:35+02:00",
-          "tree_id": "623aabe03e0aaf9b4e378c72446f810283d94e5e",
-          "url": "https://github.com/nlnwa/warchaeology/commit/227d17216a5b5beee094e2bf42828a2120bf7842"
+          "id": "ae35becd882504b57327e6db1ab096977455962c",
+          "message": "Merge pull request #133 from nlnwa/fix/compression-level-as-int-not-bool\n\nfix: use integer parameter",
+          "timestamp": "2024-04-29T14:19:32+02:00",
+          "tree_id": "551f806c86807696c27815f1a2ff5b3e2b5aeecf",
+          "url": "https://github.com/nlnwa/warchaeology/commit/ae35becd882504b57327e6db1ab096977455962c"
         },
-        "date": 1714392423506,
+        "date": 1714393199633,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 188.7,
+            "value": 187.8,
             "unit": "ns/op",
-            "extra": "5901478 times\n4 procs"
+            "extra": "6205020 times\n4 procs"
           },
           {
             "name": "BenchmarkReadFileWithError",
-            "value": 8194816,
+            "value": 8193781,
             "unit": "ns/op",
             "extra": "145 times\n4 procs"
           }
