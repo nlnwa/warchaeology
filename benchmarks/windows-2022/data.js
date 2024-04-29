@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714392667216,
+  "lastUpdate": 1714393388587,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -702,6 +702,42 @@ window.BENCHMARK_DATA = {
             "value": 8521072,
             "unit": "ns/op",
             "extra": "139 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "skaterase@gmail.com",
+            "name": "Marius Elsfjordstrand Beck",
+            "username": "maeb"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ae35becd882504b57327e6db1ab096977455962c",
+          "message": "Merge pull request #133 from nlnwa/fix/compression-level-as-int-not-bool\n\nfix: use integer parameter",
+          "timestamp": "2024-04-29T14:19:32+02:00",
+          "tree_id": "551f806c86807696c27815f1a2ff5b3e2b5aeecf",
+          "url": "https://github.com/nlnwa/warchaeology/commit/ae35becd882504b57327e6db1ab096977455962c"
+        },
+        "date": 1714393374961,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 7208827,
+            "unit": "ns/op",
+            "extra": "158 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8912418,
+            "unit": "ns/op",
+            "extra": "142 times\n4 procs"
           }
         ]
       }
