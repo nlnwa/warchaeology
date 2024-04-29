@@ -63,7 +63,7 @@ The remaining records are written as is.`,
 	cmd.Flags().IntP(flag.ConcurrentWriters, "C", 16, flag.ConcurrentWritersHelp)
 	cmd.Flags().StringP(flag.FileSize, "S", "1GB", flag.FileSizeHelp)
 	cmd.Flags().BoolP(flag.Compress, "z", false, flag.CompressHelp)
-	cmd.Flags().Bool(flag.CompressionLevel, false, flag.CompressionLevelHelp)
+	cmd.Flags().Int(flag.CompressionLevel, 0, flag.CompressionLevelHelp)
 	cmd.Flags().StringP(flag.FilePrefix, "p", "", flag.FilePrefixHelp)
 	cmd.Flags().StringP(flag.WarcDir, "w", ".", flag.WarcDirHelp)
 	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
