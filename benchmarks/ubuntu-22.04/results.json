@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1713852602155,
+  "lastUpdate": 1714392423507,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,24 +16,24 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "bec21e2df27374421de2b58cb8847208a75346a1",
-          "message": "Merge pull request #143 from nlnwa/dependabot/go_modules/golang.org/x/net-0.23.0\n\nbuild(deps): bump golang.org/x/net from 0.19.0 to 0.23.0",
-          "timestamp": "2024-04-23T08:09:10+02:00",
-          "tree_id": "5bec5c30583a061497baa8d7b49c0c3f2cc5acc0",
-          "url": "https://github.com/nlnwa/warchaeology/commit/bec21e2df27374421de2b58cb8847208a75346a1"
+          "id": "227d17216a5b5beee094e2bf42828a2120bf7842",
+          "message": "Merge pull request #144 from nlnwa/dependabot/github_actions/golangci/golangci-lint-action-5\n\nbuild(deps): bump golangci/golangci-lint-action from 4 to 5",
+          "timestamp": "2024-04-29T14:06:35+02:00",
+          "tree_id": "623aabe03e0aaf9b4e378c72446f810283d94e5e",
+          "url": "https://github.com/nlnwa/warchaeology/commit/227d17216a5b5beee094e2bf42828a2120bf7842"
         },
-        "date": 1713852602154,
+        "date": 1714392423506,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 194.6,
+            "value": 188.7,
             "unit": "ns/op",
-            "extra": "5639400 times\n4 procs"
+            "extra": "5901478 times\n4 procs"
           },
           {
             "name": "BenchmarkReadFileWithError",
-            "value": 8223558,
+            "value": 8194816,
             "unit": "ns/op",
             "extra": "145 times\n4 procs"
           }
