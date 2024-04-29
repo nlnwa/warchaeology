@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713852597522,
+  "lastUpdate": 1714392422398,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -1324,6 +1324,42 @@ window.BENCHMARK_DATA = {
           {
             "name": "BenchmarkReadFileWithError",
             "value": 8223558,
+            "unit": "ns/op",
+            "extra": "145 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "227d17216a5b5beee094e2bf42828a2120bf7842",
+          "message": "Merge pull request #144 from nlnwa/dependabot/github_actions/golangci/golangci-lint-action-5\n\nbuild(deps): bump golangci/golangci-lint-action from 4 to 5",
+          "timestamp": "2024-04-29T14:06:35+02:00",
+          "tree_id": "623aabe03e0aaf9b4e378c72446f810283d94e5e",
+          "url": "https://github.com/nlnwa/warchaeology/commit/227d17216a5b5beee094e2bf42828a2120bf7842"
+        },
+        "date": 1714392421720,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 188.7,
+            "unit": "ns/op",
+            "extra": "5901478 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8194816,
             "unit": "ns/op",
             "extra": "145 times\n4 procs"
           }
