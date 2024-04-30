@@ -1,14 +1,14 @@
 {
-  "lastUpdate": 1714393395797,
+  "lastUpdate": 1714469365497,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
       {
         "commit": {
           "author": {
-            "email": "skaterase@gmail.com",
-            "name": "Marius Elsfjordstrand Beck",
-            "username": "maeb"
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
           },
           "committer": {
             "email": "noreply@github.com",
@@ -16,26 +16,26 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "ae35becd882504b57327e6db1ab096977455962c",
-          "message": "Merge pull request #133 from nlnwa/fix/compression-level-as-int-not-bool\n\nfix: use integer parameter",
-          "timestamp": "2024-04-29T14:19:32+02:00",
-          "tree_id": "551f806c86807696c27815f1a2ff5b3e2b5aeecf",
-          "url": "https://github.com/nlnwa/warchaeology/commit/ae35becd882504b57327e6db1ab096977455962c"
+          "id": "c57900bf00f5fa92b20a507f3da9d7b2d6deb39f",
+          "message": "Merge pull request #145 from nlnwa/refactor/rename-testdata-dir\n\nrefactor: rename `testdata` dir",
+          "timestamp": "2024-04-30T11:25:30+02:00",
+          "tree_id": "e2b8f16030eee33af583ffafcedb4fe5d09fc451",
+          "url": "https://github.com/nlnwa/warchaeology/commit/c57900bf00f5fa92b20a507f3da9d7b2d6deb39f"
         },
-        "date": 1714393395796,
+        "date": 1714469365496,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 7208827,
+            "value": 10098568,
             "unit": "ns/op",
-            "extra": "158 times\n4 procs"
+            "extra": "100 times\n4 procs"
           },
           {
             "name": "BenchmarkReadFileWithError",
-            "value": 8912418,
+            "value": 8456119,
             "unit": "ns/op",
-            "extra": "142 times\n4 procs"
+            "extra": "139 times\n4 procs"
           }
         ]
       }
