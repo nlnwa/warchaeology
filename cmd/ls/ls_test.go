@@ -10,7 +10,7 @@ import (
 )
 
 func TestConfigReadFileWithError(t *testing.T) {
-	testDataDir := filepath.Join("..", "..", "test-data")
+	testDataDir := filepath.Join("..", "..", "testdata")
 	warcWithErrors := filepath.Join(testDataDir, "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz")
 	config := &conf{}
 	config.filter = filter.NewFromViper()
@@ -24,7 +24,7 @@ func BenchmarkReadFileWithError(b *testing.B) {
 	// `github-action-benchmark` is unable to handle some of the output in the
 	// benchmark result files.
 	os.Stdout = nil
-	testDataDir := filepath.Join("..", "..", "test-data")
+	testDataDir := filepath.Join("..", "..", "testdata")
 	warcWithErrors := filepath.Join(testDataDir, "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz")
 	config := &conf{}
 	config.filter = filter.NewFromViper()

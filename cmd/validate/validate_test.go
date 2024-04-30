@@ -8,7 +8,7 @@ import (
 )
 
 func TestValidateSamsungFileWithError(t *testing.T) {
-	testDataDir := filepath.Join("..", "..", "test-data")
+	testDataDir := filepath.Join("..", "..", "testdata")
 	warcWithErrors := filepath.Join(testDataDir, "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz")
 	defer func() {
 		if r := recover(); r == nil {
