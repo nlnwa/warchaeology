@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714393198597,
+  "lastUpdate": 1714469168035,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -1398,6 +1398,42 @@ window.BENCHMARK_DATA = {
             "value": 8193781,
             "unit": "ns/op",
             "extra": "145 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c57900bf00f5fa92b20a507f3da9d7b2d6deb39f",
+          "message": "Merge pull request #145 from nlnwa/refactor/rename-testdata-dir\n\nrefactor: rename `testdata` dir",
+          "timestamp": "2024-04-30T11:25:30+02:00",
+          "tree_id": "e2b8f16030eee33af583ffafcedb4fe5d09fc451",
+          "url": "https://github.com/nlnwa/warchaeology/commit/c57900bf00f5fa92b20a507f3da9d7b2d6deb39f"
+        },
+        "date": 1714469166863,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 190.4,
+            "unit": "ns/op",
+            "extra": "6192103 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8488757,
+            "unit": "ns/op",
+            "extra": "139 times\n4 procs"
           }
         ]
       }
