@@ -142,10 +142,6 @@ func validateFile(fileSystem afero.Fs, file string) filewalker.Result {
 			break
 		}
 
-		if warcRecord.Type() == gowarc.Warcinfo {
-			warcInfoId = warcRecord.WarcHeader().GetId(gowarc.WarcRecordID)
-		}
-
 		err = warcRecord.ValidateDigest(validation)
 		if err != nil {
 			result.AddError(fmt.Errorf("rec num: %d, offset: %d, cause: %w", result.Records(), currentOffset, err))
