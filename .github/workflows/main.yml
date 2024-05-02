@@ -14,7 +14,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: 1.22
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -38,7 +38,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: 1.22
       - name: Test
         run: go test ./...
 
@@ -54,7 +54,7 @@ jobs:
           lfs: true
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: 1.22
       - name: Run benchmark
         run: go test ./... -bench="Bench" | tee benchmark-result.txt
       - uses: actions/upload-artifact@v4
@@ -93,7 +93,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: 1.22
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
