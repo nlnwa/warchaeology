@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714469359684,
+  "lastUpdate": 1715061866625,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -774,6 +774,42 @@ window.BENCHMARK_DATA = {
             "value": 8456119,
             "unit": "ns/op",
             "extra": "139 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "trym.bremnes@gmail.com",
+            "name": "Trym Bremnes",
+            "username": "trym-b"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8b20f252889518af4190070bdb1aceb681044913",
+          "message": "Merge pull request #147 from nlnwa/dependabot/go_modules/github.com/nlnwa/gowarc-1.6.0\n\nbuild(deps): bump github.com/nlnwa/gowarc from 1.5.0 to 1.6.0",
+          "timestamp": "2024-05-07T08:01:53+02:00",
+          "tree_id": "925de994640b68af93dc46bd5a80e0b19760ec65",
+          "url": "https://github.com/nlnwa/warchaeology/commit/8b20f252889518af4190070bdb1aceb681044913"
+        },
+        "date": 1715061852874,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 8870392,
+            "unit": "ns/op",
+            "extra": "140 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 9497900,
+            "unit": "ns/op",
+            "extra": "120 times\n4 procs"
           }
         ]
       }
