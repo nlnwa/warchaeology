@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1714469365497,
+  "lastUpdate": 1715061873639,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -16,26 +16,26 @@
             "username": "web-flow"
           },
           "distinct": true,
-          "id": "c57900bf00f5fa92b20a507f3da9d7b2d6deb39f",
-          "message": "Merge pull request #145 from nlnwa/refactor/rename-testdata-dir\n\nrefactor: rename `testdata` dir",
-          "timestamp": "2024-04-30T11:25:30+02:00",
-          "tree_id": "e2b8f16030eee33af583ffafcedb4fe5d09fc451",
-          "url": "https://github.com/nlnwa/warchaeology/commit/c57900bf00f5fa92b20a507f3da9d7b2d6deb39f"
+          "id": "8b20f252889518af4190070bdb1aceb681044913",
+          "message": "Merge pull request #147 from nlnwa/dependabot/go_modules/github.com/nlnwa/gowarc-1.6.0\n\nbuild(deps): bump github.com/nlnwa/gowarc from 1.5.0 to 1.6.0",
+          "timestamp": "2024-05-07T08:01:53+02:00",
+          "tree_id": "925de994640b68af93dc46bd5a80e0b19760ec65",
+          "url": "https://github.com/nlnwa/warchaeology/commit/8b20f252889518af4190070bdb1aceb681044913"
         },
-        "date": 1714469365496,
+        "date": 1715061873638,
         "tool": "go",
         "benches": [
           {
             "name": "BenchmarkDummy",
-            "value": 10098568,
+            "value": 8870392,
             "unit": "ns/op",
-            "extra": "100 times\n4 procs"
+            "extra": "140 times\n4 procs"
           },
           {
             "name": "BenchmarkReadFileWithError",
-            "value": 8456119,
+            "value": 9497900,
             "unit": "ns/op",
-            "extra": "139 times\n4 procs"
+            "extra": "120 times\n4 procs"
           }
         ]
       }
