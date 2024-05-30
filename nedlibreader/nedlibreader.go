@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -41,9 +43,9 @@ func (nedlibReader *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Vali
 	if err != nil {
 		return nil, 0, validation, err
 	}
+	defer func() { _ = file.Close() }()
 
 	response, err := http.ReadResponse(bufio.NewReader(io.MultiReader(file, bytes.NewReader([]byte{'\r', '\n'}))), nil)
-	_ = file.Close()
 	if err != nil {
 		return nil, 0, validation, err
 	}
@@ -62,7 +64,25 @@ func (nedlibReader *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Vali
 		}
 		warcRecordBuilder.AddWarcHeaderTime(gowarc.WarcDate, t)
 	} else {
-		warcRecordBuilder.AddWarcHeaderTime(gowarc.WarcDate, nedlibReader.defaultTime)
+		// if one of the path segments is a date, use that as the date (at 12:00 noon)
+		var t time.Time
+		segments := strings.Split(nedlibReader.metaFilename, string(filepath.Separator))
+		re := regexp.MustCompile(`\d{4}-\d{1,2}-\d{1,2}`)
+		for _, dateString := range segments {
+			if len(dateString) < 8 {
+				continue
+			}
+			t, err = time.Parse("2006-1-2", re.FindString(dateString))
+			if err == nil {
+				break
+			}
+		}
+		if t.IsZero() {
+			t = nedlibReader.defaultTime
+		} else {
+			t = t.Add(time.Hour * 12)
+		}
+		warcRecordBuilder.AddWarcHeaderTime(gowarc.WarcDate, t)
 	}
 
 	for field := range header {
