@@ -68,6 +68,10 @@ func parseTime(dateString string) (t time.Time, err error) {
 	if err == nil {
 		return
 	}
+	t, err = parseRFC1123BrokenYear(dateString)
+	if err == nil {
+		return
+	}
 	return time.Time{}, fmt.Errorf("failed to parse string as time.Time: '%s'", dateString)
 }
 
@@ -100,6 +104,12 @@ func parseRFC850BrokenYear(value string) (time.Time, error) {
 	// Replace Jul-103 With Jul-03
 	value = regexp.MustCompile(`([A-Za-z]{3}-)1(\d{2})`).ReplaceAllString(value, "${1}${2}")
 	return time.Parse(time.RFC850, value)
+}
+
+func parseRFC1123BrokenYear(value string) (time.Time, error) {
+	// Replace 31 Jul 103 With 31 Jul 2003
+	value = regexp.MustCompile(`(\d{2} [A-Za-z]{3}) 1(\d{2})`).ReplaceAllString(value, "${1} 20${2}")
+	return time.Parse(time.RFC1123, value)
 }
 
 // parse date and time string on the format: "lø, 19 jul 2003 04:45:41 CET" to a time.Time

@@ -21,6 +21,7 @@ const (
 	RFC1123_NO_LEADING_ZERO      = "RFC1123_NO_LEADING_ZERO"
 	RFC1123_SECONDS_OUT_OF_RANGE = "RFC1123_SECONDS_OUT_OF_RANGE"
 	RFC1123_NORSK                = "RFC1123_NORSK"
+	RFC1123_BROKEN_YEAR          = "RFC1123_BROKEN_YEAR"
 	RFC822                       = "RFC822"
 	RFC822Z                      = "RFC822Z"
 	RFC850                       = "RFC850"
@@ -38,6 +39,7 @@ var timeParseFuncs = map[string]func(string) (time.Time, error){
 	RFC1123Z:                     func(value string) (time.Time, error) { return time.Parse(time.RFC1123Z, value) },
 	RFC1123_NORSK:                parseCustomNorwegianTime,
 	RFC1123_SECONDS_OUT_OF_RANGE: parseRFC1123SecondsOutOfRange,
+	RFC1123_BROKEN_YEAR:          parseRFC1123BrokenYear,
 	RFC850:                       func(value string) (time.Time, error) { return time.Parse(time.RFC850, value) },
 	RFC850_BROKEN_YEAR:           parseRFC850BrokenYear,
 	RFC822:                       func(value string) (time.Time, error) { return time.Parse(time.RFC822, value) },
@@ -100,6 +102,10 @@ var timeTests = map[string][]struct {
 		{"Sat, 2 Aug 2003 03:41:01 GMT", time.Date(2003, time.August, 2, 3, 41, 1, 0, time.UTC)},
 		{"Sun, 3 Aug 2003 03:34:00 GMT", time.Date(2003, time.August, 3, 3, 34, 0, 0, time.UTC)},
 		{"Sun, 3 Aug 2003 05:43:49 CES", time.Date(2003, time.August, 3, 7, 43, 49, 0, locCET)},
+	},
+	RFC1123_BROKEN_YEAR: {
+		{"Thu, 31 Jul 103 13:00:03 GMT", time.Date(2003, time.July, 31, 13, 0, 3, 0, time.UTC)},
+		{"Thu, 31 Jul 103 16:45:34 GMT", time.Date(2003, time.July, 31, 16, 45, 34, 0, time.UTC)},
 	},
 	RFC1123_SECONDS_OUT_OF_RANGE: {
 		{"Thu, 17 Jul 2003 12:15:60 GMT", time.Date(2003, time.July, 17, 12, 15, 60, 0, time.UTC)},
