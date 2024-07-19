@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715061866625,
+  "lastUpdate": 1721388054995,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -810,6 +810,42 @@ window.BENCHMARK_DATA = {
             "value": 9497900,
             "unit": "ns/op",
             "extra": "120 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c654f575294b31d0b37db317ff3f39b676910bfa",
+          "message": "Merge pull request #154 from nlnwa/dependabot/go_modules/github.com/spf13/viper-1.19.0",
+          "timestamp": "2024-07-19T11:17:02Z",
+          "tree_id": "ca440f97df27e353f544dc21ad149ec8bd3c4ebd",
+          "url": "https://github.com/nlnwa/warchaeology/commit/c654f575294b31d0b37db317ff3f39b676910bfa"
+        },
+        "date": 1721388035852,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 11429277,
+            "unit": "ns/op",
+            "extra": "128 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8733762,
+            "unit": "ns/op",
+            "extra": "135 times\n4 procs"
           }
         ]
       }
