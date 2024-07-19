@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721388361242,
+  "lastUpdate": 1721388888574,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -882,6 +882,42 @@ window.BENCHMARK_DATA = {
             "value": 8836111,
             "unit": "ns/op",
             "extra": "135 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4832f4821ad5accfefcc67648a54faca33f13861",
+          "message": "Merge pull request #157 from nlnwa/dependabot/go_modules/github.com/spf13/cobra-1.8.1",
+          "timestamp": "2024-07-19T11:28:39Z",
+          "tree_id": "3e56c808ce9d944e0b842fef725b0a58ee6e5690",
+          "url": "https://github.com/nlnwa/warchaeology/commit/4832f4821ad5accfefcc67648a54faca33f13861"
+        },
+        "date": 1721388870065,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 10980530,
+            "unit": "ns/op",
+            "extra": "100 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 9434831,
+            "unit": "ns/op",
+            "extra": "124 times\n4 procs"
           }
         ]
       }
