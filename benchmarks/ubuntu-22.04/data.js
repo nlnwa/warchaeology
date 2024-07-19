@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721387875537,
+  "lastUpdate": 1721388126048,
   "repoUrl": "https://github.com/nlnwa/warchaeology",
   "entries": {
     "Go Benchmark": [
@@ -1506,6 +1506,42 @@ window.BENCHMARK_DATA = {
             "value": 8194293,
             "unit": "ns/op",
             "extra": "145 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "marius.beck@nb.no",
+            "name": "Marius Elsfjordstrand Beck",
+            "username": "maeb"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "553682fff2f900585a19ee2906bfaafb74254ef2",
+          "message": "Merge pull request #155 from nlnwa/dependabot/github_actions/goreleaser/goreleaser-action-6\n\nbuild(deps): bump goreleaser/goreleaser-action from 5 to 6",
+          "timestamp": "2024-07-19T13:21:30+02:00",
+          "tree_id": "fd7bf86ee27cc95b3e1216cb262fcfc46d133513",
+          "url": "https://github.com/nlnwa/warchaeology/commit/553682fff2f900585a19ee2906bfaafb74254ef2"
+        },
+        "date": 1721388125047,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDummy",
+            "value": 200,
+            "unit": "ns/op",
+            "extra": "6097888 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkReadFileWithError",
+            "value": 8166542,
+            "unit": "ns/op",
+            "extra": "146 times\n4 procs"
           }
         ]
       }
