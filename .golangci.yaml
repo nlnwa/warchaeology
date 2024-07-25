@@ -1,5 +1,6 @@
 output:
-  format: github-actions
+  formats:
+    - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
   uniq-by-line: true
@@ -14,21 +15,23 @@ issues:
   max-same-issues: 0
 
 severity:
+  default-severity: error
   case-sensitive: true
 
 linters:
   enable-all: true
   disable:
+     # magic number detector (mnd) is too strict
+    - mnd
   # TODO(https://github.com/nlnwa/warchaeology/issues/66): The following
   # sub-linters should be evaluated if they are going to be enabled or not.
     - containedctx
     - cyclop
-    - deadcode
     - depguard
     - errname
     - errorlint
+    - err113
     - exhaustive
-    - exhaustivestruct
     - exhaustruct
     - forbidigo
     - forcetypeassert
@@ -39,35 +42,28 @@ linters:
     - gocritic
     - godot
     - godox
-    - goerr113
     - gofumpt
-    - golint
     - gomnd
     - gosec
-    - ifshort
     - inamedparam
     - interfacebloat
-    - interfacer
+    - intrange
     - ireturn
     - lll
-    - maligned
     - nakedret
     - nestif
     - nilerr
     - nlreturn
     - nonamedreturns
-    - nosnakecase
     - paralleltest
     - perfsprint
     - prealloc
     - revive
-    - scopelint
     - stylecheck
     - tenv
     - testifylint
     - testpackage
     - unparam
-    - varcheck
     - varnamelen
     - whitespace
     - wrapcheck

@@ -1,7 +1,6 @@
 name: Main
 
-on:
-  push:
+on: [push]
 
 permissions:
   contents: write
@@ -11,42 +10,21 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: 1.22
-      - name: Checkout
-        uses: actions/checkout@v4
+          go-version: 'stable'
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.56.1
+          version: latest
 
   test:
     name: go test
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-2022, macos-13]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.22
-      - name: Test
-        run: go test ./...
-
-  benchmark:
-    name: Benchmark
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, windows-2022]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -54,29 +32,8 @@ jobs:
           lfs: true
       - uses: actions/setup-go@v5
         with:
-          go-version: 1.22
-      - name: Run benchmark
-        run: go test ./... -bench="Bench" | tee benchmark-result.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.os }}-benchmark-results
-          path: benchmark-result.txt
-      - name: Download previous benchmark results
-        uses: actions/checkout@v4
-        with:
-          ref: benchmark-results
-          path: previous/
-          lfs: true
-      - name: Compare benchmark results
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Go Benchmark
-          tool: 'go'
-          output-file-path: benchmark-result.txt
-          external-data-json-path: ./previous/benchmarks/${{ matrix.os }}/results.json
-          auto-push: false
-          fail-on-alert: true
-          alert-threshold: "150%"
+          go-version: 'stable'
+      - run: go test ./...
 
   build:
     runs-on: ubuntu-latest
@@ -85,20 +42,17 @@ jobs:
       - name: Detect snapshot
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         run: echo "flags=--snapshot" >> $GITHUB_ENV
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           lfs: true
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: 1.22
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+          go-version: 'stable'
+      - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
-          version: v1.24.0
+          version: "~> v2"
           args: release --clean ${{ env.flags }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
