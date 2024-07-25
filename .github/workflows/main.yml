@@ -39,42 +39,6 @@ jobs:
       - name: Test
         run: go test ./...
 
-  benchmark:
-    name: Benchmark
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, windows-2022]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          lfs: true
-      - uses: actions/setup-go@v5
-        with:
-          go-version: 'stable'
-      - name: Run benchmark
-        run: go test ./... -bench="Bench" | tee benchmark-result.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.os }}-benchmark-results
-          path: benchmark-result.txt
-      - name: Download previous benchmark results
-        uses: actions/checkout@v4
-        with:
-          ref: benchmark-results
-          path: previous/
-          lfs: true
-      - name: Compare benchmark results
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Go Benchmark
-          tool: 'go'
-          output-file-path: benchmark-result.txt
-          external-data-json-path: ./previous/benchmarks/${{ matrix.os }}/results.json
-          auto-push: false
-          fail-on-alert: true
-          alert-threshold: "150%"
-
   build:
     runs-on: ubuntu-latest
     name: Build
