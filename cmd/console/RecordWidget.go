@@ -7,7 +7,7 @@ import (
 
 	"github.com/awesome-gocui/gocui"
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/cmd/internal/flag"
 	"github.com/spf13/viper"
 )
 

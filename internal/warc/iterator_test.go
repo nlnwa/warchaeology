@@ -8,14 +8,14 @@ import (
 	"github.com/nlnwa/gowarc"
 )
 
-const (
-	testDataDir = "../../testdata"
+var (
+	testDataDir = filepath.Join("..", "..", "testdata")
 )
 
 var testFiles = map[string]string{
-	"empty":              filepath.Join(testDataDir, "empty.warc"),
-	"single-record":      filepath.Join(testDataDir, "single-record.warc"),
-	"samsung-with-error": filepath.Join(testDataDir, "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz"),
+	"empty":              filepath.Join(testDataDir, "warc", "empty.warc"),
+	"single-record":      filepath.Join(testDataDir, "warc", "single-record.warc"),
+	"samsung-with-error": filepath.Join(testDataDir, "warc", "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz"),
 }
 
 var tests = []struct {
@@ -79,7 +79,7 @@ func TestIterator(t *testing.T) {
 			test.iterator.WarcFileReader = warcFileReader
 
 			// run iterator
-			go test.iterator.Iterate(context.Background())
+			go test.iterator.iterate(context.Background())
 
 			// count records
 			count := 0

@@ -1,5 +1,5 @@
 ---
-date: 2024-02-21T15:43:33+01:00
+date: 2024-09-03T09:54:19+02:00
 title: "warc console"
 slug: warc_console
 url: /cmd/warc_console/
@@ -9,25 +9,23 @@ url: /cmd/warc_console/
 A shell for working with WARC files
 
 ```
-warc console <directory> [flags]
+warc console DIR [flags]
 ```
 
 ### Options
 
 ```
   -h, --help               help for console
-      --suffixes strings   filter files by suffixes (default [.warc,.warc.gz])
+      --suffixes strings   filter files by suffix (default [.warc,.warc.gz])
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --config string           config file. If not set, /etc/xdg/warc, /home/johnh/.config/warc and the current directory will be searched for a file named 'config.yaml'
-      --log-console strings     the kind of log output to write to console. Valid values: info, error, summary, progress (default [progress,summary])
-      --log-file strings        the kind of log output to write to file. Valid values: info, error, summary (default [info,error,summary])
-  -L, --log-file-name string    a file to write log output. Empty for no log file
-      --max-buffer-mem string   the maximum bytes of memory allowed for each buffer before overflowing to disk (default "1MB")
-      --tmpdir string           directory to use for temporary files (default "/tmp")
+      --config string       config file. If not set, $XDG_CONFIG_DIRS, /etc/xdg/warc $XDG_CONFIG_HOME/warc and the current directory will be searched for a file named 'config.yaml'
+  -O, --log-file string     log to file (default "-")
+      --log-format string   log format. Valid values: text, json (default "text")
+      --log-level string    log level. Valid values: debug, info, warn, error (default "info")
 ```
 
 ### SEE ALSO

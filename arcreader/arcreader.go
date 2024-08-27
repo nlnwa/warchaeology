@@ -47,12 +47,14 @@ func (wf *ArcFileReader) Next() (gowarc.WarcRecord, int64, *gowarc.Validation, e
 		}
 	}
 	wf.offset = wf.initialOffset + wf.countingReader.N() - int64(wf.bufferedReader.Buffered())
-	fs, _ := wf.file.Stat()
+	fs, err := wf.file.Stat()
+	if err != nil {
+		return nil, wf.offset, validation, err
+	}
 	if fs.Size() <= wf.offset {
 		wf.offset = 0
 	}
 
-	var err error
 	var recordOffset int64
 	wf.currentRecord, recordOffset, validation, err = wf.warcReader.Unmarshal(wf.bufferedReader)
 	return wf.currentRecord, wf.offset + recordOffset, validation, err

@@ -2,6 +2,8 @@ package warc
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 
 	"github.com/nlnwa/gowarc"
@@ -17,10 +19,21 @@ type Record struct {
 	Validation *gowarc.Validation
 }
 
+func (r Record) Close() error {
+	if r.WarcRecord != nil {
+		return r.WarcRecord.Close()
+	}
+	return nil
+}
+
+type RecordIterator interface {
+	Next() (gowarc.WarcRecord, int64, *gowarc.Validation, error)
+}
+
 // Itetaror is a WARC record iterator
 type Iterator struct {
 	// reader to read WARC records from
-	WarcFileReader *gowarc.WarcFileReader
+	WarcFileReader RecordIterator
 
 	// return only the Nth record (0 for all) after applying filter
 	Nth int
@@ -29,23 +42,29 @@ type Iterator struct {
 	Limit int
 
 	// return only records that match the filter
-	Filter *filter.Filter
+	Filter *filter.RecordFilter
 
 	// channel to send records to
 	Records chan<- Record
 }
 
-// Iterate reads WARC records from the WARC file reader and sends them to the result channel
-func (iterator Iterator) Iterate(ctx context.Context) {
-	// Assert that the required fields are set
-	if iterator.WarcFileReader == nil {
-		panic("WarcFileReader is nil")
+func NewIterator(ctx context.Context, reader RecordIterator, filter *filter.RecordFilter, nth, limit int) <-chan Record {
+	records := make(chan Record)
+	iterator := Iterator{
+		WarcFileReader: reader,
+		Filter:         filter,
+		Nth:            nth,
+		Limit:          limit,
+		Records:        records,
 	}
-	if iterator.Records == nil {
-		panic("Result channel is nil")
-	}
+	go iterator.iterate(ctx)
 
-	defer close(iterator.Records)
+	return records
+}
+
+// Iterate reads WARC records from the WARC file reader and sends them to the result channel
+func (iter Iterator) iterate(ctx context.Context) {
+	defer close(iter.Records)
 
 	var currentOffset, previousOffset int64
 	var warcRecord, previousWarcRecord gowarc.WarcRecord
@@ -57,8 +76,14 @@ func (iterator Iterator) Iterate(ctx context.Context) {
 	var count int
 
 	for {
+		// check if context is done
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		// return if previous record was the last record
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return
 		}
 
@@ -69,7 +94,7 @@ func (iterator Iterator) Iterate(ctx context.Context) {
 		previousOffset = currentOffset
 
 		// read next record
-		warcRecord, currentOffset, validation, err = iterator.WarcFileReader.Next()
+		warcRecord, currentOffset, validation, err = iter.WarcFileReader.Next()
 
 		if !skippedFirst {
 			// we delay sending the first record to be able to calculate record size
@@ -90,12 +115,12 @@ func (iterator Iterator) Iterate(ctx context.Context) {
 			select {
 			case <-ctx.Done():
 				return
-			case iterator.Records <- record:
+			case iter.Records <- record:
 			}
 			return
 		}
 
-		if iterator.Filter != nil && !iterator.Filter.Accept(record.WarcRecord) {
+		if iter.Filter != nil && !iter.Filter.Accept(record.WarcRecord) {
 			continue
 		}
 
@@ -103,22 +128,35 @@ func (iterator Iterator) Iterate(ctx context.Context) {
 		count++
 
 		// if there was a Nth record specified, skip until we reach it
-		if iterator.Nth > 0 && count != iterator.Nth {
+		if iter.Nth > 0 && count != iter.Nth {
 			continue
 		}
 
 		select {
 		case <-ctx.Done():
 			return
-		case iterator.Records <- record:
+		case iter.Records <- record:
 			// If there was a Nth record specified, return after sending it
-			if iterator.Nth > 0 {
+			if iter.Nth > 0 {
 				return
 			}
 			// If there was a limit specified, return after limit is reached
-			if iterator.Limit > 0 && count >= iterator.Limit {
+			if iter.Limit > 0 && count >= iter.Limit {
 				return
 			}
 		}
 	}
+}
+
+func Error(record Record, err error) RecordError {
+	return RecordError{Record: record, Err: err}
+}
+
+type RecordError struct {
+	Record Record
+	Err    error
+}
+
+func (e RecordError) Error() string {
+	return fmt.Sprintf("offset: %d: %v", e.Record.Offset, e.Err)
 }

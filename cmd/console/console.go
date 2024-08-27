@@ -2,7 +2,6 @@ package console
 
 import (
 	"errors"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -10,16 +9,24 @@ import (
 
 	"github.com/awesome-gocui/gocui"
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/cmd/internal/flag"
 	"github.com/spf13/cobra"
 )
 
-func NewCommand() *cobra.Command {
+var state = &State{curView: "dir"}
+
+func NewCmdConsole() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:               "console <directory>",
-		Short:             "A shell for working with WARC files",
-		Long:              ``,
-		RunE:              parseArgumentsAndCallConsole,
+		Use:   "console DIR",
+		Short: "A shell for working with WARC files",
+		Long:  ``,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := state.Complete(cmd, args); err != nil {
+				return err
+			}
+			cmd.SilenceUsage = true
+			return Run()
+		},
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
@@ -28,7 +35,10 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func parseArgumentsAndCallConsole(cmd *cobra.Command, args []string) error {
+func (state *State) Complete(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return errors.New("missing input directory")
+	}
 	if len(args) > 0 {
 		state.dir = args[0]
 	}
@@ -52,17 +62,15 @@ func parseArgumentsAndCallConsole(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return runE()
+	return nil
 
 }
 
-var state = &State{curView: "dir"}
-
-func runE() error {
+func Run() error {
 	os.Setenv("COLORTERM", "truecolor")
 	gui, err := gocui.NewGui(gocui.OutputTrue, true)
 	if err != nil {
-		log.Panicln(err)
+		return err
 	}
 	defer gui.Close()
 
@@ -78,10 +86,10 @@ func runE() error {
 	gui.SupportOverlaps = true
 	gui.Mouse = true
 
-	nonWidgets := gocui.ManagerFunc(layout)
+	nonWidgets := gocui.ManagerFunc(state.layout)
 	flowLayout := gocui.ManagerFunc(flowLayout)
 
-	filesWidget := NewListWidget("dir", "Content_error", "Records", readFile, populateFiles)
+	filesWidget := NewListWidget("dir", "Content_error", "Records", state.readFile, populateFiles)
 
 	viewRecordWidget := NewRecordWidget("Content", "Records", "dir")
 
@@ -92,60 +100,60 @@ func runE() error {
 	gui.SetManager(filesWidget, recordsWidget, viewRecordWidget, nonWidgets, flowLayout)
 
 	if err := gui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
-		log.Panicln(err)
+		return err
 	}
 
 	if err := gui.SetKeybinding("", 'e', gocui.ModNone, state.filter.toggleErrorFilter); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := gui.SetKeybinding("help", gocui.MouseLeft, gocui.ModNone, state.filter.mouseToggleFilter); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := gui.SetKeybinding("", 'i', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
 		return state.filter.toggleRecordTypeFilter(gui, gowarc.Warcinfo)
 	}); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := gui.SetKeybinding("", 'q', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
 		return state.filter.toggleRecordTypeFilter(gui, gowarc.Request)
 	}); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := gui.SetKeybinding("", 'r', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
 		return state.filter.toggleRecordTypeFilter(gui, gowarc.Response)
 	}); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := gui.SetKeybinding("", 'm', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
 		return state.filter.toggleRecordTypeFilter(gui, gowarc.Metadata)
 	}); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := gui.SetKeybinding("", 's', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
 		return state.filter.toggleRecordTypeFilter(gui, gowarc.Resource)
 	}); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := gui.SetKeybinding("", 'v', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
 		return state.filter.toggleRecordTypeFilter(gui, gowarc.Revisit)
 	}); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := gui.SetKeybinding("", 'c', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
 		return state.filter.toggleRecordTypeFilter(gui, gowarc.Continuation)
 	}); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := gui.SetKeybinding("", 'n', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
 		return state.filter.toggleRecordTypeFilter(gui, gowarc.Conversion)
 	}); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := gui.SetKeybinding("", 'h', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
 		shortcutHelpWidget := NewShortcutHelpWidget()
 		return shortcutHelpWidget.Layout(gui)
 	}); err != nil {
-		log.Panicln(err)
+		return err
 	}
 
 	state.records = recordsWidget
@@ -154,7 +162,7 @@ func runE() error {
 		var err error
 		state.dir, err = os.Getwd()
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 	time.AfterFunc(100*time.Millisecond, func() {
@@ -162,7 +170,7 @@ func runE() error {
 	})
 
 	if err := gui.MainLoop(); err != nil && !errors.Is(err, gocui.ErrQuit) {
-		panic(err)
+		return err
 	}
 	return nil
 }
@@ -195,7 +203,7 @@ func flowLayout(gui *gocui.Gui) error {
 	return nil
 }
 
-func layout(gui *gocui.Gui) error {
+func (state *State) layout(gui *gocui.Gui) error {
 	maxX, maxY := gui.Size()
 
 	if view, err := gui.SetView("help", 0, maxY-2, maxX, maxY, 0); err != nil {
@@ -222,7 +230,7 @@ func quit(gui *gocui.Gui, v *gocui.View) error {
 	return gocui.ErrQuit
 }
 
-func readFile(gui *gocui.Gui, widget *ListWidget) {
+func (state *State) readFile(gui *gocui.Gui, widget *ListWidget) {
 	if len(widget.filteredRecords) > 0 {
 		state.file = widget.filteredRecords[widget.selected].(string)
 		state.records.Init(gui, state.dir+"/"+state.file)

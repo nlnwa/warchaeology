@@ -11,179 +11,318 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"log/slog"
 	"os"
 	"os/signal"
-	"path"
-	"runtime"
+	"path/filepath"
+	"sync"
 	"syscall"
 
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/cmd/internal/flag"
+	"github.com/nlnwa/warchaeology/cmd/internal/log"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
-	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/filter"
 	"github.com/nlnwa/warchaeology/internal/hooks"
+	"github.com/nlnwa/warchaeology/internal/index"
+	"github.com/nlnwa/warchaeology/internal/stat"
+	"github.com/nlnwa/warchaeology/internal/warc"
+	"github.com/nlnwa/warchaeology/internal/workerpool"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-type conf struct {
-	files               []string
-	warcDir             string
+const (
+	CalculateHash     = "calculate-hash"
+	CalculateHashHelp = `calculate hash of output file. The hash is made available to the close output file hook as WARC_HASH. Valid values: md5, sha1, sha256, sha512`
+)
+
+type ValidateOptions struct {
+	paths               []string
+	outputDir           string
+	concurrency         int
+	recordNum           int
+	recordCount         int
+	hashFunction        string
+	FileIndex           *index.FileIndex
+	filter              *filter.RecordFilter
+	FileWalker          *filewalker.FileWalker
+	warcRecordOptions   []gowarc.WarcRecordOption
+	openInputFileHook   hooks.OpenInputFileHook
+	CloseInputFileHook  hooks.CloseInputFileHook
 	openOutputFileHook  hooks.OpenOutputFileHook
 	closeOutputFileHook hooks.CloseOutputFileHook
 }
 
-var config conf
+type ValidateFlags struct {
+	FileWalkerFlags       flag.FileWalkerFlags
+	FilterFlags           flag.FilterFlags
+	WarcRecordOptionFlags flag.WarcRecordOptionFlags
+	IndexFlags            flag.IndexFlags
+	OutputHookFlags       flag.OutputHookFlags
+	InputHookFlags        flag.InputHookFlags
+	ConcurrencyFlags      flag.ConcurrencyFlags
+}
 
-func NewCommand() *cobra.Command {
+func (f ValidateFlags) AddFlags(cmd *cobra.Command) {
+	f.FileWalkerFlags.AddFlags(cmd)
+	f.FilterFlags.AddFlags(cmd)
+	f.IndexFlags.AddFlags(cmd)
+	f.WarcRecordOptionFlags.AddFlags(cmd)
+	f.OutputHookFlags.AddFlags(cmd)
+	f.InputHookFlags.AddFlags(cmd)
+	f.ConcurrencyFlags.AddFlags(cmd)
+
+	cmd.Flags().String(CalculateHash, "", CalculateHashHelp)
+	cmd.Flags().StringP(flag.OutputDir, "o", "", "output directory for validated warc files. If not empty this enables copying of input file. Directory must exist.")
+}
+
+func (f ValidateFlags) OutputDir() string {
+	return viper.GetString(flag.OutputDir)
+}
+
+func (f ValidateFlags) HashFunction() string {
+	return viper.GetString(CalculateHash)
+}
+
+func (f ValidateFlags) ToOptions() (*ValidateOptions, error) {
+	filter, err := f.FilterFlags.ToFilter()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create filter: %w", err)
+	}
+	fileList, err := flag.ReadSrcFileList(f.FileWalkerFlags.SrcFileListFlags.SrcFileList())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read from source file: %w", err)
+	}
+	fileWalker, err := f.FileWalkerFlags.ToFileWalker()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create file walker: %w", err)
+	}
+	var fileIndex *index.FileIndex
+	if f.IndexFlags.KeepIndex() {
+		fileIndex, err = f.IndexFlags.ToFileIndex()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create file index: %w", err)
+		}
+	}
+	openInputFileHook, err := f.InputHookFlags.ToOpenInputFileHook()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create open input file hook: %w", err)
+	}
+	closeInputFileHook, err := f.InputHookFlags.ToCloseInputFileHook()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create close input file hook: %w", err)
+	}
+	openOutputFileHook, err := hooks.NewOpenOutputFileHook("validate", f.OutputHookFlags.OpenOutputFileHook())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create open output file hook: %w", err)
+	}
+	closeOutputFileHook, err := hooks.NewCloseOutputFileHook("validate", f.OutputHookFlags.CloseOutputFileHook())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create close output file hook: %w", err)
+	}
+
+	return &ValidateOptions{
+		paths:               fileList,
+		FileWalker:          fileWalker,
+		filter:              filter,
+		hashFunction:        f.HashFunction(),
+		concurrency:         f.ConcurrencyFlags.Concurrency(),
+		outputDir:           f.OutputDir(),
+		warcRecordOptions:   f.WarcRecordOptionFlags.ToWarcRecordOptions(),
+		FileIndex:           fileIndex,
+		openInputFileHook:   openInputFileHook,
+		CloseInputFileHook:  closeInputFileHook,
+		openOutputFileHook:  openOutputFileHook,
+		closeOutputFileHook: closeOutputFileHook,
+	}, nil
+}
+
+func NewCmdValidate() *cobra.Command {
+	flags := ValidateFlags{}
+
 	var cmd = &cobra.Command{
-		Use:               "validate <files/dirs>",
-		Short:             "Validate warc files",
-		Long:              ``,
-		RunE:              parseArgumentsAndCallValidate,
+		Use:   "validate FILE/DIR ...",
+		Short: "Validate WARC files",
+		Long:  ``,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			o, err := flags.ToOptions()
+			if err != nil {
+				return err
+			}
+			err = o.Complete(cmd, args)
+			if err != nil {
+				return err
+			}
+			err = o.Validate()
+			if err != nil {
+				return err
+			}
+			cmd.SilenceUsage = true
+			return o.Run()
+		},
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
 
-	cacheDir, err := os.UserCacheDir()
-	if err != nil {
-		panic(err)
-	}
-
-	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)
-	cmd.Flags().BoolP(flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
-	cmd.Flags().StringSlice(flag.Suffixes, []string{".warc", ".warc.gz"}, flag.SuffixesHelp)
-	cmd.Flags().IntP(flag.Concurrency, "c", int(float32(runtime.NumCPU())*float32(1.5)), flag.ConcurrencyHelp)
-	cmd.Flags().String(flag.SrcFilesystem, "", flag.SrcFilesystemHelp)
-	cmd.Flags().String(flag.SrcFileList, "", flag.SrcFileListHelp)
-	cmd.Flags().BoolP(flag.KeepIndex, "k", false, flag.KeepIndexHelp)
-	cmd.Flags().BoolP(flag.NewIndex, "K", false, flag.NewIndexHelp)
-	cmd.Flags().StringP(flag.IndexDir, "i", cacheDir+"/warc", flag.IndexDirHelp)
-	cmd.Flags().String(flag.OpenInputFileHook, "", flag.OpenInputFileHookHelp)
-	cmd.Flags().String(flag.CloseInputFileHook, "", flag.CloseInputFileHookHelp)
-	cmd.Flags().String(flag.OpenOutputFileHook, "", flag.OpenOutputFileHookHelp)
-	cmd.Flags().String(flag.CloseOutputFileHook, "", flag.CloseOutputFileHookHelp)
-	cmd.Flags().String(flag.WarcDir, "", "output directory for validated warc files. If not empty this enables copying of input file. Directory must exist.")
-	cmd.Flags().String(flag.CalculateHash, "", flag.CalculateHashHelp)
+	flags.AddFlags(cmd)
 
 	return cmd
 }
 
-func parseArgumentsAndCallValidate(cmd *cobra.Command, args []string) error {
+func (o *ValidateOptions) Complete(cmd *cobra.Command, args []string) error {
+	o.paths = append(o.paths, args...)
+	return nil
+}
 
-	if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
+func (o *ValidateOptions) Validate() error {
+	if len(o.paths) == 0 {
 		return errors.New("missing file or directory name")
 	}
-	config.files = args
-	config.warcDir = viper.GetString(flag.WarcDir)
-
-	var err error
-	config.openOutputFileHook, err = hooks.NewOpenOutputFileHook(cmd.Name(), viper.GetString(flag.OpenOutputFileHook))
-	if err != nil {
-		return err
-	}
-
-	config.closeOutputFileHook, err = hooks.NewCloseOutputFileHook(cmd.Name(), viper.GetString(flag.CloseOutputFileHook))
-	if err != nil {
-		return err
-	}
-
-	return runE(cmd.Name())
+	return nil
 }
 
-func runE(cmd string) error {
-	ctx, cancel := context.WithCancel(context.Background())
+func (o *ValidateOptions) Run() error {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
 
-	signalChannel := make(chan os.Signal, 1)
-	signal.Notify(signalChannel, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-signalChannel
-		cancel()
-	}()
+	if o.FileIndex != nil {
+		defer o.FileIndex.Close()
+	}
 
-	fileWalker, err := filewalker.NewFromViper(cmd, config.files, validateFile)
+	closer, err := log.InitLogger(os.Stderr)
 	if err != nil {
 		return err
 	}
-	stats := filewalker.NewStats()
-	return fileWalker.Walk(ctx, stats)
+	defer closer.Close()
+
+	workerPool := workerpool.New(o.concurrency)
+	defer workerPool.CloseWait()
+
+	walkFn := func(fs afero.Fs, path string, err error) error {
+		if err != nil {
+			return err
+		}
+		return workerPool.Submit(ctx, func() {
+			result, err := filewalker.Preposterous(path, o.FileIndex, o.openInputFileHook, o.CloseInputFileHook, func() stat.Result {
+				return o.validateFile(ctx, fs, path)
+			})
+			if errors.Is(err, filewalker.ErrSkipFile) {
+				return
+			}
+			if err != nil {
+				slog.Error(err.Error())
+				return
+			}
+			slog := slog.With("file", path, "errors", result.ErrorCount(), "records", result.Records())
+			if result.ErrorCount() == 0 {
+				slog.Info("Valid")
+			} else {
+				slog.Warn("Invalid")
+			}
+			if result.Fatal() != nil {
+				defer cancel()
+				slog.Error(result.Fatal().Error())
+			}
+			for _, err := range result.Errors() {
+				slog.Error(err.Error())
+			}
+		})
+	}
+
+	for _, path := range o.paths {
+		err := o.FileWalker.Walk(path, walkFn)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func validateFile(fileSystem afero.Fs, file string) filewalker.Result {
-	result := filewalker.NewResult(file)
+func (o *ValidateOptions) validateFile(ctx context.Context, fs afero.Fs, path string) stat.Result {
+	result := stat.NewResult(path)
 	var warcInfoId string
 
-	teeReader, err := newTeeReader(fileSystem, file)
+	teeReader, err := o.newTeeReader(fs, path)
 	if err != nil {
-		result.AddError(err)
+		result.AddError(fmt.Errorf("failed to create tee reader: %w", err))
 		return result
 	}
-
 	defer func() {
 		_ = teeReader.Close(&warcInfoId, result)
 	}()
 
-	warcFileReader, err := gowarc.NewWarcFileReaderFromStream(teeReader, 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
+	warcFileReader, err := gowarc.NewWarcFileReaderFromStream(teeReader, 0, o.warcRecordOptions...)
 	if err != nil {
-		result.AddError(err)
+		result.AddError(fmt.Errorf("failed to create warc file reader: %w", err))
 		return result
 	}
 	defer func() { _ = warcFileReader.Close() }()
 
-	for {
-		warcRecord, currentOffset, validation, err := warcFileReader.Next()
-		if err == io.EOF {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var once sync.Once
+
+	for record := range warc.NewIterator(ctx, warcFileReader, o.filter, o.recordNum, o.recordCount) {
+		handleRecord(record, result)
+		if result.Fatal() != nil {
 			break
 		}
-
-		result.IncrRecords()
-		result.IncrProcessed()
-		if err != nil {
-			result.AddError(fmt.Errorf("rec num: %d, offset: %d, cause: %w", result.Records(), currentOffset, err))
-			break
-		}
-
-		if warcRecord.Type() == gowarc.Warcinfo {
-			warcInfoId = warcRecord.WarcHeader().GetId(gowarc.WarcRecordID)
-		}
-
-		err = warcRecord.ValidateDigest(validation)
-		if err != nil {
-			result.AddError(fmt.Errorf("rec num: %d, offset: %d, cause: %w", result.Records(), currentOffset, err))
-			break
-		}
-
-		if err := warcRecord.Close(); err != nil {
-			*validation = append(*validation, err)
-		}
-
-		if !validation.Valid() {
-			result.AddError(fmt.Errorf("rec num: %d, offset: %d, record: %s, cause: %w", result.Records(), currentOffset, warcRecord, validation))
+		// Capture the WARC Record Id of the first warcinfo record in the file.
+		// It is passed to the close output file hook as an environment variable
+		if record.WarcRecord.Type() == gowarc.Warcinfo {
+			once.Do(func() {
+				warcInfoId = record.WarcRecord.WarcHeader().GetId(gowarc.WarcRecordID)
+			})
 		}
 	}
 	return result
 }
 
-type teeReader struct {
-	io.Reader
-	r              afero.File
-	w              *os.File
-	inputFileName  string
-	outputFileName string
+func handleRecord(record warc.Record, result stat.Result) {
+	defer record.Close()
+
+	result.IncrRecords()
+	result.IncrProcessed()
+
+	if record.Err != nil {
+		// a record iterator error is fatal because it is not possible to continue processing the file
+		result.SetFatal(warc.Error(record, record.Err))
+		return
+	}
+	if !record.Validation.Valid() {
+		result.AddError(warc.Error(record, record.Validation))
+	}
+	if err := record.WarcRecord.ValidateDigest(record.Validation); err != nil {
+		result.SetFatal(warc.Error(record, record.Err))
+		return
+	}
 }
 
-func newTeeReader(fs afero.Fs, file string) (*teeReader, error) {
+type teeReader struct {
+	io.Reader
+	r                   afero.File
+	w                   *os.File
+	inputFileName       string
+	outputFileName      string
+	closeOutputFileHook hooks.CloseOutputFileHook
+}
+
+func (o *ValidateOptions) newTeeReader(fs afero.Fs, file string) (*teeReader, error) {
 	f, err := fs.Open(file)
 	if err != nil {
 		return nil, err
 	}
 	teeReader := &teeReader{
-		r:             f,
-		inputFileName: file,
+		r:                   f,
+		inputFileName:       file,
+		closeOutputFileHook: o.closeOutputFileHook,
 	}
 
-	if config.warcDir != "" {
-		teeReader.outputFileName = config.warcDir + "/" + path.Base(file)
-		if err := config.openOutputFileHook.WithSrcFileName(file).Run(teeReader.outputFileName); err != nil {
+	if o.outputDir != "" {
+		teeReader.outputFileName = filepath.Join(o.outputDir, filepath.Base(file))
+		if err := o.openOutputFileHook.WithSrcFileName(file).Run(teeReader.outputFileName); err != nil {
 			_ = f.Close()
 			return nil, err
 		}
@@ -197,11 +336,11 @@ func newTeeReader(fs afero.Fs, file string) (*teeReader, error) {
 	} else {
 		teeReader.Reader = f
 	}
-	teeReader.Reader = CountingReader(teeReader.Reader)
+	teeReader.Reader = NewCountingReader(teeReader.Reader, o.hashFunction)
 	return teeReader, nil
 }
 
-func (reader *teeReader) Close(warcInfoId *string, result filewalker.Result) (err error) {
+func (reader *teeReader) Close(warcInfoId *string, result stat.Result) (err error) {
 	if reader.r != nil {
 		_ = reader.r.Close()
 		reader.r = nil
@@ -209,13 +348,11 @@ func (reader *teeReader) Close(warcInfoId *string, result filewalker.Result) (er
 	if reader.w != nil {
 		_ = reader.w.Close()
 
-		if err := config.closeOutputFileHook.
+		return reader.closeOutputFileHook.
 			WithSrcFileName(reader.inputFileName).
 			WithHash(reader.Hash()).
 			WithErrorCount(result.ErrorCount()).
-			Run(reader.outputFileName, reader.Size(), *warcInfoId); err != nil {
-			panic(err)
-		}
+			Run(reader.outputFileName, reader.Size(), *warcInfoId)
 	}
 
 	return
@@ -235,9 +372,9 @@ func (reader *teeReader) Hash() string {
 	return ""
 }
 
-func CountingReader(ioReader io.Reader) io.Reader {
+func NewCountingReader(ioReader io.Reader, hashFunction string) io.Reader {
 	countingReader := &countingReader{Reader: ioReader}
-	switch viper.GetString(flag.CalculateHash) {
+	switch hashFunction {
 	case "md5":
 		countingReader.hash = crypto.MD5.New()
 	case "sha1":

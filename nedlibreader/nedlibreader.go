@@ -15,7 +15,7 @@ import (
 )
 
 type NedlibReader struct {
-	fileSystem        afero.Fs
+	fs                afero.Fs
 	metaFilename      string
 	defaultTime       time.Time
 	warcRecordOptions []gowarc.WarcRecordOption
@@ -24,7 +24,7 @@ type NedlibReader struct {
 
 func NewNedlibReader(fileSystem afero.Fs, metaFilename string, defaultTime time.Time, warcRecordOptions ...gowarc.WarcRecordOption) (*NedlibReader, error) {
 	nedlibReader := &NedlibReader{
-		fileSystem:        fileSystem,
+		fs:                fileSystem,
 		metaFilename:      metaFilename,
 		defaultTime:       defaultTime,
 		warcRecordOptions: warcRecordOptions,
@@ -37,9 +37,11 @@ func (nedlibReader *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Vali
 	if nedlibReader.done {
 		return nil, 0, validation, io.EOF
 	}
-	defer func() { nedlibReader.done = true }()
+	defer func() {
+		nedlibReader.done = true
+	}()
 
-	file, err := nedlibReader.fileSystem.Open(nedlibReader.metaFilename)
+	file, err := nedlibReader.fs.Open(nedlibReader.metaFilename)
 	if err != nil {
 		return nil, 0, validation, err
 	}
@@ -107,13 +109,13 @@ func (nedlibReader *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Vali
 		return nil, 0, validation, err
 	}
 
-	metaFile, err := nedlibReader.fileSystem.Open(strings.TrimSuffix(nedlibReader.metaFilename, ".meta"))
+	payloadFile, err := nedlibReader.fs.Open(strings.TrimSuffix(nedlibReader.metaFilename, ".meta"))
 	if err != nil {
 		return nil, 0, validation, err
 	}
-	defer func() { _ = metaFile.Close() }()
+	defer func() { _ = payloadFile.Close() }()
 
-	if _, err = warcRecordBuilder.ReadFrom(metaFile); err != nil {
+	if _, err = warcRecordBuilder.ReadFrom(payloadFile); err != nil {
 		return nil, 0, validation, err
 	}
 

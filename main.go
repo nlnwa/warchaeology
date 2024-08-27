@@ -1,23 +1,22 @@
 package main
 
 import (
-	"runtime"
-
 	"github.com/nlnwa/warchaeology/cmd"
-	"github.com/nlnwa/warchaeology/internal/cmdversion"
+	cmdversion "github.com/nlnwa/warchaeology/internal/version"
 )
 
-// Overridden by ldflags
 var (
-	version = "dev"
+	version = "dirty"
 	commit  = "none"
+	date    = "unknown"
 )
 
 func main() {
-	runtime.GOMAXPROCS(128)
-	c := cmd.NewCommand()
-	cmdversion.SetVersion(c.Name(), version, commit)
-	c.SetVersionTemplate(`{{printf "%s\n" .Version}}`)
-	c.Version = cmdversion.CmdVersion()
-	_ = c.Execute()
+	cmd := cmd.NewWarcCommand()
+
+	cmdversion.Set(version, commit, date)
+	cmd.Version = cmdversion.Version.GitVersion
+	cmd.SetVersionTemplate(`{{printf "%s\n" .Version}}`)
+
+	_ = cmd.Execute()
 }

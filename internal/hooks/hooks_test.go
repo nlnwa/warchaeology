@@ -42,8 +42,6 @@ func TestOpenInputFileHook(t *testing.T) {
 				} else {
 					assert.NoError(t, err)
 				}
-			} else {
-				assert.NoError(t, err)
 			}
 
 			out, err := h.Output(tt.fileName)

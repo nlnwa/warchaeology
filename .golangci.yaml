@@ -28,7 +28,6 @@ linters:
     - containedctx
     - cyclop
     - depguard
-    - errname
     - errorlint
     - err113
     - exhaustive

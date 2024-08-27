@@ -1,3 +1,6 @@
+# Default binary
+warchaeology
+
 # Binaries for programs and plugins
 *.exe
 *.exe~

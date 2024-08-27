@@ -1,0 +1,81 @@
+package flag
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+
+	"github.com/nlnwa/warchaeology/internal/index"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+const (
+	NewIndex     = "new-index"
+	NewIndexHelp = `true to start from a fresh index, deleting eventual index from last run`
+
+	KeepIndex     = "keep-index"
+	KeepIndexHelp = `true to keep index on disk so that the next run will continue where the previous run left off`
+
+	IndexDir     = "index-dir"
+	IndexDirHelp = `directory to store indexes`
+)
+
+type IndexFlags struct {
+	name string
+}
+
+func WithDefaultIndexSubDir(name string) func(*IndexFlags) {
+	return func(f *IndexFlags) {
+		f.name = name
+	}
+}
+
+func (f IndexFlags) AddFlags(cmd *cobra.Command, options ...func(*IndexFlags)) {
+	// Set GOMAXPROCS to 128 as recommended by badger
+	runtime.GOMAXPROCS(128)
+
+	for _, option := range options {
+		option(&f)
+	}
+
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		panic(fmt.Errorf("failed to get user cache dir: %v", err))
+	}
+
+	cacheDir = filepath.Join(cacheDir, f.name)
+	if f.name == "" {
+		cacheDir = filepath.Join(cacheDir, "index")
+	}
+
+	flags := cmd.Flags()
+	flags.BoolP(KeepIndex, "k", false, KeepIndexHelp)
+	flags.BoolP(NewIndex, "K", false, NewIndexHelp)
+	flags.String(IndexDir, cacheDir, IndexDirHelp)
+
+	if err := cmd.MarkFlagDirname(IndexDir); err != nil {
+		panic(err)
+	}
+}
+
+func (f IndexFlags) IndexDir() string {
+	return viper.GetString(IndexDir)
+}
+
+func (f IndexFlags) KeepIndex() bool {
+	return viper.GetBool(KeepIndex)
+}
+
+func (f IndexFlags) NewIndex() bool {
+	return viper.GetBool(NewIndex)
+}
+
+func (f IndexFlags) ToDigestIndex() (*index.DigestIndex, error) {
+	return index.NewDigestIndex(f.IndexDir(), f.name, f.KeepIndex(), f.NewIndex())
+}
+
+func (f IndexFlags) ToFileIndex() (*index.FileIndex, error) {
+	return index.NewFileIndex(f.IndexDir(), f.name, f.KeepIndex(), f.NewIndex())
+}

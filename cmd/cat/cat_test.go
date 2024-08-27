@@ -15,14 +15,14 @@ import (
 	"github.com/nlnwa/warchaeology/internal/warc"
 )
 
-const (
-	testDataDir = "../../testdata"
+var (
+	testDataDir = filepath.Join("..", "..", "testdata")
 )
 
 var testFiles = map[string]string{
-	"empty":              filepath.Join(testDataDir, "empty.warc"),
-	"single-record":      filepath.Join(testDataDir, "single-record.warc"),
-	"samsung-with-error": filepath.Join(testDataDir, "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz"),
+	"empty":              filepath.Join(testDataDir, "warc", "empty.warc"),
+	"single-record":      filepath.Join(testDataDir, "warc", "single-record.warc"),
+	"samsung-with-error": filepath.Join(testDataDir, "warc", "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz"),
 }
 
 // TestWriteWarcRecord tests the writeWarcRecord function.
@@ -104,15 +104,8 @@ func TestWriteWarcRecord(t *testing.T) {
 				}
 			}
 
-			records := make(chan warc.Record)
-
-			go warc.Iterator{
-				WarcFileReader: warcFileReader,
-				Records:        records,
-			}.Iterate(context.Background())
-
 			// print everything
-			catConfig := &config{
+			catWriter := &writer{
 				showWarcHeader:     true,
 				showProtocolHeader: true,
 				showPayload:        true,
@@ -121,12 +114,12 @@ func TestWriteWarcRecord(t *testing.T) {
 			got := new(bytes.Buffer)
 			var currentOffset int64
 
-			for record := range records {
+			for record := range warc.NewIterator(context.Background(), warcFileReader, nil, 0, 0) {
 				if record.Err != nil {
 					break
 				}
 
-				err := writeWarcRecord(got, record.WarcRecord, catConfig)
+				err := catWriter.writeWarcRecord(got, record.WarcRecord)
 				if err != nil {
 					t.Errorf("writeWarcRecord() error = %v", err)
 				}
