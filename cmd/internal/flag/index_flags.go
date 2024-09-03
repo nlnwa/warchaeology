@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/nlnwa/warchaeology/internal/index"
+	"github.com/nlnwa/warchaeology/v3/internal/index"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/filter"
+	"github.com/nlnwa/warchaeology/v3/internal/filter"
 )
 
 // Record represents a WARC record with additional metadata

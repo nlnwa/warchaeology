@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/nlnwa/warchaeology/cmd/internal/flag"
+	"github.com/nlnwa/warchaeology/v3/cmd/internal/flag"
 )
 
 func getWriter(w io.WriteCloser) (io.WriteCloser, error) {

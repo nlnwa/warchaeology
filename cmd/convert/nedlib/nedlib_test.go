@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
+	"github.com/nlnwa/warchaeology/v3/internal/warcwriterconfig"
 	"github.com/spf13/afero"
 )
 

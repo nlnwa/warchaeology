@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/filter"
+	"github.com/nlnwa/warchaeology/v3/internal/filter"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

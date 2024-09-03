@@ -7,7 +7,7 @@ import (
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/util"
+	"github.com/nlnwa/warchaeology/v3/internal/util"
 )
 
 const minIndexDiskFree = 1 * 1024 * 1024
