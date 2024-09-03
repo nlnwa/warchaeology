@@ -1,5 +1,6 @@
 package filewalker
 
+/*
 import (
 	"fmt"
 	"strings"
@@ -9,7 +10,7 @@ import (
 	workerPool "github.com/nlnwa/warchaeology/internal/workerpool"
 )
 
-func closePool(walker *fileWalker, pool *workerPool.WorkerPool, resultChan chan Result, allResults *sync.WaitGroup, startTime time.Time, stats Stats) {
+func closePool(walker *FileWalker, pool *workerPool.WorkerPool, resultChan chan filewalker.Result, allResults *sync.WaitGroup, startTime time.Time, stats filewalker.Stats) {
 	pool.CloseWait()
 	resultChan <- nil
 	allResults.Wait()
@@ -21,7 +22,7 @@ func closePool(walker *fileWalker, pool *workerPool.WorkerPool, resultChan chan 
 	}
 }
 
-func printResultsAndProgress(walker *fileWalker, resultChan chan Result, allResults *sync.WaitGroup, stats Stats) {
+func printResultsAndProgress(walker *FileWalker, resultChan chan filewalker.Result, allResults *sync.WaitGroup, stats filewalker.Stats) {
 	count := 0
 	for {
 		result := <-resultChan
@@ -51,23 +52,11 @@ func printResultsAndProgress(walker *fileWalker, resultChan chan Result, allResu
 	}
 }
 
-func (walker *fileWalker) hasSuffix(path string) bool {
-	if walker.suffixes == nil || len(walker.suffixes) == 0 {
-		return true
-	}
-	for _, suffix := range walker.suffixes {
-		if strings.HasSuffix(path, suffix) {
-			return true
-		}
-	}
-	return false
-}
-
-func (walker *fileWalker) isLog(log logType) bool {
+func (walker *FileWalker) isLog(log logType) bool {
 	return walker.logConsoleTypes&log != 0 || walker.logFile != nil && walker.logfileTypes&log != 0
 }
 
-func (walker *fileWalker) logSummary(str string) {
+func (walker *FileWalker) logSummary(str string) {
 	if walker.logConsoleTypes&summaryLogType != 0 {
 		fmt.Println(str)
 	}
@@ -76,7 +65,7 @@ func (walker *fileWalker) logSummary(str string) {
 	}
 }
 
-func (walker *fileWalker) logInfo(res Result, recNum int) {
+func (walker *FileWalker) logInfo(res filewalker.Result, recNum int) {
 	logString := res.Log(recNum)
 	if walker.logConsoleTypes&infoLogType != 0 {
 		fmt.Println(logString)
@@ -86,7 +75,7 @@ func (walker *fileWalker) logInfo(res Result, recNum int) {
 	}
 }
 
-func (walker *fileWalker) logError(res Result, recordNumber int) {
+func (walker *FileWalker) logError(res filewalker.Result, recordNumber int) {
 	recordNumberLogString := res.Log(recordNumber)
 	errorString := strings.ReplaceAll(res.Error(), "\n", "\n  ")
 	if walker.logConsoleTypes&errorLogType != 0 {
@@ -98,3 +87,4 @@ func (walker *fileWalker) logError(res Result, recordNumber int) {
 		_, _ = fmt.Fprintln(walker.logFile, errorString)
 	}
 }
+*/

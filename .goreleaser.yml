@@ -1,13 +1,10 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
 before:
   hooks:
-    # You may remove this if you don't use go modules.
-    - go mod tidy
-    # you may remove this if you don't need go generate
-    - go generate ./...
-    - ./script/completions.sh
-
+    - mkdir -p completions
+    - sh -c "for sh in bash zsh fish; do go run . completion "$sh" > "completions/warc.$sh"; done"
 
 builds:
   - env:
@@ -76,7 +73,7 @@ checksum:
   name_template: 'checksums.txt'
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   use: github-native

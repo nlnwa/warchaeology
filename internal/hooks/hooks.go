@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -30,14 +31,13 @@ type OpenInputFileHook struct {
 // returns an OpenInputFileHook or ErrCommandNotFound if the hook command is not found
 func NewOpenInputFileHook(cmd, hook string) (OpenInputFileHook, error) {
 	if !checkExists(hook) {
-		return OpenInputFileHook{}, ErrCommandNotFound{"OpenInputFile", hook}
+		return OpenInputFileHook{}, CommandNotFoundError{"OpenInputFile", hook}
 	}
 
-	h := OpenInputFileHook{
+	return OpenInputFileHook{
 		hook: hook,
 		cmd:  cmd,
-	}
-	return h, nil
+	}, nil
 }
 
 func (h OpenInputFileHook) Run(fileName string) error {
@@ -87,7 +87,7 @@ type CloseInputFileHook struct {
 // returns a CloseInputFileHook or ErrCommandNotFound if the hook command is not found
 func NewCloseInputFileHook(cmd, hook string) (CloseInputFileHook, error) {
 	if !checkExists(hook) {
-		return CloseInputFileHook{}, ErrCommandNotFound{"CloseInputFile", hook}
+		return CloseInputFileHook{}, CommandNotFoundError{"CloseInputFile", hook}
 	}
 
 	h := CloseInputFileHook{
@@ -153,7 +153,7 @@ type OpenOutputFileHook struct {
 // returns an OpenOutputFileHook or ErrCommandNotFound if the hook command is not found
 func NewOpenOutputFileHook(cmd, hook string) (OpenOutputFileHook, error) {
 	if !checkExists(hook) {
-		return OpenOutputFileHook{}, ErrCommandNotFound{"OpenOutputFile", hook}
+		return OpenOutputFileHook{}, CommandNotFoundError{"OpenOutputFile", hook}
 	}
 
 	h := OpenOutputFileHook{
@@ -218,7 +218,7 @@ type CloseOutputFileHook struct {
 // returns a CloseOutputFileHook or ErrCommandNotFound if the hook command is not found
 func NewCloseOutputFileHook(cmd, hook string) (CloseOutputFileHook, error) {
 	if !checkExists(hook) {
-		return CloseOutputFileHook{}, ErrCommandNotFound{"CloseOutputFile", hook}
+		return CloseOutputFileHook{}, CommandNotFoundError{"CloseOutputFile", hook}
 	}
 
 	h := CloseOutputFileHook{
@@ -296,13 +296,13 @@ func checkExists(command string) bool {
 	return err == nil
 }
 
-type ErrCommandNotFound struct {
+type CommandNotFoundError struct {
 	hookType string
 	command  string
 }
 
-func (e ErrCommandNotFound) Error() string {
+func (e CommandNotFoundError) Error() string {
 	return fmt.Sprintf("executable file '%s' not found in $PATH for %sHook", e.command, e.hookType)
 }
 
-var ErrSkipFile = fmt.Errorf("skip file")
+var ErrSkipFile = errors.New("skip file")

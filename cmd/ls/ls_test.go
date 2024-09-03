@@ -1,35 +1,57 @@
 package ls
 
 import (
-	"os"
+	"bytes"
+	"context"
 	"path/filepath"
 	"testing"
 
-	"github.com/nlnwa/warchaeology/internal/filter"
+	"github.com/nlnwa/gowarc"
 	"github.com/spf13/afero"
 )
 
-func TestConfigReadFileWithError(t *testing.T) {
-	testDataDir := filepath.Join("..", "..", "testdata")
-	warcWithErrors := filepath.Join(testDataDir, "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz")
-	config := &conf{}
-	config.filter = filter.NewFromViper()
-	config.files = []string{warcWithErrors}
-	_ = config.readFile(afero.NewOsFs(), warcWithErrors)
+var (
+	testDataDir    = filepath.Join("..", "..", "testdata")
+	warcWithErrors = filepath.Join(testDataDir, "warc", "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz")
+)
+
+func TestListFile(t *testing.T) {
+	got := new(bytes.Buffer)
+
+	fields := ""
+	delimiter := " "
+	writer, err := NewRecordWriter(got, fields, delimiter)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	opts := &ListOptions{
+		writer:            writer,
+		warcRecordOptions: []gowarc.WarcRecordOption{gowarc.WithBufferTmpDir(t.TempDir())},
+	}
+
+	err = opts.listFile(context.TODO(), afero.NewOsFs(), warcWithErrors)
+	if err == nil {
+		t.Error("expected error, got nil")
+	}
 	// TODO: check that the result contains the expected values
 }
 
-func BenchmarkReadFileWithError(b *testing.B) {
-	// Stdout is redirected to /dev/null since the benchmarking tool
-	// `github-action-benchmark` is unable to handle some of the output in the
-	// benchmark result files.
-	os.Stdout = nil
-	testDataDir := filepath.Join("..", "..", "testdata")
-	warcWithErrors := filepath.Join(testDataDir, "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz")
-	config := &conf{}
-	config.filter = filter.NewFromViper()
-	config.files = []string{warcWithErrors}
+func BenchmarkListFile(b *testing.B) {
+	got := new(bytes.Buffer)
+	fields := ""
+	delimiter := " "
+	writer, err := NewRecordWriter(got, fields, delimiter)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	opts := &ListOptions{
+		writer:            writer,
+		warcRecordOptions: []gowarc.WarcRecordOption{gowarc.WithBufferTmpDir(b.TempDir())},
+	}
+
 	for i := 0; i < b.N; i++ {
-		_ = config.readFile(afero.NewOsFs(), warcWithErrors)
+		_ = opts.listFile(context.TODO(), afero.NewOsFs(), warcWithErrors)
 	}
 }

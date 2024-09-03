@@ -4,90 +4,73 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
+	"log/slog"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
-	"time"
 
 	"github.com/nlnwa/gowarc"
 	"github.com/nlnwa/warchaeology/arcreader"
-	"github.com/nlnwa/warchaeology/internal/cmdversion"
+	"github.com/nlnwa/warchaeology/cmd/internal/flag"
+	"github.com/nlnwa/warchaeology/cmd/internal/log"
 	"github.com/nlnwa/warchaeology/internal/filewalker"
-	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/hooks"
+	"github.com/nlnwa/warchaeology/internal/index"
+	"github.com/nlnwa/warchaeology/internal/stat"
+	"github.com/nlnwa/warchaeology/internal/util"
+	"github.com/nlnwa/warchaeology/internal/version"
+	"github.com/nlnwa/warchaeology/internal/warc"
 	"github.com/nlnwa/warchaeology/internal/warcwriterconfig"
+	"github.com/nlnwa/warchaeology/internal/workerpool"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-type conf struct {
-	files       []string
-	concurrency int
-	writerConf  *warcwriterconfig.WarcWriterConfig
+type ConvertArcOptions struct {
+	Paths              []string
+	Concurrency        int
+	MinWARCDiskFree    int64
+	WarcWriterConfig   *warcwriterconfig.WarcWriterConfig
+	WarcRecordOptions  []gowarc.WarcRecordOption
+	FileWalker         *filewalker.FileWalker
+	FileIndex          *index.FileIndex
+	OpenInputFileHook  hooks.OpenInputFileHook
+	CloseInputFileHook hooks.CloseInputFileHook
 }
 
-func NewCommand() *cobra.Command {
-	var cmd = &cobra.Command{
-		Use:               "arc <files/dirs>",
-		Short:             "Convert arc file into warc file",
-		Long:              ``,
-		RunE:              parseArgumentsAndCallArc,
-		ValidArgsFunction: flag.SuffixCompletionFn,
-	}
-
-	cacheDir, err := os.UserCacheDir()
-	if err != nil {
-		panic(err)
-	}
-
-	cmd.Flags().BoolP(flag.Recursive, "r", false, flag.RecursiveHelp)
-	cmd.Flags().BoolP(flag.FollowSymlinks, "s", false, flag.FollowSymlinksHelp)
-	cmd.Flags().BoolP(flag.KeepIndex, "k", false, flag.KeepIndexHelp)
-	cmd.Flags().BoolP(flag.NewIndex, "K", false, flag.NewIndexHelp)
-	cmd.Flags().StringP(flag.IndexDir, "i", cacheDir+"/warc", flag.IndexDirHelp)
-	cmd.Flags().StringSlice(flag.Suffixes, []string{".arc", ".arc.gz"}, flag.SuffixesHelp)
-	cmd.Flags().IntP(flag.Concurrency, "c", int(float32(runtime.NumCPU())*float32(1.5)), flag.ConcurrencyHelp)
-	cmd.Flags().IntP(flag.ConcurrentWriters, "C", 1, flag.ConcurrentWritersHelp)
-	cmd.Flags().Int64P(flag.FileSize, "S", 1024*1024*1024, flag.FileSizeHelp)
-	cmd.Flags().BoolP(flag.Compress, "z", false, flag.CompressHelp)
-	cmd.Flags().Int(flag.CompressionLevel, 0, flag.CompressionLevelHelp)
-	cmd.Flags().StringP(flag.FilePrefix, "p", "from_arc_", flag.FilePrefixHelp)
-	cmd.Flags().StringP(flag.WarcDir, "w", ".", flag.WarcDirHelp)
-	cmd.Flags().String(flag.SubdirPattern, "", flag.SubdirPatternHelp)
-	cmd.Flags().StringP(flag.NameGenerator, "n", "identity", flag.NameGeneratorHelp)
-	cmd.Flags().Bool(flag.Flush, false, flag.FlushHelp)
-	cmd.Flags().String(flag.WarcVersion, "1.1", flag.WarcVersionHelp)
-	cmd.Flags().StringP(flag.DefaultDate, "t", time.Now().Format(warcwriterconfig.DefaultDateFormat), flag.DefaultDateHelp)
-	cmd.Flags().String(flag.SrcFilesystem, "", flag.SrcFilesystemHelp)
-	cmd.Flags().String(flag.OpenInputFileHook, "", flag.OpenInputFileHookHelp)
-	cmd.Flags().String(flag.CloseInputFileHook, "", flag.CloseInputFileHookHelp)
-	cmd.Flags().String(flag.OpenOutputFileHook, "", flag.OpenOutputFileHookHelp)
-	cmd.Flags().String(flag.CloseOutputFileHook, "", flag.CloseOutputFileHookHelp)
-
-	if err := cmd.RegisterFlagCompletionFunc(flag.NameGenerator,
-		cobra.FixedCompletions([]string{"default", "identity"}, cobra.ShellCompDirectiveNoFileComp)); err != nil {
-		panic(err)
-	}
-
-	return cmd
+type ConvertArcFlags struct {
+	FileWalkerFlags       flag.FileWalkerFlags
+	IndexFlags            flag.IndexFlags
+	WarcWriterConfigFlags flag.WarcWriterConfigFlags
+	WarcRecordOptionFlags flag.WarcRecordOptionFlags
+	OutputHookFlags       flag.OutputHookFlags
+	InputHookFlags        flag.InputHookFlags
+	UtilFlags             flag.UtilFlags
+	ConcurrencyFlags      flag.ConcurrencyFlags
 }
 
-func parseArgumentsAndCallArc(cmd *cobra.Command, args []string) error {
-	config := &conf{}
-	warcRecordWriter, err := warcwriterconfig.NewFromViper(cmd.Name())
+func (f ConvertArcFlags) AddFlags(cmd *cobra.Command) {
+	f.FileWalkerFlags.AddFlags(cmd, flag.WithDefaultSuffixes([]string{".arc", ".arc.gz"}))
+	f.OutputHookFlags.AddFlags(cmd)
+	f.InputHookFlags.AddFlags(cmd)
+	f.WarcWriterConfigFlags.AddFlags(cmd, flag.WithCmdName(cmd.Name()))
+	f.WarcRecordOptionFlags.AddFlags(cmd)
+	f.IndexFlags.AddFlags(cmd, flag.WithDefaultIndexSubDir(cmd.Name()))
+	f.UtilFlags.AddFlags(cmd)
+	f.ConcurrencyFlags.AddFlags(cmd)
+}
+
+func (f ConvertArcFlags) ToConvertArcOptions() (*ConvertArcOptions, error) {
+	warcWriterConfig, err := f.WarcWriterConfigFlags.ToWarcWriterConfig()
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to create warc writer config: %w", err)
 	}
-
-	warcRecordWriter.OneToOneWriter = true
-
-	if warcRecordWriter.OneToOneWriter {
-		warcRecordWriter.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
+	if warcWriterConfig.OneToOneWriter {
+		warcWriterConfig.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
 			payload := &gowarc.WarcFields{}
-			payload.Set("software", cmdversion.SoftwareVersion()+" https://github.com/nlnwa/warchaeology")
-			payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", warcRecordWriter.WarcVersion.Minor(), warcRecordWriter.WarcVersion.Minor()))
+			payload.Set("software", version.SoftwareVersion())
+			payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", warcWriterConfig.WarcVersion.Minor(), warcWriterConfig.WarcVersion.Minor()))
 			payload.Set("description", "Converted from ARC")
 			hostname, errInner := os.Hostname()
 			if errInner != nil {
@@ -100,65 +83,184 @@ func parseArgumentsAndCallArc(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	config.writerConf = warcRecordWriter
-	config.concurrency = viper.GetInt(flag.Concurrency)
+	warcRecordOptions := f.WarcRecordOptionFlags.ToWarcRecordOptions()
+	warcRecordOptions = append(warcRecordOptions,
+		gowarc.WithVersion(warcWriterConfig.WarcVersion),
+		gowarc.WithAddMissingDigest(true),
+	)
 
-	if len(args) == 0 && viper.GetString(flag.SrcFileList) == "" {
-		return errors.New("missing file or directory name")
+	// and we also read paths from a file if the --src-file-fileList flag is set
+	fileList, err := flag.ReadSrcFileList(viper.GetString(flag.SrcFileList))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read from source file: %w", err)
 	}
-	config.files = args
-	return runE(cmd.Name(), config)
 
+	fileWalker, err := f.FileWalkerFlags.ToFileWalker()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create file walker: %w", err)
+	}
+
+	var fileIndex *index.FileIndex
+	if f.IndexFlags.KeepIndex() {
+		fileIndex, err = f.IndexFlags.ToFileIndex()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create file index: %w", err)
+		}
+	}
+
+	return &ConvertArcOptions{
+		Concurrency:       f.ConcurrencyFlags.Concurrency(),
+		WarcWriterConfig:  warcWriterConfig,
+		WarcRecordOptions: warcRecordOptions,
+		FileWalker:        fileWalker,
+		FileIndex:         fileIndex,
+		Paths:             fileList,
+	}, nil
 }
 
-func runE(cmd string, config *conf) error {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewCommand() *cobra.Command {
+	flags := ConvertArcFlags{}
 
-	signalChannel := make(chan os.Signal, 1)
-	signal.Notify(signalChannel, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-signalChannel
-		cancel()
-	}()
+	var cmd = &cobra.Command{
+		Use:   "arc <files/dirs>",
+		Short: "Convert arc file into warc file",
+		Long:  ``,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			o, err := flags.ToConvertArcOptions()
+			if err != nil {
+				return err
+			}
+			err = o.Complete(cmd, args)
+			if err != nil {
+				return err
+			}
+			err = o.Validate()
+			if err != nil {
+				return err
+			}
+			cmd.SilenceUsage = true
+			return o.Run()
+		},
+		ValidArgsFunction: flag.SuffixCompletionFn,
+	}
 
-	defer config.writerConf.Close()
-	fileWalker, err := filewalker.NewFromViper(cmd, config.files, config.readFile)
+	flags.AddFlags(cmd)
+
+	return cmd
+}
+
+func (o *ConvertArcOptions) Complete(cmd *cobra.Command, args []string) error {
+	o.Paths = append(o.Paths, args...)
+	return nil
+}
+
+func (o *ConvertArcOptions) Validate() error {
+	if len(o.Paths) == 0 {
+		return errors.New("missing file or directory name")
+	}
+	return nil
+}
+
+func (o *ConvertArcOptions) Run() error {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
+
+	closer, err := log.InitLogger(os.Stderr)
 	if err != nil {
 		return err
 	}
-	stats := filewalker.NewStats()
-	return fileWalker.Walk(ctx, stats)
+	defer closer.Close()
+
+	if o.FileIndex != nil {
+		defer o.FileIndex.Close()
+	}
+	defer o.WarcWriterConfig.Close()
+
+	workerPool := workerpool.New(o.Concurrency)
+	defer workerPool.CloseWait()
+
+	walkFn := func(fs afero.Fs, path string, err error) error {
+		if err != nil {
+			return err
+		}
+
+		slog := slog.With("path", path)
+
+		return workerPool.Submit(ctx, func() {
+			if o.MinWARCDiskFree > 0 {
+				diskFree := util.DiskFree(o.WarcWriterConfig.OutDir)
+				if diskFree < o.MinWARCDiskFree {
+					slog.Error("not enough space left on device", "space", diskFree, "dir", o.WarcWriterConfig.OutDir)
+					cancel()
+				}
+			}
+
+			result, err := filewalker.Preposterous(path, o.FileIndex, o.OpenInputFileHook, o.CloseInputFileHook, func() stat.Result {
+				return o.readFile(ctx, fs, path)
+			})
+			if errors.Is(err, filewalker.ErrSkipFile) {
+				return
+			}
+			if err != nil {
+				defer cancel()
+				slog.Error(err.Error(), "path", path)
+				return
+			}
+			for _, err := range result.Errors() {
+				slog.Error(err.Error(), "path", path)
+			}
+			if result.Fatal() != nil {
+				defer cancel()
+				slog.Error(result.Fatal().Error(), "path", path)
+			}
+
+		})
+	}
+
+	for _, path := range o.Paths {
+		err := o.FileWalker.Walk(path, walkFn)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (config *conf) readFile(fileSystem afero.Fs, fileName string) filewalker.Result {
-	result := filewalker.NewResult(fileName)
+func (o *ConvertArcOptions) readFile(ctx context.Context, fileSystem afero.Fs, fileName string) stat.Result {
+	result := stat.NewResult(fileName)
 
-	arcFileReader, err := arcreader.NewArcFileReader(fileSystem, fileName, 0,
-		gowarc.WithVersion(config.writerConf.WarcVersion),
-		gowarc.WithAddMissingDigest(true),
-		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)),
-	)
+	arcFileReader, err := arcreader.NewArcFileReader(fileSystem, fileName, 0, o.WarcRecordOptions...)
 	if err != nil {
 		result.AddError(err)
 		return result
 	}
 	defer func() { _ = arcFileReader.Close() }()
 
-	var warcFileWriter *gowarc.WarcFileWriter
-
-	for {
-		var currentOffset int64
-		currentOffset, warcFileWriter, err = handleRecord(config, arcFileReader, fileName, result, warcFileWriter)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			result.AddError(fmt.Errorf("error: %v, rec num: %d, offset %d", err.Error(), result.Records(), currentOffset))
-		}
+	var writer *gowarc.WarcFileWriter
+	if o.WarcWriterConfig.OneToOneWriter {
+		defer func() {
+			if writer != nil {
+				_ = writer.Close()
+			}
+		}()
 	}
 
-	if warcFileWriter != nil {
-		_ = warcFileWriter.Close()
+	for record := range warc.NewIterator(ctx, arcFileReader, nil, 0, 0) {
+		if writer == nil {
+			warcDate := record.WarcRecord.WarcHeader().Get(gowarc.WarcDate)
+			writer, err = o.WarcWriterConfig.GetWarcWriter(fileName, warcDate)
+			if err != nil {
+				result.SetFatal(warc.Error(record, err))
+				break
+			}
+		}
+		o.handleRecord(writer, record, result)
+		if result.Fatal() != nil {
+			break
+		}
+		if !o.WarcWriterConfig.OneToOneWriter {
+			writer = nil
+		}
 	}
 
 	return result
@@ -168,36 +270,20 @@ func (config *conf) readFile(fileSystem afero.Fs, fileName string) filewalker.Re
 // The input parameter writer and output parameter writerOut is only used for identity transformation. In this case there is one writer
 // per file which should be closed by readFile when the file is processed. But since we need the warc date of the first record to open
 // the writer, it must be opened in this function. These parameters are used for giving readFile access to the writer.
-func handleRecord(config *conf, arcFileReader *arcreader.ArcFileReader, fileName string, result filewalker.Result, warcFileWriter *gowarc.WarcFileWriter) (int64, *gowarc.WarcFileWriter, error) {
-	writerOut := warcFileWriter
-
-	warcRecord, offset, validation, err := arcFileReader.Next()
-	defer func() {
-		if warcRecord != nil {
-			_ = warcRecord.Close()
-		}
-	}()
+func (o *ConvertArcOptions) handleRecord(warcFileWriter *gowarc.WarcFileWriter, record warc.Record, result stat.Result) {
+	defer record.Close()
 
 	result.IncrRecords()
 	result.IncrProcessed()
-	if err != nil {
-		return offset, writerOut, err
-	}
-	if !validation.Valid() {
-		fmt.Println(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), offset, validation))
-		result.AddError(fmt.Errorf("info: found problem in rec num: %d, offset %d: %s", result.Records(), offset, validation))
-	}
 
-	if warcFileWriter == nil {
-		warcFileWriter = config.writerConf.GetWarcWriter(fileName, warcRecord.WarcHeader().Get(gowarc.WarcDate))
-		if config.writerConf.OneToOneWriter {
-			writerOut = warcFileWriter
-		}
+	if record.Err != nil {
+		result.SetFatal(warc.Error(record, record.Err))
+		return
 	}
-	if writeResponse := warcFileWriter.Write(warcRecord); writeResponse != nil && writeResponse[0].Err != nil {
-		fmt.Printf("Offset: %d\n", offset)
-		_, _ = warcRecord.WarcHeader().Write(os.Stdout)
-		panic(writeResponse[0].Err)
+	if !record.Validation.Valid() {
+		result.AddError(warc.Error(record, record.Validation))
 	}
-	return offset, writerOut, err
+	if writeResponse := warcFileWriter.Write(record.WarcRecord); len(writeResponse) > 0 && writeResponse[0].Err != nil {
+		result.SetFatal(warc.Error(record, writeResponse[0].Err))
+	}
 }

@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/afero"
 )
 
-const (
-	testDataDir = "../testdata"
+var (
+	testDataDir = filepath.Join("..", "testdata")
 )
 
 var testFiles = map[string]string{
@@ -63,7 +63,7 @@ func TestNedlibReader(t *testing.T) {
 			}
 
 			nedlibReader := &NedlibReader{
-				fileSystem:        afero.NewReadOnlyFs(afero.NewOsFs()),
+				fs:                afero.NewReadOnlyFs(afero.NewOsFs()),
 				metaFilename:      testFile,
 				defaultTime:       time.Time{},
 				warcRecordOptions: nil,

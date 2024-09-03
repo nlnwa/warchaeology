@@ -2,6 +2,7 @@ package aart
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"image"
@@ -11,102 +12,139 @@ import (
 	_ "image/png"
 	"io"
 	"os"
-	"strconv"
 
 	"github.com/nfnt/resize"
 	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/warchaeology/cmd/internal/flag"
 	"github.com/nlnwa/warchaeology/internal/filter"
-	"github.com/nlnwa/warchaeology/internal/flag"
+	"github.com/nlnwa/warchaeology/internal/warc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-type conf struct {
-	offset    int64
-	recordNum int
-	filter    *filter.Filter
+type AartOptions struct {
+	offset            int64
+	recordNum         int
+	recordCount       int
+	filter            *filter.RecordFilter
+	fileName          string
+	warcRecordOptions []gowarc.WarcRecordOption
+	width             int
 }
 
-func NewCommand() *cobra.Command {
-	var cmd = &cobra.Command{
+type AartFlags struct {
+	FilterFlags           flag.FilterFlags
+	WarcIteratorFlags     flag.WarcIteratorFlags
+	WarcRecordOptionFlags flag.WarcRecordOptionFlags
+}
+
+func (f AartFlags) AddFlags(cmd *cobra.Command) {
+	f.FilterFlags.AddFlags(cmd, flag.WithDefaultMimeType([]string{"image/jpeg", "image/png", "image/gif"}))
+	f.WarcIteratorFlags.AddFlags(cmd)
+	f.WarcRecordOptionFlags.AddFlags(cmd)
+
+	cmd.Flags().IntP("width", "w", 100, "Width of image")
+}
+
+func (f AartFlags) Width() int {
+	return viper.GetInt("width")
+}
+
+func (f AartFlags) ToOptions() (*AartOptions, error) {
+	filter, err := f.FilterFlags.ToFilter()
+	if err != nil {
+		return nil, err
+	}
+
+	warcRecordOptions := f.WarcRecordOptionFlags.ToWarcRecordOptions()
+
+	return &AartOptions{
+		filter:            filter,
+		offset:            f.WarcIteratorFlags.Offset(),
+		recordNum:         f.WarcIteratorFlags.RecordNum(),
+		recordCount:       f.WarcIteratorFlags.Limit(),
+		width:             f.Width(),
+		warcRecordOptions: warcRecordOptions,
+	}, nil
+}
+
+func NewCmdAart() *cobra.Command {
+	flags := AartFlags{}
+
+	cmd := &cobra.Command{
 		Use:    "aart",
 		Short:  "Show images",
 		Long:   ``,
 		Hidden: true,
-		RunE:   parseArgumentsAndCallAsciiArt}
+		RunE: func(cmd *cobra.Command, args []string) error {
+			o, err := flags.ToOptions()
+			if err != nil {
+				return err
+			}
+			err = o.Complete(cmd, args)
+			if err != nil {
+				return err
+			}
+			err = o.Validate()
+			if err != nil {
+				return err
+			}
+			cmd.SilenceUsage = true
+			return o.Run()
+		},
+	}
 
-	cmd.Flags().IntP("width", "w", 100, "Width of image")
+	flags.AddFlags(cmd)
 
 	return cmd
 }
 
-func parseArgumentsAndCallAsciiArt(cmd *cobra.Command, args []string) error {
-	config := &conf{}
-	if len(args) == 0 {
-		return errors.New("missing file name")
-	}
-	fileName := args[0]
-	config.offset = viper.GetInt64(flag.Offset)
-	config.recordNum = viper.GetInt(flag.RecordNum)
+func (o *AartOptions) Complete(cmd *cobra.Command, args []string) error {
+	o.fileName = args[0]
 
-	if config.offset < 0 {
-		config.offset = 0
-	}
-
-	viper.Set(flag.MimeType, []string{"image/gif", "image/jpeg", "image/png"})
-	config.filter = filter.NewFromViper()
-
-	readFile(config, fileName)
 	return nil
 
 }
+func (o *AartOptions) Validate() error {
+	if len(o.fileName) == 0 {
+		return errors.New("missing file name")
+	}
+	return nil
+}
 
-func readFile(c *conf, fileName string) {
-	wf, err := gowarc.NewWarcFileReader(fileName, c.offset, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
-	defer func() { _ = wf.Close() }()
+func (o *AartOptions) Run() error {
+	wf, err := gowarc.NewWarcFileReader(o.fileName, o.offset, o.warcRecordOptions...)
+	defer func() {
+		if wf != nil {
+			_ = wf.Close()
+		}
+	}()
 	if err != nil {
-		fmt.Printf("Error opening file: %v\n", err)
-		return
+		return fmt.Errorf("failed to create WARC reader: %v", err)
 	}
 
-	num := 0
-	count := 0
-
-	for {
-		wr, _, _, err := wf.Next()
-		if err == io.EOF {
-			break
+	for record := range warc.NewIterator(context.TODO(), wf, o.filter, o.recordNum, o.recordCount) {
+		if record.Err != nil {
+			return fmt.Errorf("failed reading records: %w", record.Err)
 		}
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error: %v, rec num: %v, Offset %v\n", err.Error(), strconv.Itoa(count), c.offset)
-			break
-		}
-
-		if !c.filter.Accept(wr) {
-			continue
-		}
-
-		// Find record number
-		if c.recordNum > 0 && num < c.recordNum {
-			num++
-			continue
-		}
+		wr := record.WarcRecord
 
 		if b, ok := wr.Block().(gowarc.HttpResponseBlock); ok {
 			fmt.Printf("\u001B[2J\u001B[HUrl: %s\n\n", wr.WarcHeader().Get(gowarc.WarcTargetURI))
 			r, err := b.PayloadBytes()
 			if err != nil {
-				fmt.Printf("Error: %v\n", err)
+				fmt.Fprintf(os.Stderr, "Failed to get payload bytes: %v\n", err)
 			}
-			err = display(r, viper.GetInt("width"))
+			err = display(r, o.width)
 			if err != nil {
-				fmt.Println("Couldn't decode image,\nError:", err.Error())
+				fmt.Fprintf(os.Stderr, "Failed to display: %v\n", err)
 				continue
 			}
 			fmt.Printf("Hit enter to continue\n")
 			_, _ = fmt.Scanln()
 		}
 	}
+	return nil
 }
 
 var asciiChar = "MND8OZ$7I?+=~:,.."
@@ -138,7 +176,6 @@ func getHeight(img image.Image, w int) (image.Image, int, int) {
 }
 
 func display(r io.Reader, width int) error {
-
 	img, _, err := image.Decode(r)
 	if err != nil {
 		return err

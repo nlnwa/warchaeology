@@ -3,6 +3,7 @@ package arcreader
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -12,7 +13,7 @@ import (
 
 	"github.com/klauspost/compress/gzip"
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal"
+	mytime "github.com/nlnwa/warchaeology/internal/time"
 )
 
 type unmarshaler struct {
@@ -35,31 +36,32 @@ func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gow
 	isGzip, r, offset, err := u.searchNextRecord(b)
 
 	defer func() {
-		if r != nil {
-			// Discarding 1 byte which makes up the end of record marker (\n)
-			var lf byte = '\n'
-			bb, e := r.Peek(4)
-			if len(bb) == 0 {
-				err = fmt.Errorf("wrong peek: %d, %v", len(bb), e)
-			} else {
-				if len(bb) != 1 || bb[0] != lf || (e != nil && e != io.EOF) {
-					err = fmt.Errorf("wrong peek: %d, %q, %v", len(bb), bb[0], e)
-				}
-				_, _ = r.Discard(1)
+		if r == nil {
+			return
+		}
+		// Discarding 1 byte which makes up the end of record marker (\n)
+		var lf byte = '\n'
+		bb, e := r.Peek(4)
+		if len(bb) == 0 {
+			err = fmt.Errorf("wrong peek: %d, %w", len(bb), e)
+		} else {
+			if len(bb) != 1 || bb[0] != lf || (e != nil && e != io.EOF) {
+				err = fmt.Errorf("wrong peek: %d, %q, %w", len(bb), bb[0], e)
 			}
+			_, _ = r.Discard(1)
+		}
 
-			if isGzip {
-				// Empty gzip reader to ensure gzip checksum is validated
-				b := make([]byte, 10)
-				var err error
-				for err == nil {
-					_, err = u.gz.Read(b)
-					if err == io.EOF || err == io.ErrUnexpectedEOF {
-						return
-					}
+		if isGzip {
+			// Empty gzip reader to ensure gzip checksum is validated
+			b := make([]byte, 10)
+			var err error
+			for err == nil {
+				_, err = u.gz.Read(b)
+				if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+					return
 				}
-				_ = u.gz.Close()
 			}
+			_ = u.gz.Close()
 		}
 	}()
 
@@ -67,12 +69,12 @@ func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gow
 		return nil, offset, validation, err
 	}
 	if err != nil {
-		return nil, offset, validation, fmt.Errorf("Could not parse ARC record: %w", err)
+		return nil, offset, validation, fmt.Errorf("could not parse ARC record: %w", err)
 	}
 
 	l, err := r.ReadString('\n')
 	if err != nil {
-		return nil, 0, nil, fmt.Errorf("Could not parse ARC record: %w", err)
+		return nil, 0, nil, fmt.Errorf("could not parse ARC record: %w", err)
 	}
 
 	var wr gowarc.WarcRecord
@@ -151,13 +153,13 @@ func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRe
 	var read int
 	l2, err := r.ReadString('\n')
 	if err != nil {
-		return nil, nil, fmt.Errorf("Could not parse ARC file header")
+		return nil, nil, fmt.Errorf("could not parse ARC file header")
 	}
 	read += len(l2)
 	i := strings.IndexByte(l2, ' ')
 	v, err := strconv.Atoi(l2[:i])
 	if err != nil {
-		return nil, nil, fmt.Errorf("Could not parse version from ARC file header: %w", err)
+		return nil, nil, fmt.Errorf("could not parse version from ARC file header: %w", err)
 	}
 	u.version = v
 
@@ -173,12 +175,12 @@ func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRe
 			return nil, nil, err
 		}
 	default:
-		return nil, nil, fmt.Errorf("Uknown ARC record version: %d", v)
+		return nil, nil, fmt.Errorf("unknown ARC record version: %d", v)
 	}
 
 	l3, err := r.ReadString('\n')
 	if err != nil {
-		return nil, nil, fmt.Errorf("Could not parse ARC record: %w", err)
+		return nil, nil, fmt.Errorf("could not parse ARC record: %w", err)
 	}
 	read += len(l3)
 	remaining := length - int64(read)
@@ -222,7 +224,7 @@ func (u *unmarshaler) parseRecord(r *bufio.Reader, l1 string) (gowarc.WarcRecord
 			return nil, nil, err
 		}
 	default:
-		return nil, nil, fmt.Errorf("Uknown ARC record version: %d", u.version)
+		return nil, nil, fmt.Errorf("unknown ARC record version: %d", u.version)
 	}
 
 	rb := gowarc.NewRecordBuilder(0, u.opts...)
@@ -250,19 +252,19 @@ func (u *unmarshaler) parseUrlRecordV1(l string) (gowarc.RecordType, string, str
 	reg := regexp.MustCompile(`([^ ]*) ([^ ]*) (\d*) ([^ ]*) (\d*)`)
 	subs := reg.FindStringSubmatch(l)
 	if subs == nil || len(subs) < 4 {
-		return 0, "", "", time.Time{}, "", 0, fmt.Errorf("Could not parse ARC record from: %s", l)
+		return 0, "", "", time.Time{}, "", 0, fmt.Errorf("could not parse ARC record from: %s", l)
 	}
 	url := subs[1]
 	ip := subs[2]
 	d := subs[3]
-	date, err := internal.From14ToTime(d)
+	date, err := mytime.From14ToTime(d)
 	if err != nil {
 		return 0, "", "", time.Time{}, "", 0, err
 	}
 	contentType := subs[4]
 	length, err := strconv.ParseInt(subs[5], 10, 64)
 	if err != nil {
-		return 0, "", "", time.Time{}, "", 0, fmt.Errorf("Could not parse ARC record: %w", err)
+		return 0, "", "", time.Time{}, "", 0, fmt.Errorf("could not parse ARC record: %w", err)
 	}
 
 	recordType := gowarc.Response

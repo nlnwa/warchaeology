@@ -4,10 +4,11 @@ weight: 10
 ---
 
 {{< lead >}}
-Warchaeology is a collection of tools for inspecting, manipulating and validating WARC-files.
+Warchaeology is a command line tool for inspecting, converting, deduplicating and validating WARC-files.
 {{< /lead >}}
 
 ## Features
+
 {{< featuretable >}}
   {{< featureitem icon="fas fa-check" title="Validation" >}}
     Validate that WARC-files conforms to specification.

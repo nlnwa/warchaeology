@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewCommand() *cobra.Command {
+func NewCmdConvert() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "convert",
 		Short: "Convert web archives to warc files. Use subcommands for the supported formats",
@@ -15,7 +15,7 @@ func NewCommand() *cobra.Command {
 	}
 
 	// Subcommands
-	cmd.AddCommand(nedlib.NewCommand())
+	cmd.AddCommand(nedlib.NewCmdConvertNedlib())
 	cmd.AddCommand(arc.NewCommand())
 	cmd.AddCommand(warc.NewCommand())
 

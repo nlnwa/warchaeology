@@ -6,39 +6,51 @@ import (
 )
 
 type WorkerPool struct {
-	numberOfWorkers int
-	jobs            chan func()
-	waitGroup       sync.WaitGroup
+	Jobs        chan<- func()
+	waitGroup   sync.WaitGroup
+	concurrency int
 }
 
-func New(ctx context.Context, numberOfWorkers int) *WorkerPool {
-	magicNumber := 4
+func New(concurrency int) *WorkerPool {
+	jobs := make(chan func(), concurrency)
+
 	pool := &WorkerPool{
-		numberOfWorkers: numberOfWorkers,
-		jobs:            make(chan func(), numberOfWorkers*magicNumber),
-		waitGroup:       sync.WaitGroup{},
+		Jobs:        jobs,
+		concurrency: concurrency,
 	}
-	for workerIndex := 0; workerIndex < numberOfWorkers; workerIndex++ {
-		go func(jobs <-chan func()) {
+
+	for range concurrency {
+		pool.waitGroup.Add(1)
+		go func() {
+			defer pool.waitGroup.Done()
 			for job := range jobs {
-				select {
-				case <-ctx.Done():
-				default:
-					job()
-				}
-				pool.waitGroup.Done()
+				job()
 			}
-		}(pool.jobs)
+		}()
 	}
+
 	return pool
 }
 
 func (pool *WorkerPool) CloseWait() {
-	close(pool.jobs)
+	close(pool.Jobs)
 	pool.waitGroup.Wait()
 }
 
-func (pool *WorkerPool) Submit(job func()) {
-	pool.waitGroup.Add(1)
-	pool.jobs <- job
+func (pool *WorkerPool) Submit(ctx context.Context, fn func()) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+	if pool.concurrency == 0 {
+		fn()
+		return nil
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case pool.Jobs <- fn:
+		return nil
+	}
 }
