@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/nlnwa/warchaeology/cmd"
-	cmdversion "github.com/nlnwa/warchaeology/internal/version"
+	"github.com/nlnwa/warchaeology/v3/cmd"
+	cmdversion "github.com/nlnwa/warchaeology/v3/internal/version"
 )
 
 var (

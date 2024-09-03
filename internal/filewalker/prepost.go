@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/nlnwa/warchaeology/internal/hooks"
-	"github.com/nlnwa/warchaeology/internal/index"
-	"github.com/nlnwa/warchaeology/internal/stat"
+	"github.com/nlnwa/warchaeology/v3/internal/hooks"
+	"github.com/nlnwa/warchaeology/v3/internal/index"
+	"github.com/nlnwa/warchaeology/v3/internal/stat"
 )
 
 // Preposterous runs a function on a file, and handles open and close input file hooks.

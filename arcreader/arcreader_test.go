@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/warc"
+	"github.com/nlnwa/warchaeology/v3/internal/warc"
 	"github.com/spf13/afero"
 )
 

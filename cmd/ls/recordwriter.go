@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/time"
-	"github.com/nlnwa/warchaeology/internal/util"
-	"github.com/nlnwa/warchaeology/internal/warc"
+	"github.com/nlnwa/warchaeology/v3/internal/time"
+	"github.com/nlnwa/warchaeology/v3/internal/util"
+	"github.com/nlnwa/warchaeology/v3/internal/warc"
 )
 
 type JSONWriter struct {

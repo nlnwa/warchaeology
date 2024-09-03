@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	workerPool "github.com/nlnwa/warchaeology/internal/workerpool"
+	workerPool "github.com/nlnwa/warchaeology/v3/internal/workerpool"
 )
 
 func closePool(walker *FileWalker, pool *workerPool.WorkerPool, resultChan chan filewalker.Result, allResults *sync.WaitGroup, startTime time.Time, stats filewalker.Stats) {

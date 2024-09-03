@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/nlnwa/warchaeology/internal/version"
+	"github.com/nlnwa/warchaeology/v3/internal/version"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

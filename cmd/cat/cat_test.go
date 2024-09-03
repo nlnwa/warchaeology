@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/nlnwa/gowarc"
-	"github.com/nlnwa/warchaeology/internal/warc"
+	"github.com/nlnwa/warchaeology/v3/internal/warc"
 )
 
 var (
