@@ -30,6 +30,8 @@ tar zxvf warchaeology_Linux_x86_64.tar.gz
 sudo install warc /usr/local/bin/warc
 ```
 
+For a local installation (only for the current user) execute `install warc $HOME/.local/bin`.
+
 #### Command completion
 
 When using .deb or .rpm packages, command completion is automatically configured.
