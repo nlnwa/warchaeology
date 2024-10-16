@@ -80,7 +80,7 @@ func (f WarcWriterConfigFlags) AddFlags(cmd *cobra.Command, options ...func(*War
 		option(&f)
 	}
 	flags := cmd.Flags()
-	flags.BoolP(Compress, "z", false, CompressHelp)
+	flags.BoolP(Compress, "z", true, CompressHelp)
 	flags.Int(CompressionLevel, gzip.DefaultCompression, CompressionLevelHelp)
 	flags.IntP(ConcurrentWriters, "C", 16, ConcurrentWritersHelp)
 	flags.String(DefaultDate, time.Now().Format(warcwriterconfig.DefaultDateFormat), DefaultDateHelp) // TODO -t --record-type collision
