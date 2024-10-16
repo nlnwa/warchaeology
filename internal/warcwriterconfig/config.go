@@ -232,6 +232,7 @@ func New(cmd string, options ...func(*WarcWriterOptions)) (*WarcWriterConfig, er
 		writers:               make(map[string]*gowarc.WarcFileWriter),
 		WarcFileWriterOptions: warcFileWriterOptions,
 		WarcVersion:           version,
+		OneToOneWriter:        o.OneToOneWriter,
 	}, nil
 }
 
@@ -293,7 +294,9 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) (*gowarc
 		)
 	}
 
-	w.writers[lookupKey] = ww
+	if lookupKey != "" {
+		w.writers[lookupKey] = ww
+	}
 
 	return ww, nil
 }
