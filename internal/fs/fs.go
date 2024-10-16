@@ -62,6 +62,8 @@ func ResolveFilesystem(fs afero.Fs, path string, options ...func(*fsOptions)) (a
 		default:
 			return fs, nil
 		}
+	} else {
+		urlPath = path
 	}
 
 	u, err := whatwgUrl.Parse(urlPath)
