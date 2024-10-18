@@ -375,20 +375,20 @@ func (reader *teeReader) Hash() string {
 func NewCountingReader(ioReader io.Reader, hashFunction string) io.Reader {
 	countingReader := &countingReader{Reader: ioReader}
 	switch hashFunction {
-        case "md5":
-                countingReader.hash = crypto.MD5.New()
-        case "sha1":
-                countingReader.hash = crypto.SHA1.New()
-        case "sha-1":
-                countingReader.hash = crypto.SHA1.New()
-        case "sha256":
-                countingReader.hash = crypto.SHA256.New()
-        case "sha-256":
-                countingReader.hash = crypto.SHA256.New()
-        case "sha512":
-                countingReader.hash = crypto.SHA512.New()
-        case "sha-512":
-                countingReader.hash = crypto.SHA512.New()
+	case "md5":
+		countingReader.hash = crypto.MD5.New()
+	case "sha1":
+		countingReader.hash = crypto.SHA1.New()
+	case "sha-1":
+		countingReader.hash = crypto.SHA1.New()
+	case "sha256":
+		countingReader.hash = crypto.SHA256.New()
+	case "sha-256":
+		countingReader.hash = crypto.SHA256.New()
+	case "sha512":
+		countingReader.hash = crypto.SHA512.New()
+	case "sha-512":
+		countingReader.hash = crypto.SHA512.New()
 	}
 	return countingReader
 }
