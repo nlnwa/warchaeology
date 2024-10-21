@@ -55,7 +55,7 @@ output file name (prefix and suffix might still change). In this mode exactly on
 
 	OneToOne     = "one-to-one"
 	OneToOneHelp = `write each input file to a separate output file
-The same as --concurrent-writers=1, and --name-generator=identity`
+The same as --concurrent-writers=1, --file-size=0 and --name-generator=identity`
 )
 
 type WarcWriterConfigFlags struct {
