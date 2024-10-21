@@ -31,7 +31,7 @@ func WithFtpPoolSize(poolSize int32) func(*fsOptions) {
 var ErrUnsupportedFilesystem = errors.New("unsupported filesystem")
 
 // regex that matches a URL scheme
-var schemeRegexp = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.-]*://`)
+var schemeRegexp = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.-]+://`)
 
 func ResolveFilesystem(fs afero.Fs, path string, options ...func(*fsOptions)) (afero.Fs, error) {
 	opts := &fsOptions{}
@@ -62,6 +62,8 @@ func ResolveFilesystem(fs afero.Fs, path string, options ...func(*fsOptions)) (a
 		default:
 			return fs, nil
 		}
+	} else {
+		urlPath = path
 	}
 
 	u, err := whatwgUrl.Parse(urlPath)

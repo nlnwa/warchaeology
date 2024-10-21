@@ -55,7 +55,7 @@ output file name (prefix and suffix might still change). In this mode exactly on
 
 	OneToOne     = "one-to-one"
 	OneToOneHelp = `write each input file to a separate output file
-The same as --concurrent-writers=1, and --name-generator=identity`
+The same as --concurrent-writers=1, --file-size=0 and --name-generator=identity`
 )
 
 type WarcWriterConfigFlags struct {
@@ -80,7 +80,7 @@ func (f WarcWriterConfigFlags) AddFlags(cmd *cobra.Command, options ...func(*War
 		option(&f)
 	}
 	flags := cmd.Flags()
-	flags.BoolP(Compress, "z", false, CompressHelp)
+	flags.BoolP(Compress, "z", true, CompressHelp)
 	flags.Int(CompressionLevel, gzip.DefaultCompression, CompressionLevelHelp)
 	flags.IntP(ConcurrentWriters, "C", 16, ConcurrentWritersHelp)
 	flags.String(DefaultDate, time.Now().Format(warcwriterconfig.DefaultDateFormat), DefaultDateHelp) // TODO -t --record-type collision

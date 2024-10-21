@@ -232,40 +232,25 @@ func New(cmd string, options ...func(*WarcWriterOptions)) (*WarcWriterConfig, er
 		writers:               make(map[string]*gowarc.WarcFileWriter),
 		WarcFileWriterOptions: warcFileWriterOptions,
 		WarcVersion:           version,
+		OneToOneWriter:        o.OneToOneWriter,
 	}, nil
 }
 
 func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) (*gowarc.WarcFileWriter, error) {
 	var namer gowarc.WarcFileNameGenerator
-	var lookupKey string
 	var dir string
 
-	s, err := parseSubdirPattern(w.SubDirPattern, warcDate)
+	subDir, err := parseSubdirPattern(w.SubDirPattern, warcDate)
 	if err != nil {
 		return nil, err
 	}
-	if s != "" {
-		dir = filepath.Join(w.OutDir, s)
+
+	if subDir != "" {
+		dir = filepath.Join(w.OutDir, subDir)
 	} else {
 		dir = w.OutDir
 	}
-
-	if w.OneToOneWriter {
-		lookupKey = ""
-	} else {
-		lookupKey = s
-	}
-
-	var ww *gowarc.WarcFileWriter
-
-	w.writersGuard.Lock()
-	defer w.writersGuard.Unlock()
-
-	ww, ok := w.writers[lookupKey]
-	if ok {
-		return ww, nil
-	}
-
+	// create output directory if it does not exist
 	if err := os.MkdirAll(dir, 0777); err != nil {
 		return nil, err
 	}
@@ -279,6 +264,8 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) (*gowarc
 		namer = NewDefaultNamer(fromFileName, w.FilePrefix, dir)
 	}
 
+	var ww *gowarc.WarcFileWriter
+
 	if w.OneToOneWriter {
 		ww = gowarc.NewWarcFileWriter(
 			append(w.WarcFileWriterOptions,
@@ -287,13 +274,23 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) (*gowarc
 				gowarc.WithAfterFileCreationHook(w.closeOutputFileHook.WithSrcFileName(fromFileName).Run),
 			)...,
 		)
-	} else {
-		ww = gowarc.NewWarcFileWriter(
-			append(w.WarcFileWriterOptions, gowarc.WithFileNameGenerator(namer))...,
-		)
+		return ww, nil
 	}
 
-	w.writers[lookupKey] = ww
+	w.writersGuard.Lock()
+	defer w.writersGuard.Unlock()
+
+	ww, ok := w.writers[subDir]
+	if ok {
+		return ww, nil
+	}
+
+	ww = gowarc.NewWarcFileWriter(
+		append(w.WarcFileWriterOptions,
+			gowarc.WithFileNameGenerator(namer),
+		)...,
+	)
+	w.writers[subDir] = ww
 
 	return ww, nil
 }
