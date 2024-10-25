@@ -69,7 +69,7 @@ func (f ConvertNedlibFlags) ToOptions() (*ConvertNedlibOptions, error) {
 		return nil, fmt.Errorf("failed to create warc writer config: %w", err)
 	}
 
-	warcWriterConfig.WarcInfoFunc = func(wr gowarc.WarcRecordBuilder) error {
+	warcInfoFunc := func(wr gowarc.WarcRecordBuilder) error {
 		warcHeader := &gowarc.WarcFields{}
 		warcHeader.Set("software", version.SoftwareVersion())
 		warcHeader.Set("description", "Converted from Nedlib")
@@ -81,6 +81,7 @@ func (f ConvertNedlibFlags) ToOptions() (*ConvertNedlibOptions, error) {
 		_, err := wr.WriteString(warcHeader.String())
 		return err
 	}
+	warcWriterConfig.WarcFileWriterOptions = append(warcWriterConfig.WarcFileWriterOptions, gowarc.WithWarcInfoFunc(warcInfoFunc))
 
 	warcRecordOptions := []gowarc.WarcRecordOption{
 		gowarc.WithVersion(warcWriterConfig.WarcVersion),
