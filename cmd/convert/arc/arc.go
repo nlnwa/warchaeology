@@ -63,7 +63,7 @@ func (f ConvertArcFlags) AddFlags(cmd *cobra.Command) {
 	f.FileWalkerFlags.AddFlags(cmd, flag.WithDefaultSuffixes([]string{".arc", ".arc.gz"}))
 	f.OutputHookFlags.AddFlags(cmd)
 	f.InputHookFlags.AddFlags(cmd)
-	f.WarcWriterConfigFlags.AddFlags(cmd)
+	f.WarcWriterConfigFlags.AddFlags(cmd, flag.WithDefaultOneToOne(true))
 	f.WarcRecordOptionFlags.AddFlags(cmd)
 	f.IndexFlags.AddFlags(cmd)
 	f.UtilFlags.AddFlags(cmd)

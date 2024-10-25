@@ -59,13 +59,20 @@ The same as --concurrent-writers=1, --file-size=0 and --name-generator=identity`
 )
 
 type WarcWriterConfigFlags struct {
-	filePrefix string
+	defaultFilePrefix string
+	defaultOneToOne   bool
 	name       string
 }
 
 func WithDefaultFilePrefix(prefix string) func(*WarcWriterConfigFlags) {
 	return func(f *WarcWriterConfigFlags) {
-		f.filePrefix = prefix
+		f.defaultFilePrefix = prefix
+	}
+}
+
+func WithDefaultOneToOne(oneToOne bool) func(*WarcWriterConfigFlags) {
+	return func(f *WarcWriterConfigFlags) {
+		f.defaultOneToOne = oneToOne
 	}
 }
 
@@ -80,13 +87,13 @@ func (f *WarcWriterConfigFlags) AddFlags(cmd *cobra.Command, options ...func(*Wa
 	flags.IntP(ConcurrentWriters, "C", 16, ConcurrentWritersHelp)
 	flags.String(DefaultDate, time.Now().Format(warcwriterconfig.DefaultDateFormat), DefaultDateHelp) // TODO -t --record-type collision
 	flags.String(FileSize, "1GB", FileSizeHelp)                                                       // TODO -S --response-code collision
-	flags.StringP(FilePrefix, "p", f.filePrefix, FilePrefixHelp)
+	flags.StringP(FilePrefix, "p", f.defaultFilePrefix, FilePrefixHelp)
 	flags.Bool(Flush, false, FlushHelp)
 	flags.String(NameGenerator, "default", NameGeneratorHelp)
 	flags.String(SubdirPattern, "", SubdirPatternHelp)
 	flags.StringP(OutputDir, "w", ".", OutputDirHelp)
 	flags.String(WarcVersion, "1.1", WarcVersionHelp)
-	flags.Bool(OneToOne, false, OneToOneHelp)
+	flags.Bool(OneToOne, f.defaultOneToOne, OneToOneHelp)
 
 	var lastErr error
 	if err := cmd.RegisterFlagCompletionFunc(FilePrefix, cobra.NoFileCompletions); err != nil {
