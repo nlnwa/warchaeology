@@ -67,7 +67,7 @@ func (f ConvertArcFlags) ToConvertArcOptions() (*ConvertArcOptions, error) {
 		return nil, fmt.Errorf("failed to create warc writer config: %w", err)
 	}
 	if warcWriterConfig.OneToOneWriter {
-		warcWriterConfig.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
+		warcInfoFunc := func(recordBuilder gowarc.WarcRecordBuilder) error {
 			payload := &gowarc.WarcFields{}
 			payload.Set("software", version.SoftwareVersion())
 			payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", warcWriterConfig.WarcVersion.Minor(), warcWriterConfig.WarcVersion.Minor()))
@@ -81,6 +81,7 @@ func (f ConvertArcFlags) ToConvertArcOptions() (*ConvertArcOptions, error) {
 			_, err := recordBuilder.WriteString(payload.String())
 			return err
 		}
+		warcWriterConfig.WarcFileWriterOptions = append(warcWriterConfig.WarcFileWriterOptions, gowarc.WithWarcInfoFunc(warcInfoFunc))
 	}
 
 	warcRecordOptions := f.WarcRecordOptionFlags.ToWarcRecordOptions()
