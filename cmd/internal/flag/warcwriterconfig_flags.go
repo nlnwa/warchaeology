@@ -69,16 +69,11 @@ func WithDefaultFilePrefix(prefix string) func(*WarcWriterConfigFlags) {
 	}
 }
 
-func WithCmdName(name string) func(*WarcWriterConfigFlags) {
-	return func(f *WarcWriterConfigFlags) {
-		f.name = name
-	}
-}
-
-func (f WarcWriterConfigFlags) AddFlags(cmd *cobra.Command, options ...func(*WarcWriterConfigFlags)) {
+func (f *WarcWriterConfigFlags) AddFlags(cmd *cobra.Command, options ...func(*WarcWriterConfigFlags)) {
 	for _, option := range options {
-		option(&f)
+		option(f)
 	}
+	f.name = cmd.Name()
 	flags := cmd.Flags()
 	flags.BoolP(Compress, "z", true, CompressHelp)
 	flags.Int(CompressionLevel, gzip.DefaultCompression, CompressionLevelHelp)
@@ -156,7 +151,7 @@ func (f WarcWriterConfigFlags) OutputDir() string {
 	return viper.GetString(OutputDir)
 }
 
-func (f *WarcWriterConfigFlags) OneToOne() bool {
+func (f WarcWriterConfigFlags) OneToOne() bool {
 	return viper.GetBool(OneToOne)
 }
 

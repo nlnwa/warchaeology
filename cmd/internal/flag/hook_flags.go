@@ -43,20 +43,8 @@ type InputHookFlags struct {
 	name string
 }
 
-func NewInputHookFlags() InputHookFlags {
-	return InputHookFlags{}
-}
-
-func WithInputHookName(name string) func(*InputHookFlags) {
-	return func(f *InputHookFlags) {
-		f.name = name
-	}
-}
-
-func (f InputHookFlags) AddFlags(cmd *cobra.Command, opts ...func(*InputHookFlags)) {
-	for _, opt := range opts {
-		opt(&f)
-	}
+func (f *InputHookFlags) AddFlags(cmd *cobra.Command, opts ...func(*InputHookFlags)) {
+	f.name = cmd.Name()
 	flags := cmd.Flags()
 	flags.String(OpenInputFileHook, "", OpenInputFileHookHelp)
 	flags.String(CloseInputFileHook, "", CloseInputFileHookHelp)
@@ -82,21 +70,8 @@ type OutputHookFlags struct {
 	name string
 }
 
-func NewOutputHookFlags() OutputHookFlags {
-	return OutputHookFlags{}
-}
-
-func WithOutputHookName(name string) func(*OutputHookFlags) {
-	return func(f *OutputHookFlags) {
-		f.name = name
-	}
-}
-
-func (f OutputHookFlags) AddFlags(cmd *cobra.Command, opts ...func(*OutputHookFlags)) {
-	for _, opt := range opts {
-		opt(&f)
-	}
-
+func (f *OutputHookFlags) AddFlags(cmd *cobra.Command, opts ...func(*OutputHookFlags)) {
+	f.name = cmd.Name()
 	flags := cmd.Flags()
 	flags.String(OpenOutputFileHook, "", OpenOutputFileHookHelp)
 	flags.String(CloseOutputFileHook, "", CloseOutputFileHookHelp)

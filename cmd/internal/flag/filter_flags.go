@@ -39,10 +39,6 @@ type FilterFlags struct {
 	defaultMimeType []string
 }
 
-func NewFilterFlags() FilterFlags {
-	return FilterFlags{}
-}
-
 func WithDefaultMimeType(mimeTypes []string) func(*FilterFlags) {
 	return func(f *FilterFlags) {
 		f.defaultMimeType = mimeTypes

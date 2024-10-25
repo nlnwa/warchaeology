@@ -55,13 +55,21 @@ type ValidateOptions struct {
 	closeOutputFileHook hooks.CloseOutputFileHook
 }
 
+func NewValidateFlags() ValidateFlags {
+	return ValidateFlags{
+		IndexFlags:      &flag.IndexFlags{},
+		OutputHookFlags: &flag.OutputHookFlags{},
+		InputHookFlags:  &flag.InputHookFlags{},
+	}
+}
+
 type ValidateFlags struct {
+	IndexFlags            *flag.IndexFlags
+	OutputHookFlags       *flag.OutputHookFlags
+	InputHookFlags        *flag.InputHookFlags
 	FileWalkerFlags       flag.FileWalkerFlags
 	FilterFlags           flag.FilterFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
-	IndexFlags            flag.IndexFlags
-	OutputHookFlags       flag.OutputHookFlags
-	InputHookFlags        flag.InputHookFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
 }
 
@@ -140,7 +148,7 @@ func (f ValidateFlags) ToOptions() (*ValidateOptions, error) {
 }
 
 func NewCmdValidate() *cobra.Command {
-	flags := ValidateFlags{}
+	flags := NewValidateFlags()
 
 	var cmd = &cobra.Command{
 		Use:   "validate FILE/DIR ...",

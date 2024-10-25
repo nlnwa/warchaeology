@@ -55,17 +55,26 @@ type DedupOptions struct {
 type DedupFlags struct {
 	FilterFlags           flag.FilterFlags
 	WarcFileFlags         flag.WarcIteratorFlags
-	InputHookFlags        flag.InputHookFlags
-	OutputHookFlags       flag.OutputHookFlags
+	InputHookFlags        *flag.InputHookFlags
+	OutputHookFlags       *flag.OutputHookFlags
 	FileWalkerFlags       flag.FileWalkerFlags
-	WarcWriterConfigFlags flag.WarcWriterConfigFlags
+	WarcWriterConfigFlags *flag.WarcWriterConfigFlags
 	UtilFlags             flag.UtilFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
-	IndexFlags            flag.IndexFlags
+	IndexFlags            *flag.IndexFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
 }
 
-func (f *DedupFlags) AddFlags(cmd *cobra.Command) {
+func NewDedupFlags() DedupFlags {
+	return DedupFlags{
+		InputHookFlags:        &flag.InputHookFlags{},
+		OutputHookFlags:       &flag.OutputHookFlags{},
+		WarcWriterConfigFlags: &flag.WarcWriterConfigFlags{},
+		IndexFlags:            &flag.IndexFlags{},
+	}
+}
+
+func (f DedupFlags) AddFlags(cmd *cobra.Command) {
 	f.FilterFlags.AddFlags(cmd)
 	f.WarcFileFlags.AddFlags(cmd)
 	f.InputHookFlags.AddFlags(cmd)
@@ -74,7 +83,7 @@ func (f *DedupFlags) AddFlags(cmd *cobra.Command) {
 	f.WarcWriterConfigFlags.AddFlags(cmd)
 	f.UtilFlags.AddFlags(cmd)
 	f.WarcRecordOptionFlags.AddFlags(cmd)
-	f.IndexFlags.AddFlags(cmd, flag.WithDefaultIndexSubDir(cmd.Name()))
+	f.IndexFlags.AddFlags(cmd)
 	f.ConcurrencyFlags.AddFlags(cmd)
 
 	flags := cmd.Flags()
@@ -82,15 +91,15 @@ func (f *DedupFlags) AddFlags(cmd *cobra.Command) {
 	flags.StringP(DedupSizeGain, "g", "2KB", DedupSizeGainHelp)
 }
 
-func (f *DedupFlags) BufferMaxMem() int64 {
+func (f DedupFlags) BufferMaxMem() int64 {
 	return util.ParseSizeInBytes(viper.GetString(BufferMaxMem))
 }
 
-func (f *DedupFlags) DedupSizeGain() int64 {
+func (f DedupFlags) DedupSizeGain() int64 {
 	return util.ParseSizeInBytes(viper.GetString(DedupSizeGain))
 }
 
-func (f *DedupFlags) ToDedupOptions() (*DedupOptions, error) {
+func (f DedupFlags) ToDedupOptions() (*DedupOptions, error) {
 	concurrency := f.ConcurrencyFlags.Concurrency()
 
 	filter, err := f.FilterFlags.ToFilter()
@@ -180,7 +189,7 @@ func (f *DedupFlags) ToDedupOptions() (*DedupOptions, error) {
 }
 
 func NewCmdDedup() *cobra.Command {
-	flags := new(DedupFlags)
+	flags := NewDedupFlags()
 
 	var cmd = &cobra.Command{
 		Use:   "dedup",

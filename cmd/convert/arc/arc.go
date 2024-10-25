@@ -41,22 +41,31 @@ type ConvertArcOptions struct {
 
 type ConvertArcFlags struct {
 	FileWalkerFlags       flag.FileWalkerFlags
-	IndexFlags            flag.IndexFlags
-	WarcWriterConfigFlags flag.WarcWriterConfigFlags
+	IndexFlags            *flag.IndexFlags
+	WarcWriterConfigFlags *flag.WarcWriterConfigFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
-	OutputHookFlags       flag.OutputHookFlags
-	InputHookFlags        flag.InputHookFlags
+	OutputHookFlags       *flag.OutputHookFlags
+	InputHookFlags        *flag.InputHookFlags
 	UtilFlags             flag.UtilFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
+}
+
+func NewConvertArcFlags() ConvertArcFlags {
+	return ConvertArcFlags{
+		IndexFlags:            &flag.IndexFlags{},
+		OutputHookFlags:       &flag.OutputHookFlags{},
+		InputHookFlags:        &flag.InputHookFlags{},
+		WarcWriterConfigFlags: &flag.WarcWriterConfigFlags{},
+	}
 }
 
 func (f ConvertArcFlags) AddFlags(cmd *cobra.Command) {
 	f.FileWalkerFlags.AddFlags(cmd, flag.WithDefaultSuffixes([]string{".arc", ".arc.gz"}))
 	f.OutputHookFlags.AddFlags(cmd)
 	f.InputHookFlags.AddFlags(cmd)
-	f.WarcWriterConfigFlags.AddFlags(cmd, flag.WithCmdName(cmd.Name()))
+	f.WarcWriterConfigFlags.AddFlags(cmd)
 	f.WarcRecordOptionFlags.AddFlags(cmd)
-	f.IndexFlags.AddFlags(cmd, flag.WithDefaultIndexSubDir(cmd.Name()))
+	f.IndexFlags.AddFlags(cmd)
 	f.UtilFlags.AddFlags(cmd)
 	f.ConcurrencyFlags.AddFlags(cmd)
 }
@@ -132,7 +141,7 @@ func (f ConvertArcFlags) ToConvertArcOptions() (*ConvertArcOptions, error) {
 }
 
 func NewCommand() *cobra.Command {
-	flags := ConvertArcFlags{}
+	flags := NewConvertArcFlags()
 
 	var cmd = &cobra.Command{
 		Use:   "arc <files/dirs>",
