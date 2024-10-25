@@ -90,6 +90,16 @@ func (f ConvertArcFlags) ToConvertArcOptions() (*ConvertArcOptions, error) {
 		gowarc.WithAddMissingDigest(true),
 	)
 
+	openInputFileHook, err := f.InputHookFlags.ToOpenInputFileHook()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create open input file hook: %w", err)
+	}
+
+	closeInputFileHook, err := f.InputHookFlags.ToCloseInputFileHook()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create close input file hook: %w", err)
+	}
+
 	// and we also read paths from a file if the --src-file-fileList flag is set
 	fileList, err := flag.ReadSrcFileList(viper.GetString(flag.SrcFileList))
 	if err != nil {
@@ -110,12 +120,14 @@ func (f ConvertArcFlags) ToConvertArcOptions() (*ConvertArcOptions, error) {
 	}
 
 	return &ConvertArcOptions{
-		Concurrency:       f.ConcurrencyFlags.Concurrency(),
-		WarcWriterConfig:  warcWriterConfig,
-		WarcRecordOptions: warcRecordOptions,
-		FileWalker:        fileWalker,
-		FileIndex:         fileIndex,
-		Paths:             fileList,
+		Concurrency:        f.ConcurrencyFlags.Concurrency(),
+		OpenInputFileHook:  openInputFileHook,
+		CloseInputFileHook: closeInputFileHook,
+		WarcWriterConfig:   warcWriterConfig,
+		WarcRecordOptions:  warcRecordOptions,
+		FileWalker:         fileWalker,
+		FileIndex:          fileIndex,
+		Paths:              fileList,
 	}, nil
 }
 
