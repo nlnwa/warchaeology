@@ -46,6 +46,7 @@ type ConvertWarcFlags struct {
 	OutputHookFlags       *flag.OutputHookFlags
 	InputHookFlags        *flag.InputHookFlags
 	UtilFlags             flag.UtilFlags
+	RepairFlags           flag.RepairFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
 }
 
@@ -66,6 +67,7 @@ func (f ConvertWarcFlags) AddFlags(cmd *cobra.Command) {
 	f.OutputHookFlags.AddFlags(cmd)
 	f.InputHookFlags.AddFlags(cmd)
 	f.UtilFlags.AddFlags(cmd)
+	f.RepairFlags.AddFlags(cmd)
 	f.ConcurrencyFlags.AddFlags(cmd)
 }
 
@@ -78,7 +80,7 @@ func (f ConvertWarcFlags) ToConvertWarcOptions() (*ConvertWarcOptions, error) {
 		gowarc.WithVersion(wwc.WarcVersion),
 		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)),
 	}
-	if f.UtilFlags.Repair() {
+	if f.RepairFlags.Repair() {
 		warcRecordOptions = append(warcRecordOptions,
 			gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
 			gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),

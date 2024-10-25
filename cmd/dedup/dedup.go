@@ -43,7 +43,6 @@ type DedupOptions struct {
 	WarcWriterConfig    *warcwriterconfig.WarcWriterConfig
 	MinimumSizeGain     int64
 	MinWARCDiskFree     int64
-	Repair              bool
 	FileWalker          *filewalker.FileWalker
 	WarcRecordOptions   []gowarc.WarcRecordOption
 	OpenInputFileHook   hooks.OpenInputFileHook
@@ -60,6 +59,7 @@ type DedupFlags struct {
 	FileWalkerFlags       flag.FileWalkerFlags
 	WarcWriterConfigFlags *flag.WarcWriterConfigFlags
 	UtilFlags             flag.UtilFlags
+	RepairFlags           flag.RepairFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
 	IndexFlags            *flag.IndexFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
@@ -82,6 +82,7 @@ func (f DedupFlags) AddFlags(cmd *cobra.Command) {
 	f.FileWalkerFlags.AddFlags(cmd)
 	f.WarcWriterConfigFlags.AddFlags(cmd)
 	f.UtilFlags.AddFlags(cmd)
+	f.RepairFlags.AddFlags(cmd)
 	f.WarcRecordOptionFlags.AddFlags(cmd)
 	f.IndexFlags.AddFlags(cmd)
 	f.ConcurrencyFlags.AddFlags(cmd)
@@ -121,7 +122,7 @@ func (f DedupFlags) ToDedupOptions() (*DedupOptions, error) {
 		gowarc.WithAddMissingContentLength(true),
 	}
 
-	if f.UtilFlags.Repair() {
+	if f.RepairFlags.Repair() {
 		warcRecordOptions = append(warcRecordOptions,
 			gowarc.WithFixSyntaxErrors(true),
 			gowarc.WithFixDigest(true),
@@ -177,7 +178,6 @@ func (f DedupFlags) ToDedupOptions() (*DedupOptions, error) {
 		Concurrency:        concurrency,
 		MinimumSizeGain:    f.DedupSizeGain(),
 		MinWARCDiskFree:    f.UtilFlags.MinFreeDisk(),
-		Repair:             f.UtilFlags.Repair(),
 		FileWalker:         fileWalker,
 		WarcWriterConfig:   warcWriterConfig,
 		WarcRecordOptions:  warcRecordOptions,
