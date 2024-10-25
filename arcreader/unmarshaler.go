@@ -31,14 +31,15 @@ func NewUnmarshaler(opts ...gowarc.WarcRecordOption) gowarc.Unmarshaler {
 }
 
 func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gowarc.Validation, error) {
-	validation := &gowarc.Validation{}
-
 	isGzip, r, offset, err := u.searchNextRecord(b)
+	if err == io.EOF {
+		return nil, offset, nil, err
+	}
+	if err != nil {
+		return nil, offset, nil, fmt.Errorf("could not parse ARC record: %w", err)
+	}
 
 	defer func() {
-		if r == nil {
-			return
-		}
 		// Discarding 1 byte which makes up the end of record marker (\n)
 		var lf byte = '\n'
 		bb, e := r.Peek(4)
@@ -65,18 +66,12 @@ func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gow
 		}
 	}()
 
-	if err == io.EOF {
-		return nil, offset, validation, err
-	}
-	if err != nil {
-		return nil, offset, validation, fmt.Errorf("could not parse ARC record: %w", err)
-	}
-
 	l, err := r.ReadString('\n')
 	if err != nil {
 		return nil, 0, nil, fmt.Errorf("could not parse ARC record: %w", err)
 	}
 
+	validation := new(gowarc.Validation)
 	var wr gowarc.WarcRecord
 	if strings.HasPrefix(l, "filedesc://") {
 		wr, validation, err = u.parseFileHeader(r, l)
