@@ -71,7 +71,7 @@ func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gow
 		return nil, 0, nil, fmt.Errorf("could not parse ARC record: %w", err)
 	}
 
-	validation := new(gowarc.Validation)
+	var validation *gowarc.Validation
 	var wr gowarc.WarcRecord
 	if strings.HasPrefix(l, "filedesc://") {
 		wr, validation, err = u.parseFileHeader(r, l)
