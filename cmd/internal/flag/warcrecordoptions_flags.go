@@ -16,10 +16,6 @@ const (
 type WarcRecordOptionFlags struct {
 }
 
-func NewWarcRecordOptionFlags() WarcRecordOptionFlags {
-	return WarcRecordOptionFlags{}
-}
-
 func (f WarcRecordOptionFlags) AddFlags(cmd *cobra.Command) {
 	flags := cmd.Flags()
 	flags.String(TmpDir, os.TempDir(), TmpDirHelp)

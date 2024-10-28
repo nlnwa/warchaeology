@@ -50,18 +50,26 @@ type ValidateOptions struct {
 	FileWalker          *filewalker.FileWalker
 	warcRecordOptions   []gowarc.WarcRecordOption
 	openInputFileHook   hooks.OpenInputFileHook
-	CloseInputFileHook  hooks.CloseInputFileHook
+	closeInputFileHook  hooks.CloseInputFileHook
 	openOutputFileHook  hooks.OpenOutputFileHook
 	closeOutputFileHook hooks.CloseOutputFileHook
 }
 
+func NewValidateFlags() ValidateFlags {
+	return ValidateFlags{
+		IndexFlags:      &flag.IndexFlags{},
+		OutputHookFlags: &flag.OutputHookFlags{},
+		InputHookFlags:  &flag.InputHookFlags{},
+	}
+}
+
 type ValidateFlags struct {
+	IndexFlags            *flag.IndexFlags
+	OutputHookFlags       *flag.OutputHookFlags
+	InputHookFlags        *flag.InputHookFlags
 	FileWalkerFlags       flag.FileWalkerFlags
 	FilterFlags           flag.FilterFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
-	IndexFlags            flag.IndexFlags
-	OutputHookFlags       flag.OutputHookFlags
-	InputHookFlags        flag.InputHookFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
 }
 
@@ -133,14 +141,14 @@ func (f ValidateFlags) ToOptions() (*ValidateOptions, error) {
 		warcRecordOptions:   f.WarcRecordOptionFlags.ToWarcRecordOptions(),
 		FileIndex:           fileIndex,
 		openInputFileHook:   openInputFileHook,
-		CloseInputFileHook:  closeInputFileHook,
+		closeInputFileHook:  closeInputFileHook,
 		openOutputFileHook:  openOutputFileHook,
 		closeOutputFileHook: closeOutputFileHook,
 	}, nil
 }
 
 func NewCmdValidate() *cobra.Command {
-	flags := ValidateFlags{}
+	flags := NewValidateFlags()
 
 	var cmd = &cobra.Command{
 		Use:   "validate FILE/DIR ...",
@@ -204,7 +212,7 @@ func (o *ValidateOptions) Run() error {
 			return err
 		}
 		return workerPool.Submit(ctx, func() {
-			result, err := filewalker.Preposterous(path, o.FileIndex, o.openInputFileHook, o.CloseInputFileHook, func() stat.Result {
+			result, err := filewalker.Preposterous(path, o.FileIndex, o.openInputFileHook, o.closeInputFileHook, func() stat.Result {
 				return o.validateFile(ctx, fs, path)
 			})
 			if errors.Is(err, filewalker.ErrSkipFile) {

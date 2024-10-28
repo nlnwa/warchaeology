@@ -59,39 +59,41 @@ The same as --concurrent-writers=1, --file-size=0 and --name-generator=identity`
 )
 
 type WarcWriterConfigFlags struct {
-	filePrefix string
-	name       string
+	defaultFilePrefix string
+	defaultOneToOne   bool
+	name              string
 }
 
 func WithDefaultFilePrefix(prefix string) func(*WarcWriterConfigFlags) {
 	return func(f *WarcWriterConfigFlags) {
-		f.filePrefix = prefix
+		f.defaultFilePrefix = prefix
 	}
 }
 
-func WithCmdName(name string) func(*WarcWriterConfigFlags) {
+func WithDefaultOneToOne(oneToOne bool) func(*WarcWriterConfigFlags) {
 	return func(f *WarcWriterConfigFlags) {
-		f.name = name
+		f.defaultOneToOne = oneToOne
 	}
 }
 
-func (f WarcWriterConfigFlags) AddFlags(cmd *cobra.Command, options ...func(*WarcWriterConfigFlags)) {
+func (f *WarcWriterConfigFlags) AddFlags(cmd *cobra.Command, options ...func(*WarcWriterConfigFlags)) {
 	for _, option := range options {
-		option(&f)
+		option(f)
 	}
+	f.name = cmd.Name()
 	flags := cmd.Flags()
 	flags.BoolP(Compress, "z", true, CompressHelp)
 	flags.Int(CompressionLevel, gzip.DefaultCompression, CompressionLevelHelp)
 	flags.IntP(ConcurrentWriters, "C", 16, ConcurrentWritersHelp)
 	flags.String(DefaultDate, time.Now().Format(warcwriterconfig.DefaultDateFormat), DefaultDateHelp) // TODO -t --record-type collision
 	flags.String(FileSize, "1GB", FileSizeHelp)                                                       // TODO -S --response-code collision
-	flags.StringP(FilePrefix, "p", f.filePrefix, FilePrefixHelp)
+	flags.StringP(FilePrefix, "p", f.defaultFilePrefix, FilePrefixHelp)
 	flags.Bool(Flush, false, FlushHelp)
 	flags.String(NameGenerator, "default", NameGeneratorHelp)
 	flags.String(SubdirPattern, "", SubdirPatternHelp)
 	flags.StringP(OutputDir, "w", ".", OutputDirHelp)
 	flags.String(WarcVersion, "1.1", WarcVersionHelp)
-	flags.Bool(OneToOne, false, OneToOneHelp)
+	flags.Bool(OneToOne, f.defaultOneToOne, OneToOneHelp)
 
 	var lastErr error
 	if err := cmd.RegisterFlagCompletionFunc(FilePrefix, cobra.NoFileCompletions); err != nil {
@@ -156,7 +158,7 @@ func (f WarcWriterConfigFlags) OutputDir() string {
 	return viper.GetString(OutputDir)
 }
 
-func (f *WarcWriterConfigFlags) OneToOne() bool {
+func (f WarcWriterConfigFlags) OneToOne() bool {
 	return viper.GetBool(OneToOne)
 }
 

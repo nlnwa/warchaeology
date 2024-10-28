@@ -42,17 +42,26 @@ type ConvertNedlibOptions struct {
 
 type ConvertNedlibFlags struct {
 	FileWalkerFlags       flag.FileWalkerFlags
-	WarcWriterConfigFlags flag.WarcWriterConfigFlags
-	IndexFlags            flag.IndexFlags
-	OutputHookFlags       flag.OutputHookFlags
-	InputHookFlags        flag.InputHookFlags
+	WarcWriterConfigFlags *flag.WarcWriterConfigFlags
+	IndexFlags            *flag.IndexFlags
+	OutputHookFlags       *flag.OutputHookFlags
+	InputHookFlags        *flag.InputHookFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
+}
+
+func NewConvertNedlibFlags() ConvertNedlibFlags {
+	return ConvertNedlibFlags{
+		IndexFlags:            &flag.IndexFlags{},
+		OutputHookFlags:       &flag.OutputHookFlags{},
+		InputHookFlags:        &flag.InputHookFlags{},
+		WarcWriterConfigFlags: &flag.WarcWriterConfigFlags{},
+	}
 }
 
 func (f ConvertNedlibFlags) AddFlags(cmd *cobra.Command) {
 	f.FileWalkerFlags.AddFlags(cmd, flag.WithDefaultSuffixes([]string{".meta"}))
-	f.WarcWriterConfigFlags.AddFlags(cmd, flag.WithDefaultFilePrefix("nedlib_"), flag.WithCmdName(cmd.Name()))
-	f.IndexFlags.AddFlags(cmd, flag.WithDefaultIndexSubDir(cmd.Name()))
+	f.WarcWriterConfigFlags.AddFlags(cmd, flag.WithDefaultFilePrefix("nedlib_"))
+	f.IndexFlags.AddFlags(cmd)
 	f.OutputHookFlags.AddFlags(cmd)
 	f.InputHookFlags.AddFlags(cmd)
 	f.ConcurrencyFlags.AddFlags(cmd)
@@ -69,7 +78,7 @@ func (f ConvertNedlibFlags) ToOptions() (*ConvertNedlibOptions, error) {
 		return nil, fmt.Errorf("failed to create warc writer config: %w", err)
 	}
 
-	warcWriterConfig.WarcInfoFunc = func(wr gowarc.WarcRecordBuilder) error {
+	warcInfoFunc := func(wr gowarc.WarcRecordBuilder) error {
 		warcHeader := &gowarc.WarcFields{}
 		warcHeader.Set("software", version.SoftwareVersion())
 		warcHeader.Set("description", "Converted from Nedlib")
@@ -81,6 +90,7 @@ func (f ConvertNedlibFlags) ToOptions() (*ConvertNedlibOptions, error) {
 		_, err := wr.WriteString(warcHeader.String())
 		return err
 	}
+	warcWriterConfig.WarcFileWriterOptions = append(warcWriterConfig.WarcFileWriterOptions, gowarc.WithWarcInfoFunc(warcInfoFunc))
 
 	warcRecordOptions := []gowarc.WarcRecordOption{
 		gowarc.WithVersion(warcWriterConfig.WarcVersion),
@@ -118,7 +128,7 @@ func (f ConvertNedlibFlags) ToOptions() (*ConvertNedlibOptions, error) {
 }
 
 func NewCmdConvertNedlib() *cobra.Command {
-	flags := ConvertNedlibFlags{}
+	flags := NewConvertNedlibFlags()
 
 	cmd := &cobra.Command{
 		Use:   "nedlib <files/dirs>",

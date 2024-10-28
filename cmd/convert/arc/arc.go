@@ -41,22 +41,31 @@ type ConvertArcOptions struct {
 
 type ConvertArcFlags struct {
 	FileWalkerFlags       flag.FileWalkerFlags
-	IndexFlags            flag.IndexFlags
-	WarcWriterConfigFlags flag.WarcWriterConfigFlags
+	IndexFlags            *flag.IndexFlags
+	WarcWriterConfigFlags *flag.WarcWriterConfigFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
-	OutputHookFlags       flag.OutputHookFlags
-	InputHookFlags        flag.InputHookFlags
+	OutputHookFlags       *flag.OutputHookFlags
+	InputHookFlags        *flag.InputHookFlags
 	UtilFlags             flag.UtilFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
+}
+
+func NewConvertArcFlags() ConvertArcFlags {
+	return ConvertArcFlags{
+		IndexFlags:            &flag.IndexFlags{},
+		OutputHookFlags:       &flag.OutputHookFlags{},
+		InputHookFlags:        &flag.InputHookFlags{},
+		WarcWriterConfigFlags: &flag.WarcWriterConfigFlags{},
+	}
 }
 
 func (f ConvertArcFlags) AddFlags(cmd *cobra.Command) {
 	f.FileWalkerFlags.AddFlags(cmd, flag.WithDefaultSuffixes([]string{".arc", ".arc.gz"}))
 	f.OutputHookFlags.AddFlags(cmd)
 	f.InputHookFlags.AddFlags(cmd)
-	f.WarcWriterConfigFlags.AddFlags(cmd, flag.WithCmdName(cmd.Name()))
+	f.WarcWriterConfigFlags.AddFlags(cmd, flag.WithDefaultOneToOne(true))
 	f.WarcRecordOptionFlags.AddFlags(cmd)
-	f.IndexFlags.AddFlags(cmd, flag.WithDefaultIndexSubDir(cmd.Name()))
+	f.IndexFlags.AddFlags(cmd)
 	f.UtilFlags.AddFlags(cmd)
 	f.ConcurrencyFlags.AddFlags(cmd)
 }
@@ -67,7 +76,7 @@ func (f ConvertArcFlags) ToConvertArcOptions() (*ConvertArcOptions, error) {
 		return nil, fmt.Errorf("failed to create warc writer config: %w", err)
 	}
 	if warcWriterConfig.OneToOneWriter {
-		warcWriterConfig.WarcInfoFunc = func(recordBuilder gowarc.WarcRecordBuilder) error {
+		warcInfoFunc := func(recordBuilder gowarc.WarcRecordBuilder) error {
 			payload := &gowarc.WarcFields{}
 			payload.Set("software", version.SoftwareVersion())
 			payload.Set("format", fmt.Sprintf("WARC File Format %d.%d", warcWriterConfig.WarcVersion.Minor(), warcWriterConfig.WarcVersion.Minor()))
@@ -81,6 +90,7 @@ func (f ConvertArcFlags) ToConvertArcOptions() (*ConvertArcOptions, error) {
 			_, err := recordBuilder.WriteString(payload.String())
 			return err
 		}
+		warcWriterConfig.WarcFileWriterOptions = append(warcWriterConfig.WarcFileWriterOptions, gowarc.WithWarcInfoFunc(warcInfoFunc))
 	}
 
 	warcRecordOptions := f.WarcRecordOptionFlags.ToWarcRecordOptions()
@@ -88,6 +98,16 @@ func (f ConvertArcFlags) ToConvertArcOptions() (*ConvertArcOptions, error) {
 		gowarc.WithVersion(warcWriterConfig.WarcVersion),
 		gowarc.WithAddMissingDigest(true),
 	)
+
+	openInputFileHook, err := f.InputHookFlags.ToOpenInputFileHook()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create open input file hook: %w", err)
+	}
+
+	closeInputFileHook, err := f.InputHookFlags.ToCloseInputFileHook()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create close input file hook: %w", err)
+	}
 
 	// and we also read paths from a file if the --src-file-fileList flag is set
 	fileList, err := flag.ReadSrcFileList(viper.GetString(flag.SrcFileList))
@@ -109,17 +129,19 @@ func (f ConvertArcFlags) ToConvertArcOptions() (*ConvertArcOptions, error) {
 	}
 
 	return &ConvertArcOptions{
-		Concurrency:       f.ConcurrencyFlags.Concurrency(),
-		WarcWriterConfig:  warcWriterConfig,
-		WarcRecordOptions: warcRecordOptions,
-		FileWalker:        fileWalker,
-		FileIndex:         fileIndex,
-		Paths:             fileList,
+		Concurrency:        f.ConcurrencyFlags.Concurrency(),
+		OpenInputFileHook:  openInputFileHook,
+		CloseInputFileHook: closeInputFileHook,
+		WarcWriterConfig:   warcWriterConfig,
+		WarcRecordOptions:  warcRecordOptions,
+		FileWalker:         fileWalker,
+		FileIndex:          fileIndex,
+		Paths:              fileList,
 	}, nil
 }
 
 func NewCommand() *cobra.Command {
-	flags := ConvertArcFlags{}
+	flags := NewConvertArcFlags()
 
 	var cmd = &cobra.Command{
 		Use:   "arc <files/dirs>",

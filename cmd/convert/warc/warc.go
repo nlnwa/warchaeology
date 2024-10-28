@@ -40,23 +40,34 @@ type ConvertWarcOptions struct {
 
 type ConvertWarcFlags struct {
 	FileWalkerFlags       flag.FileWalkerFlags
-	IndexFlags            flag.IndexFlags
+	IndexFlags            *flag.IndexFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
-	WarcWriterConfigFlags flag.WarcWriterConfigFlags
-	OutputHookFlags       flag.OutputHookFlags
-	InputHookFlags        flag.InputHookFlags
+	WarcWriterConfigFlags *flag.WarcWriterConfigFlags
+	OutputHookFlags       *flag.OutputHookFlags
+	InputHookFlags        *flag.InputHookFlags
 	UtilFlags             flag.UtilFlags
+	RepairFlags           flag.RepairFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
+}
+
+func NewConvertWarcFlags() ConvertWarcFlags {
+	return ConvertWarcFlags{
+		IndexFlags:            &flag.IndexFlags{},
+		OutputHookFlags:       &flag.OutputHookFlags{},
+		InputHookFlags:        &flag.InputHookFlags{},
+		WarcWriterConfigFlags: &flag.WarcWriterConfigFlags{},
+	}
 }
 
 func (f ConvertWarcFlags) AddFlags(cmd *cobra.Command) {
 	f.FileWalkerFlags.AddFlags(cmd, flag.WithDefaultSuffixes([]string{".warc", ".warc.gz"}))
-	f.IndexFlags.AddFlags(cmd, flag.WithDefaultIndexSubDir(cmd.Name()))
+	f.IndexFlags.AddFlags(cmd)
 	f.WarcRecordOptionFlags.AddFlags(cmd)
-	f.WarcWriterConfigFlags.AddFlags(cmd, flag.WithCmdName(cmd.Name()))
+	f.WarcWriterConfigFlags.AddFlags(cmd)
 	f.OutputHookFlags.AddFlags(cmd)
 	f.InputHookFlags.AddFlags(cmd)
 	f.UtilFlags.AddFlags(cmd)
+	f.RepairFlags.AddFlags(cmd)
 	f.ConcurrencyFlags.AddFlags(cmd)
 }
 
@@ -69,7 +80,7 @@ func (f ConvertWarcFlags) ToConvertWarcOptions() (*ConvertWarcOptions, error) {
 		gowarc.WithVersion(wwc.WarcVersion),
 		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)),
 	}
-	if f.UtilFlags.Repair() {
+	if f.RepairFlags.Repair() {
 		warcRecordOptions = append(warcRecordOptions,
 			gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
 			gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),
@@ -136,7 +147,7 @@ func (f ConvertWarcFlags) ToConvertWarcOptions() (*ConvertWarcOptions, error) {
 }
 
 func NewCommand() *cobra.Command {
-	flags := ConvertWarcFlags{}
+	flags := NewConvertWarcFlags()
 
 	var cmd = &cobra.Command{
 		Use:   "warc <files/dirs>",

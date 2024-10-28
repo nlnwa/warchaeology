@@ -14,7 +14,6 @@ type ArcFileReader struct {
 	warcReader     gowarc.Unmarshaler
 	countingReader *CountingReader
 	bufferedReader *bufio.Reader
-	currentRecord  gowarc.WarcRecord
 }
 
 func NewArcFileReader(fs afero.Fs, filename string, offset int64, opts ...gowarc.WarcRecordOption) (*ArcFileReader, error) {
@@ -40,24 +39,17 @@ func NewArcFileReader(fs afero.Fs, filename string, offset int64, opts ...gowarc
 }
 
 func (wf *ArcFileReader) Next() (gowarc.WarcRecord, int64, *gowarc.Validation, error) {
-	var validation *gowarc.Validation
-	if wf.currentRecord != nil {
-		if err := wf.currentRecord.Close(); err != nil {
-			return nil, wf.offset, validation, err
-		}
-	}
 	wf.offset = wf.initialOffset + wf.countingReader.N() - int64(wf.bufferedReader.Buffered())
 	fs, err := wf.file.Stat()
 	if err != nil {
-		return nil, wf.offset, validation, err
+		return nil, wf.offset, nil, err
 	}
 	if fs.Size() <= wf.offset {
 		wf.offset = 0
 	}
 
-	var recordOffset int64
-	wf.currentRecord, recordOffset, validation, err = wf.warcReader.Unmarshal(wf.bufferedReader)
-	return wf.currentRecord, wf.offset + recordOffset, validation, err
+	record, recordOffset, validation, err := wf.warcReader.Unmarshal(wf.bufferedReader)
+	return record, wf.offset + recordOffset, validation, err
 }
 
 func (wf *ArcFileReader) Close() error {

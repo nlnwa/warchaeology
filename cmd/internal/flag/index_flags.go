@@ -26,19 +26,11 @@ type IndexFlags struct {
 	name string
 }
 
-func WithDefaultIndexSubDir(name string) func(*IndexFlags) {
-	return func(f *IndexFlags) {
-		f.name = name
-	}
-}
+func (f *IndexFlags) AddFlags(cmd *cobra.Command, options ...func(*IndexFlags)) {
+	f.name = cmd.Name()
 
-func (f IndexFlags) AddFlags(cmd *cobra.Command, options ...func(*IndexFlags)) {
 	// Set GOMAXPROCS to 128 as recommended by badger
 	runtime.GOMAXPROCS(128)
-
-	for _, option := range options {
-		option(&f)
-	}
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
