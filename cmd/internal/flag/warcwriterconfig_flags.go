@@ -61,7 +61,7 @@ The same as --concurrent-writers=1, --file-size=0 and --name-generator=identity`
 type WarcWriterConfigFlags struct {
 	defaultFilePrefix string
 	defaultOneToOne   bool
-	name       string
+	name              string
 }
 
 func WithDefaultFilePrefix(prefix string) func(*WarcWriterConfigFlags) {
