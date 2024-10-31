@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/gowarc/v2"
 	"github.com/nlnwa/warchaeology/v3/arcreader"
 	"github.com/nlnwa/warchaeology/v3/cmd/internal/flag"
 	"github.com/nlnwa/warchaeology/v3/cmd/internal/log"

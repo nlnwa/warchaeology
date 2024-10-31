@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/gowarc/v2"
 	"github.com/nlnwa/warchaeology/v3/internal/filter"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

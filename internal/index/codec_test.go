@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/gowarc/v2"
 )
 
 func Test_codec_decode(t *testing.T) {

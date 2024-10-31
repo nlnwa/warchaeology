@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/gowarc/v2"
 	"github.com/nlnwa/warchaeology/v3/internal/filter"
 )
 

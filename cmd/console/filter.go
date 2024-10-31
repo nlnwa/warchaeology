@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/awesome-gocui/gocui"
-	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/gowarc/v2"
 )
 
 type recordFilter struct {
