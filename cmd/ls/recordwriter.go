@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/gowarc/v2"
 	"github.com/nlnwa/warchaeology/v3/internal/time"
 	"github.com/nlnwa/warchaeology/v3/internal/util"
 	"github.com/nlnwa/warchaeology/v3/internal/warc"

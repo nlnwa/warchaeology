@@ -17,6 +17,7 @@ warchaeology
 # Dependency directories (remove the comment below to include it)
 # vendor/
 /.idea/
+/.vscode/
 
 /dist/
 /docs/.hugo_build.lock

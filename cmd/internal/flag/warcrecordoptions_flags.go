@@ -3,7 +3,7 @@ package flag
 import (
 	"os"
 
-	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/gowarc/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

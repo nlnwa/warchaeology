@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/gowarc/v2"
 )
 
 type Metadata struct {

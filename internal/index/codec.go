@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nlnwa/gowarc"
+	"github.com/nlnwa/gowarc/v2"
 )
 
 const (
