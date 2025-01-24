@@ -114,55 +114,55 @@ func (f *WarcWriterConfigFlags) AddFlags(cmd *cobra.Command, options ...func(*Wa
 
 }
 
-func (f WarcWriterConfigFlags) ConcurrentWriters() int {
+func (f *WarcWriterConfigFlags) ConcurrentWriters() int {
 	return viper.GetInt(ConcurrentWriters)
 }
 
-func (f WarcWriterConfigFlags) FileSize() string {
+func (f *WarcWriterConfigFlags) FileSize() string {
 	return viper.GetString(FileSize)
 }
 
-func (f WarcWriterConfigFlags) Compress() bool {
+func (f *WarcWriterConfigFlags) Compress() bool {
 	return viper.GetBool(Compress)
 }
 
-func (f WarcWriterConfigFlags) CompressionLevel() int {
+func (f *WarcWriterConfigFlags) CompressionLevel() int {
 	return viper.GetInt(CompressionLevel)
 }
 
-func (f WarcWriterConfigFlags) FilePrefix() string {
+func (f *WarcWriterConfigFlags) FilePrefix() string {
 	return viper.GetString(FilePrefix)
 }
 
-func (f WarcWriterConfigFlags) SubdirPattern() string {
+func (f *WarcWriterConfigFlags) SubdirPattern() string {
 	return viper.GetString(SubdirPattern)
 }
 
-func (f WarcWriterConfigFlags) NameGenerator() string {
+func (f *WarcWriterConfigFlags) NameGenerator() string {
 	return viper.GetString(NameGenerator)
 }
 
-func (f WarcWriterConfigFlags) Flush() bool {
+func (f *WarcWriterConfigFlags) Flush() bool {
 	return viper.GetBool(Flush)
 }
 
-func (f WarcWriterConfigFlags) WarcVersion() string {
+func (f *WarcWriterConfigFlags) WarcVersion() string {
 	return viper.GetString(WarcVersion)
 }
 
-func (f WarcWriterConfigFlags) DefaultDate() string {
+func (f *WarcWriterConfigFlags) DefaultDate() string {
 	return viper.GetString(DefaultDate)
 }
 
-func (f WarcWriterConfigFlags) OutputDir() string {
+func (f *WarcWriterConfigFlags) OutputDir() string {
 	return viper.GetString(OutputDir)
 }
 
-func (f WarcWriterConfigFlags) OneToOne() bool {
+func (f *WarcWriterConfigFlags) OneToOne() bool {
 	return viper.GetBool(OneToOne)
 }
 
-func (f WarcWriterConfigFlags) ToWarcWriterConfig() (*warcwriterconfig.WarcWriterConfig, error) {
+func (f *WarcWriterConfigFlags) ToWarcWriterConfig() (*warcwriterconfig.WarcWriterConfig, error) {
 	return warcwriterconfig.New(f.name,
 		warcwriterconfig.WithOneToOneWriter(f.OneToOne()),
 		warcwriterconfig.WithOutDir(f.OutputDir()),

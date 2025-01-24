@@ -3,7 +3,6 @@ output:
     - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
-  uniq-by-line: true
   sort-results: true
 
 linters-settings:
@@ -11,6 +10,7 @@ linters-settings:
     simplify: true
 
 issues:
+  uniq-by-line: true
   max-issues-per-linter: 0
   max-same-issues: 0
 
@@ -42,7 +42,6 @@ linters:
     - godot
     - godox
     - gofumpt
-    - gomnd
     - gosec
     - inamedparam
     - interfacebloat
