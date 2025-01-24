@@ -52,22 +52,22 @@ func (f *IndexFlags) AddFlags(cmd *cobra.Command, options ...func(*IndexFlags)) 
 	}
 }
 
-func (f IndexFlags) IndexDir() string {
+func (f *IndexFlags) IndexDir() string {
 	return viper.GetString(IndexDir)
 }
 
-func (f IndexFlags) KeepIndex() bool {
+func (f *IndexFlags) KeepIndex() bool {
 	return viper.GetBool(KeepIndex)
 }
 
-func (f IndexFlags) NewIndex() bool {
+func (f *IndexFlags) NewIndex() bool {
 	return viper.GetBool(NewIndex)
 }
 
-func (f IndexFlags) ToDigestIndex() (*index.DigestIndex, error) {
+func (f *IndexFlags) ToDigestIndex() (*index.DigestIndex, error) {
 	return index.NewDigestIndex(f.IndexDir(), f.name, f.KeepIndex(), f.NewIndex())
 }
 
-func (f IndexFlags) ToFileIndex() (*index.FileIndex, error) {
+func (f *IndexFlags) ToFileIndex() (*index.FileIndex, error) {
 	return index.NewFileIndex(f.IndexDir(), f.name, f.KeepIndex(), f.NewIndex())
 }

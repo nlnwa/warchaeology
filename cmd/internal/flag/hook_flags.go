@@ -50,19 +50,19 @@ func (f *InputHookFlags) AddFlags(cmd *cobra.Command, opts ...func(*InputHookFla
 	flags.String(CloseInputFileHook, "", CloseInputFileHookHelp)
 }
 
-func (f InputHookFlags) OpenInputFileHook() string {
+func (f *InputHookFlags) OpenInputFileHook() string {
 	return viper.GetString(OpenInputFileHook)
 }
 
-func (f InputHookFlags) CloseInputFileHook() string {
+func (f *InputHookFlags) CloseInputFileHook() string {
 	return viper.GetString(CloseInputFileHook)
 }
 
-func (f InputHookFlags) ToOpenInputFileHook() (hooks.OpenInputFileHook, error) {
+func (f *InputHookFlags) ToOpenInputFileHook() (hooks.OpenInputFileHook, error) {
 	return hooks.NewOpenInputFileHook(f.name, f.OpenInputFileHook())
 }
 
-func (f InputHookFlags) ToCloseInputFileHook() (hooks.CloseInputFileHook, error) {
+func (f *InputHookFlags) ToCloseInputFileHook() (hooks.CloseInputFileHook, error) {
 	return hooks.NewCloseInputFileHook(f.name, f.CloseInputFileHook())
 }
 
@@ -77,18 +77,18 @@ func (f *OutputHookFlags) AddFlags(cmd *cobra.Command, opts ...func(*OutputHookF
 	flags.String(CloseOutputFileHook, "", CloseOutputFileHookHelp)
 }
 
-func (f OutputHookFlags) OpenOutputFileHook() string {
+func (f *OutputHookFlags) OpenOutputFileHook() string {
 	return viper.GetString(OpenOutputFileHook)
 }
 
-func (f OutputHookFlags) CloseOutputFileHook() string {
+func (f *OutputHookFlags) CloseOutputFileHook() string {
 	return viper.GetString(CloseOutputFileHook)
 }
 
-func (f OutputHookFlags) ToOpenOutputFileHook() (hooks.OpenOutputFileHook, error) {
+func (f *OutputHookFlags) ToOpenOutputFileHook() (hooks.OpenOutputFileHook, error) {
 	return hooks.NewOpenOutputFileHook(f.name, f.OpenOutputFileHook())
 }
 
-func (f OutputHookFlags) ToCloseOutputFileHook() (hooks.CloseOutputFileHook, error) {
+func (f *OutputHookFlags) ToCloseOutputFileHook() (hooks.CloseOutputFileHook, error) {
 	return hooks.NewCloseOutputFileHook(f.name, f.CloseOutputFileHook())
 }
