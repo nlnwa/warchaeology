@@ -11,7 +11,6 @@ import (
 
 	"github.com/nlnwa/gowarc/v2"
 	"github.com/nlnwa/warchaeology/v3/cmd/internal/flag"
-	"github.com/nlnwa/warchaeology/v3/cmd/internal/log"
 	"github.com/nlnwa/warchaeology/v3/internal/filewalker"
 	"github.com/nlnwa/warchaeology/v3/internal/hooks"
 	"github.com/nlnwa/warchaeology/v3/internal/index"
@@ -35,6 +34,7 @@ type ConvertNedlibOptions struct {
 	FileIndex          *index.FileIndex
 	MinWARCDiskFree    int64
 	Concurrency        int
+	ContinueOnError    bool
 	WarcRecordOptions  []gowarc.WarcRecordOption
 	OpenInputFileHook  hooks.OpenInputFileHook
 	CloseInputFileHook hooks.CloseInputFileHook
@@ -47,6 +47,7 @@ type ConvertNedlibFlags struct {
 	OutputHookFlags       *flag.OutputHookFlags
 	InputHookFlags        *flag.InputHookFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
+	ErrorFlags            flag.ErrorFlags
 }
 
 func NewConvertNedlibFlags() ConvertNedlibFlags {
@@ -65,6 +66,7 @@ func (f ConvertNedlibFlags) AddFlags(cmd *cobra.Command) {
 	f.OutputHookFlags.AddFlags(cmd)
 	f.InputHookFlags.AddFlags(cmd)
 	f.ConcurrencyFlags.AddFlags(cmd)
+	f.ErrorFlags.AddFlags(cmd)
 }
 
 func (f ConvertNedlibFlags) ToOptions() (*ConvertNedlibOptions, error) {
@@ -124,6 +126,7 @@ func (f ConvertNedlibFlags) ToOptions() (*ConvertNedlibOptions, error) {
 		Paths:             fileList,
 		FileWalker:        fileWalker,
 		FileIndex:         fileIndex,
+		ContinueOnError:   f.ErrorFlags.ContinueOnError(),
 	}, nil
 }
 
@@ -131,7 +134,7 @@ func NewCmdConvertNedlib() *cobra.Command {
 	flags := NewConvertNedlibFlags()
 
 	cmd := &cobra.Command{
-		Use:   "nedlib <files/dirs>",
+		Use:   "nedlib FILE/DIR ...",
 		Short: "Convert directory with files harvested with Nedlib into warc files",
 		Long:  ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -148,7 +151,11 @@ func NewCmdConvertNedlib() *cobra.Command {
 				return err
 			}
 			cmd.SilenceUsage = true
-			return o.Run(cmd.Name(), args)
+			err = o.Run()
+			if errors.Is(err, context.Canceled) {
+				os.Exit(1)
+			}
+			return err
 		},
 	}
 
@@ -169,65 +176,95 @@ func (o *ConvertNedlibOptions) Validate() error {
 	return nil
 }
 
-func (o *ConvertNedlibOptions) Run(cmd string, args []string) error {
+func (o *ConvertNedlibOptions) Run() error {
+	done := make(chan struct{})
+	exitCode := 0
+
+	defer func() {
+		<-done
+		os.Exit(exitCode)
+	}()
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
+
+	results := make(chan stat.Result)
+	go func() {
+		defer close(done)
+
+		stats := stat.NewStats()
+		defer func() {
+			slog.Info("Total", "files", stats.Files, "errors", stats.Errors, "records", stats.Records)
+		}()
+
+		for result := range results {
+			slog := slog.With("path", result.Name())
+			for _, err := range result.Errors() {
+				var recordErr warc.RecordError
+				if errors.As(err, &recordErr) {
+					slog.Error("Validation error", "error", recordErr.Error(), "offset", recordErr.Offset())
+				} else {
+					slog.Error("Validation error", "error", err.Error())
+				}
+			}
+			slog.Info("Converted file", "errors", result.ErrorCount(), "records", result.Records())
+			stats.Merge(result)
+		}
+		if stats.Errors > 0 {
+			exitCode = 1
+		}
+	}()
+	defer close(results)
 
 	if o.FileIndex != nil {
 		defer o.FileIndex.Close()
 	}
+
 	defer o.WarcWriterConfig.Close()
 
-	closer, err := log.InitLogger(os.Stderr)
-	if err != nil {
-		return err
-	}
-	defer closer.Close()
-
-	workerPool := workerpool.New(o.Concurrency)
+	workerPool := workerpool.New(ctx, o.Concurrency)
 	defer workerPool.CloseWait()
 
-	walkFn := func(fs afero.Fs, path string, err error) error {
-		if err != nil {
-			return err
-		}
-
-		slog := slog.With("path", path)
-
-		return workerPool.Submit(ctx, func() {
-			if o.MinWARCDiskFree > 0 {
-				diskFree := util.DiskFree(o.WarcWriterConfig.OutDir)
-				if diskFree < o.MinWARCDiskFree {
-					cancel()
-					slog.Error("not enough space left on device", "space", diskFree, "dir", o.WarcWriterConfig.OutDir)
-					return
-				}
-			}
-
-			result, err := filewalker.Preposterous(path, o.FileIndex, o.OpenInputFileHook, o.CloseInputFileHook, func() stat.Result {
-				return o.readFile(ctx, fs, path)
-			})
-			if errors.Is(err, filewalker.ErrSkipFile) {
-				return
-			}
-			if err != nil {
-				cancel()
-				slog.Error(err.Error())
-				return
-			}
-			for _, err := range result.Errors() {
-				slog.Error(err.Error())
-			}
-			if result.Fatal() != nil {
-				cancel()
-				slog.Error(result.Fatal().Error())
-				return
-			}
-		})
-	}
-
 	for _, path := range o.Paths {
-		err := o.FileWalker.Walk(path, walkFn)
+		err := o.FileWalker.Walk(ctx, path, func(fs afero.Fs, path string, err error) error {
+			if err != nil {
+				return err
+			}
+
+			workerPool.Submit(func() {
+				// Assert WARC disk has enough free space
+				if o.MinWARCDiskFree > 0 {
+					diskFree, err := util.DiskFree(o.WarcWriterConfig.OutDir)
+					if err != nil {
+						cancel()
+						slog.Error("Failed to get free space on device", "path", o.WarcWriterConfig.OutDir, "error", err)
+						return
+					}
+					if diskFree < o.MinWARCDiskFree {
+						cancel()
+						slog.Error("Not enough free space on device", "bytesFree", diskFree, "path", o.WarcWriterConfig.OutDir)
+						return
+					}
+				}
+
+				result, err := filewalker.Preposterous(fs, path, o.OpenInputFileHook, o.CloseInputFileHook, o.FileIndex, o.handleFile)
+				if errors.Is(err, filewalker.ErrSkipFile) {
+					return
+				} else if err != nil {
+					if !o.ContinueOnError {
+						cancel()
+					}
+					if result == nil {
+						result = stat.NewResult(path)
+					}
+					result.AddError(err)
+				}
+
+				results <- result
+			})
+
+			return nil
+		})
 		if err != nil {
 			return err
 		}
@@ -235,13 +272,12 @@ func (o *ConvertNedlibOptions) Run(cmd string, args []string) error {
 	return nil
 }
 
-func (o *ConvertNedlibOptions) readFile(ctx context.Context, fs afero.Fs, fileName string) stat.Result {
+func (o *ConvertNedlibOptions) handleFile(fs afero.Fs, fileName string) (stat.Result, error) {
 	result := stat.NewResult(fileName)
 
 	nedlibReader, err := nedlibreader.NewNedlibReader(fs, fileName, o.WarcWriterConfig.DefaultTime, o.WarcRecordOptions...)
 	if err != nil {
-		result.SetFatal(err)
-		return result
+		return nil, err
 	}
 	defer func() { _ = nedlibReader.Close() }()
 
@@ -254,52 +290,44 @@ func (o *ConvertNedlibOptions) readFile(ctx context.Context, fs afero.Fs, fileNa
 		}()
 	}
 
-	for record := range warc.NewIterator(ctx, nedlibReader, nil, 0, 0) {
-		if record.Err != nil {
-			result.SetFatal(warc.Error(record, record.Err))
-			break
+	for record, err := range warc.Records(nedlibReader, nil, 0, 0) {
+		if err != nil {
+			return result, warc.Error(record, err)
 		}
 
 		warcDate := record.WarcRecord.WarcHeader().Get(gowarc.WarcDate)
 
 		syntheticFileName, err := time.To14(warcDate)
 		if err != nil {
-			result.SetFatal(warc.Error(record, err))
-			break
+			return result, warc.Error(record, err)
 		}
 
 		writer, err := o.WarcWriterConfig.GetWarcWriter(syntheticFileName, warcDate)
 		if err != nil {
-			result.SetFatal(warc.Error(record, err))
-			break
+			return result, warc.Error(record, err)
 		}
 
-		o.handleRecord(writer, record, result)
-		if result.Fatal() != nil {
-			break
+		err = o.handleRecord(writer, record, result)
+		if err != nil {
+			return result, warc.Error(record, err)
 		}
 	}
 
-	return result
+	return result, nil
 }
 
-// handleRecord processes one record
-func (o *ConvertNedlibOptions) handleRecord(w *gowarc.WarcFileWriter, record warc.Record, result stat.Result) {
+func (o *ConvertNedlibOptions) handleRecord(w *gowarc.WarcFileWriter, record warc.Record, result stat.Result) error {
 	defer record.Close()
 
 	result.IncrRecords()
-	result.IncrProcessed()
-
-	if record.Err != nil {
-		result.SetFatal(warc.Error(record, record.Err))
-		return
-	}
 
 	if !record.Validation.Valid() {
-		result.AddError(warc.Error(record, record.Validation))
+		result.AddError(record.Validation)
 	}
 
-	if writeResponse := w.Write(record.WarcRecord); len(writeResponse) > 0 && writeResponse[0].Err != nil {
-		result.SetFatal(warc.Error(record, writeResponse[0].Err))
+	writeResponse := w.Write(record.WarcRecord)
+	if len(writeResponse) > 0 {
+		return writeResponse[0].Err
 	}
+	return nil
 }

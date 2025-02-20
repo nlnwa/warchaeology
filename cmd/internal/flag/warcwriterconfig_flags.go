@@ -21,7 +21,7 @@ const (
 	CompressHelp = `use gzip compression for WARC files`
 
 	CompressionLevel     = "compression-level"
-	CompressionLevelHelp = `the gzip compression level to use (value between 1 and 9)`
+	CompressionLevelHelp = `the gzip compression level to use (value between 1 and 9, -1 means the gzip library default level)`
 
 	FilePrefix     = "prefix"
 	FilePrefixHelp = `filename prefix for WARC files`
@@ -85,8 +85,8 @@ func (f *WarcWriterConfigFlags) AddFlags(cmd *cobra.Command, options ...func(*Wa
 	flags.BoolP(Compress, "z", true, CompressHelp)
 	flags.Int(CompressionLevel, gzip.DefaultCompression, CompressionLevelHelp)
 	flags.IntP(ConcurrentWriters, "C", 16, ConcurrentWritersHelp)
-	flags.String(DefaultDate, time.Now().Format(warcwriterconfig.DefaultDateFormat), DefaultDateHelp) // TODO -t --record-type collision
-	flags.String(FileSize, "1GB", FileSizeHelp)                                                       // TODO -S --response-code collision
+	flags.String(DefaultDate, time.Now().Format(warcwriterconfig.DefaultDateFormat), DefaultDateHelp)
+	flags.String(FileSize, "1GB", FileSizeHelp)
 	flags.StringP(FilePrefix, "p", f.defaultFilePrefix, FilePrefixHelp)
 	flags.Bool(Flush, false, FlushHelp)
 	flags.String(NameGenerator, "default", NameGeneratorHelp)

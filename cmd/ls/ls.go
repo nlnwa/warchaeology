@@ -11,7 +11,6 @@ import (
 
 	"github.com/nlnwa/gowarc/v2"
 	"github.com/nlnwa/warchaeology/v3/cmd/internal/flag"
-	"github.com/nlnwa/warchaeology/v3/cmd/internal/log"
 	"github.com/nlnwa/warchaeology/v3/internal/filewalker"
 	"github.com/nlnwa/warchaeology/v3/internal/filter"
 	"github.com/nlnwa/warchaeology/v3/internal/warc"
@@ -24,9 +23,6 @@ import (
 const (
 	Delimiter     = "delimiter"
 	DelimiterHelp = `field delimiter`
-
-	Strict     = "strict"
-	StrictHelp = `strict parsing`
 
 	Fields     = "fields"
 	FieldsHelp = `which fields to include in the output
@@ -60,7 +56,9 @@ type ListOptions struct {
 	offset            int64
 	recordNum         int
 	recordCount       int
+	force             bool
 	concurrency       int
+	continueOnError   bool
 	filter            *filter.RecordFilter
 	writer            Writer
 	fileWalker        *filewalker.FileWalker
@@ -73,6 +71,7 @@ type ListFlags struct {
 	WarcIteratorFlags     flag.WarcIteratorFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
+	ErrorFlags            flag.ErrorFlags
 }
 
 func (f ListFlags) AddFlags(cmd *cobra.Command) {
@@ -81,17 +80,13 @@ func (f ListFlags) AddFlags(cmd *cobra.Command) {
 	f.WarcIteratorFlags.AddFlags(cmd)
 	f.WarcRecordOptionFlags.AddFlags(cmd)
 	f.ConcurrencyFlags.AddFlags(cmd)
+	f.ErrorFlags.AddFlags(cmd)
 
 	flags := cmd.Flags()
 
-	flags.Bool(Strict, false, StrictHelp)
 	flags.StringP(Delimiter, "d", " ", DelimiterHelp)
 	flags.StringP(Fields, "F", "", FieldsHelp)
 	flags.Bool("json", false, "output as JSON lines")
-}
-
-func (f ListFlags) Strict() bool {
-	return viper.GetBool(Strict)
 }
 
 func (f ListFlags) Delimiter() string {
@@ -119,12 +114,6 @@ func (f ListFlags) ToListOptions() (*ListOptions, error) {
 
 	opts := f.WarcRecordOptionFlags.ToWarcRecordOptions()
 
-	if f.Strict() {
-		opts = append(opts, gowarc.WithStrictValidation())
-	} else {
-		opts = append(opts, gowarc.WithSyntaxErrorPolicy(gowarc.ErrIgnore), gowarc.WithSpecViolationPolicy(gowarc.ErrIgnore), gowarc.WithUnknownRecordTypePolicy(gowarc.ErrIgnore))
-	}
-
 	var writer Writer
 	if f.JSON() {
 		writer = NewJSONWriter(os.Stdout, f.Fields())
@@ -145,8 +134,10 @@ func (f ListFlags) ToListOptions() (*ListOptions, error) {
 		offset:            f.WarcIteratorFlags.Offset(),
 		recordNum:         f.WarcIteratorFlags.RecordNum(),
 		recordCount:       f.WarcIteratorFlags.Limit(),
+		force:             f.WarcIteratorFlags.Force(),
 		concurrency:       f.ConcurrencyFlags.Concurrency(),
 		filter:            filter,
+		continueOnError:   f.ErrorFlags.ContinueOnError(),
 		fileWalker:        fileWalker,
 		writer:            writer,
 		warcRecordOptions: opts,
@@ -173,7 +164,11 @@ func NewCmdList() *cobra.Command {
 				return err
 			}
 			cmd.SilenceUsage = true
-			return o.Run()
+			err = o.Run()
+			if errors.Is(err, context.Canceled) {
+				os.Exit(1)
+			}
+			return err
 		},
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
@@ -202,28 +197,32 @@ func (o *ListOptions) Run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	closer, err := log.InitLogger(os.Stderr)
-	if err != nil {
-		return err
-	}
-	defer closer.Close()
-
-	workerPool := workerpool.New(o.concurrency)
+	workerPool := workerpool.New(ctx, o.concurrency)
 	defer workerPool.CloseWait()
 
-	walkFn := func(fs afero.Fs, path string, err error) error {
-		if err != nil {
-			return err
-		}
-		return workerPool.Submit(ctx, func() {
-			if err := o.listFile(ctx, fs, path); err != nil {
-				slog.Error(err.Error(), "path", path)
+	for _, path := range o.paths {
+		err := o.fileWalker.Walk(ctx, path, func(fs afero.Fs, path string, err error) error {
+			if err != nil {
+				return err
 			}
-		})
-	}
 
-	for _, root := range o.paths {
-		err := o.fileWalker.Walk(root, walkFn)
+			workerPool.Submit(func() {
+				err := o.handleFile(ctx, fs, path)
+				if err != nil {
+					if !o.continueOnError {
+						cancel()
+					}
+					var recordErr warc.RecordError
+					if errors.As(err, &recordErr) {
+						slog.Error(recordErr.Error(), "path", path, "offset", recordErr.Offset())
+					} else {
+						slog.Error(err.Error(), "path", path)
+					}
+				}
+			})
+
+			return nil
+		})
 		if err != nil {
 			return err
 		}
@@ -232,7 +231,7 @@ func (o *ListOptions) Run() error {
 }
 
 // listFile reads a warc file and writes the records to the output
-func (o *ListOptions) listFile(ctx context.Context, fs afero.Fs, path string) error {
+func (o *ListOptions) handleFile(ctx context.Context, fs afero.Fs, path string) error {
 	f, err := fs.Open(path)
 	if err != nil {
 		return err
@@ -243,12 +242,25 @@ func (o *ListOptions) listFile(ctx context.Context, fs afero.Fs, path string) er
 	}
 	defer func() { _ = warcFileReader.Close() }()
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	var lastOffset int64 = -1
 
-	for record := range warc.NewIterator(ctx, warcFileReader, o.filter, o.recordNum, o.recordCount) {
+	for record, err := range warc.Records(warcFileReader, o.filter, o.recordNum, o.recordCount) {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		if err != nil {
+			// When forcing, avoid infinite loop by ensuring the iterator moves forward
+			if o.force && lastOffset != record.Offset {
+				slog.Warn(err.Error(), "offset", record.Offset, "path", path)
+				lastOffset = record.Offset
+				continue
+			}
+			return warc.Error(record, err)
+		}
 		if err := o.handleRecord(record, path); err != nil {
-			return err
+			return warc.Error(record, err)
 		}
 	}
 
@@ -257,8 +269,8 @@ func (o *ListOptions) listFile(ctx context.Context, fs afero.Fs, path string) er
 
 func (o *ListOptions) handleRecord(record warc.Record, path string) error {
 	defer record.Close()
-	if record.Err != nil {
-		return warc.Error(record, record.Err)
+	if err := o.writer.WriteRecord(record, path); err != nil {
+		return warc.Error(record, err)
 	}
-	return o.writer.WriteRecord(record, path)
+	return nil
 }

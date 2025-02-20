@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,7 +15,7 @@ import (
 )
 
 type JSONWriter struct {
-	logger *log.Logger
+	w      io.Writer
 	fields []byte
 }
 
@@ -34,7 +33,7 @@ func NewJSONWriter(w io.Writer, format string) *JSONWriter {
 	}
 	return &JSONWriter{
 		fields: fields,
-		logger: log.New(w, "", 0),
+		w:      w,
 	}
 }
 
@@ -77,9 +76,12 @@ func (recordWriter *JSONWriter) WriteRecord(record warc.Record, fileName string)
 	if err != nil {
 		return err
 	}
-
-	recordWriter.logger.Println(string(b))
-	return nil
+	_, err = recordWriter.w.Write(b)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(recordWriter.w)
+	return err
 }
 
 type RecordWriter struct {
@@ -87,7 +89,6 @@ type RecordWriter struct {
 	fields     []*field
 	sizeFields []*field
 	sep        string
-	logger     *log.Logger
 }
 
 type toInt64Fn func(record warc.Record, file string) int64
@@ -101,11 +102,10 @@ type field struct {
 	fn     writerFn
 }
 
-func NewRecordWriter(w io.Writer, format, separator string) (*RecordWriter, error) {
+func NewRecordWriter(w io.Writer, format string, separator string) (*RecordWriter, error) {
 	recordWriter := &RecordWriter{
-		w:      w,
-		sep:    separator,
-		logger: log.New(w, "", 0),
+		w:   w,
+		sep: separator,
 	}
 	if format == "" {
 		format = "V+11iT-8a100"
@@ -162,8 +162,8 @@ func (recordWriter *RecordWriter) Write(line string, size int64) error {
 		}
 		v = append(v, size)
 	}
-	recordWriter.logger.Printf(line+"\n", v...)
-	return nil
+	_, err := fmt.Fprintf(recordWriter.w, line+"\n", v...)
+	return err
 }
 
 func createInt64Fn(align, length int, valueFn toInt64Fn) writerFn {

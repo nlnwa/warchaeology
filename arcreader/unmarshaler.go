@@ -246,7 +246,7 @@ func (u *unmarshaler) parseRecord(r *bufio.Reader, l1 string) (gowarc.WarcRecord
 func (u *unmarshaler) parseUrlRecordV1(l string) (gowarc.RecordType, string, string, time.Time, string, int64, error) {
 	reg := regexp.MustCompile(`([^ ]*) ([^ ]*) (\d*) ([^ ]*) (\d*)`)
 	subs := reg.FindStringSubmatch(l)
-	if subs == nil || len(subs) < 4 {
+	if len(subs) < 4 {
 		return 0, "", "", time.Time{}, "", 0, fmt.Errorf("could not parse ARC record from: %s", l)
 	}
 	url := subs[1]

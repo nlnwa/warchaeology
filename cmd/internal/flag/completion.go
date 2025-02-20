@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// SuffixCompletionFn can be added set for commands which want to restrict file completion to suffixes set by flag
+// SuffixCompletionFn can be used by commands that want to restrict file completion to suffixes set by flag
 func SuffixCompletionFn(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	if suf, err := cmd.Flags().GetStringSlice(Suffixes); err != nil {
 		return nil, cobra.ShellCompDirectiveError

@@ -1,7 +1,6 @@
 package warc
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 
@@ -57,16 +56,16 @@ func TestConvertWarcFile(t *testing.T) {
 				WarcWriterConfig: warcWriterConfig,
 			}
 
-			result := o.readFile(context.Background(), afero.NewOsFs(), filename)
-			if !tt.wantError && result.ErrorCount() > 0 {
+			result, err := o.handleFile(afero.NewOsFs(), filename)
+			if err != nil {
+				if !tt.wantError {
+					t.Fatal(err)
+				}
+			}
+			if result.ErrorCount() > 0 {
 				for _, err := range result.Errors() {
-					t.Errorf("readFile() error = %v", err)
+					t.Error(err)
 				}
-				if result.Fatal() != nil {
-					t.Errorf("readFile() fatal = %v", result.Fatal())
-				}
-			} else if tt.wantError && result.ErrorCount() == 0 {
-				t.Errorf("readFile() expected error, got none")
 			}
 		})
 	}

@@ -20,7 +20,7 @@ type Fs struct {
 }
 
 func New(addr, user, passwd string, poolSize int32) afero.Fs {
-	constructor := func(ctx context.Context) (interface{}, error) {
+	constructor := func(ctx context.Context) (any, error) {
 		c, err := ftp.Dial(addr, ftp.DialWithContext(ctx))
 		if err != nil {
 			return nil, err
@@ -32,7 +32,7 @@ func New(addr, user, passwd string, poolSize int32) afero.Fs {
 		return c, nil
 	}
 
-	destructor := func(value interface{}) {
+	destructor := func(value any) {
 		_ = value.(*ftp.ServerConn).Quit()
 	}
 

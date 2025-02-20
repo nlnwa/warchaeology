@@ -30,7 +30,7 @@ func TestListFile(t *testing.T) {
 		warcRecordOptions: []gowarc.WarcRecordOption{gowarc.WithBufferTmpDir(t.TempDir())},
 	}
 
-	err = opts.listFile(context.TODO(), afero.NewOsFs(), warcWithErrors)
+	err = opts.handleFile(context.Background(), afero.NewOsFs(), warcWithErrors)
 	if err == nil {
 		t.Error("expected error, got nil")
 	}
@@ -52,6 +52,6 @@ func BenchmarkListFile(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		_ = opts.listFile(context.TODO(), afero.NewOsFs(), warcWithErrors)
+		_ = opts.handleFile(context.Background(), afero.NewOsFs(), warcWithErrors)
 	}
 }

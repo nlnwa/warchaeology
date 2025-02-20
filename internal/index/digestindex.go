@@ -1,16 +1,13 @@
 package index
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/nlnwa/gowarc/v2"
-	"github.com/nlnwa/warchaeology/v3/internal/util"
 )
-
-const minIndexDiskFree = 1 * 1024 * 1024
 
 type DigestIndex struct {
 	dir       string
@@ -19,6 +16,9 @@ type DigestIndex struct {
 }
 
 func NewDigestIndex(indexDir string, subdir string, keepIndex bool, newIndex bool) (idx *DigestIndex, err error) {
+	// Set GOMAXPROCS to 128 as recommended by badger
+	runtime.GOMAXPROCS(128)
+
 	dir := filepath.Join(indexDir, subdir, "digests")
 	dir = filepath.Clean(dir)
 	idx = &DigestIndex{
@@ -37,26 +37,22 @@ func NewDigestIndex(indexDir string, subdir string, keepIndex bool, newIndex boo
 	return
 }
 
-func (digestIndex *DigestIndex) HasDiskSpace() error {
-	space := util.DiskFree(digestIndex.dir)
-	if space < minIndexDiskFree {
-		return fmt.Errorf("not enough disk space on %s: %d bytes free", digestIndex.dir, space)
-	}
-	return nil
+func (digestIndex *DigestIndex) GetDir() string {
+	return digestIndex.dir
 }
 
 func (digestIndex *DigestIndex) IsRevisit(key string, revisitRef *gowarc.RevisitRef) (*gowarc.RevisitRef, error) {
 	var revisitReference *gowarc.RevisitRef
-	err := digestIndex.db.Update(func(transaction *badger.Txn) error {
-		item, err := transaction.Get([]byte(key))
+	val, err := MarshalRevisitRef(revisitRef)
+	if err != nil {
+		return nil, err
+	}
+	err = digestIndex.db.Update(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(key))
+		if err == badger.ErrKeyNotFound {
+			return txn.Set([]byte(key), val)
+		}
 		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				val, err := MarshalRevisitRef(revisitRef)
-				if err != nil {
-					return err
-				}
-				return transaction.Set([]byte(key), val)
-			}
 			return err
 		}
 		return item.Value(func(val []byte) error {
@@ -65,13 +61,10 @@ func (digestIndex *DigestIndex) IsRevisit(key string, revisitRef *gowarc.Revisit
 			return err
 		})
 	})
-	if err != nil {
-		if err == badger.ErrConflict {
-			return digestIndex.IsRevisit(key, revisitRef)
-		}
-		return nil, err
+	if err == badger.ErrConflict {
+		return digestIndex.IsRevisit(key, revisitRef)
 	}
-	return revisitReference, nil
+	return revisitReference, err
 }
 
 func (idx *DigestIndex) Close() {

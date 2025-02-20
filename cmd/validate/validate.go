@@ -2,25 +2,17 @@ package validate
 
 import (
 	"context"
-	"crypto"
-	_ "crypto/md5"
-	_ "crypto/sha1"
-	_ "crypto/sha256"
-	_ "crypto/sha512"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"sync"
 	"syscall"
 
 	"github.com/nlnwa/gowarc/v2"
 	"github.com/nlnwa/warchaeology/v3/cmd/internal/flag"
-	"github.com/nlnwa/warchaeology/v3/cmd/internal/log"
 	"github.com/nlnwa/warchaeology/v3/internal/filewalker"
 	"github.com/nlnwa/warchaeology/v3/internal/filter"
 	"github.com/nlnwa/warchaeology/v3/internal/hooks"
@@ -44,10 +36,13 @@ type ValidateOptions struct {
 	concurrency         int
 	recordNum           int
 	recordCount         int
+	offset              int64
+	force               bool
 	hashFunction        string
 	FileIndex           *index.FileIndex
 	filter              *filter.RecordFilter
 	FileWalker          *filewalker.FileWalker
+	continueOnError     bool
 	warcRecordOptions   []gowarc.WarcRecordOption
 	openInputFileHook   hooks.OpenInputFileHook
 	closeInputFileHook  hooks.CloseInputFileHook
@@ -71,6 +66,8 @@ type ValidateFlags struct {
 	FilterFlags           flag.FilterFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
+	ErrorFlags            flag.ErrorFlags
+	WarcIteratorFlags     flag.WarcIteratorFlags
 }
 
 func (f ValidateFlags) AddFlags(cmd *cobra.Command) {
@@ -81,9 +78,11 @@ func (f ValidateFlags) AddFlags(cmd *cobra.Command) {
 	f.OutputHookFlags.AddFlags(cmd)
 	f.InputHookFlags.AddFlags(cmd)
 	f.ConcurrencyFlags.AddFlags(cmd)
+	f.ErrorFlags.AddFlags(cmd)
+	f.WarcIteratorFlags.AddFlags(cmd)
 
 	cmd.Flags().String(CalculateHash, "", CalculateHashHelp)
-	cmd.Flags().StringP(flag.OutputDir, "o", "", "output directory for validated warc files. If not empty this enables copying of input file. Directory must exist.")
+	cmd.Flags().StringP(flag.OutputDir, "w", "", "output directory for validated warc files. If not empty this enables copying of input file. Directory must exist.")
 }
 
 func (f ValidateFlags) OutputDir() string {
@@ -134,10 +133,15 @@ func (f ValidateFlags) ToOptions() (*ValidateOptions, error) {
 	return &ValidateOptions{
 		paths:               fileList,
 		FileWalker:          fileWalker,
+		continueOnError:     f.ErrorFlags.ContinueOnError(),
 		filter:              filter,
 		hashFunction:        f.HashFunction(),
 		concurrency:         f.ConcurrencyFlags.Concurrency(),
 		outputDir:           f.OutputDir(),
+		recordNum:           f.WarcIteratorFlags.RecordNum(),
+		recordCount:         f.WarcIteratorFlags.Limit(),
+		force:               f.WarcIteratorFlags.Force(),
+		offset:              f.WarcIteratorFlags.Offset(),
 		warcRecordOptions:   f.WarcRecordOptionFlags.ToWarcRecordOptions(),
 		FileIndex:           fileIndex,
 		openInputFileHook:   openInputFileHook,
@@ -168,7 +172,11 @@ func NewCmdValidate() *cobra.Command {
 				return err
 			}
 			cmd.SilenceUsage = true
-			return o.Run()
+			err = o.Run()
+			if errors.Is(err, context.Canceled) {
+				os.Exit(1)
+			}
+			return err
 		},
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
@@ -191,55 +199,77 @@ func (o *ValidateOptions) Validate() error {
 }
 
 func (o *ValidateOptions) Run() error {
+	exitCode := 0
+	done := make(chan struct{})
+
+	defer func() {
+		<-done
+		os.Exit(exitCode)
+	}()
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
+
+	results := make(chan stat.Result)
+	go func() {
+		defer close(done)
+
+		stats := stat.NewStats()
+		defer func() {
+			slog.Info("Total", "files", stats.Files, "errors", stats.Errors, "records", stats.Records)
+		}()
+
+		for result := range results {
+			slog := slog.With("path", result.Name())
+			for _, err := range result.Errors() {
+				var recordErr warc.RecordError
+				if errors.As(err, &recordErr) {
+					slog.Error("Validation error", "error", recordErr.Error(), "offset", recordErr.Offset())
+				} else {
+					slog.Error("Validation error", "error", err.Error())
+				}
+			}
+			slog.Info("Validated file", "errors", result.ErrorCount(), "records", result.Records())
+			stats.Merge(result)
+		}
+		if stats.Errors > 0 {
+			exitCode = 1
+		}
+	}()
+	defer close(results)
 
 	if o.FileIndex != nil {
 		defer o.FileIndex.Close()
 	}
 
-	closer, err := log.InitLogger(os.Stderr)
-	if err != nil {
-		return err
-	}
-	defer closer.Close()
-
-	workerPool := workerpool.New(o.concurrency)
+	workerPool := workerpool.New(ctx, o.concurrency)
 	defer workerPool.CloseWait()
 
-	walkFn := func(fs afero.Fs, path string, err error) error {
-		if err != nil {
-			return err
-		}
-		return workerPool.Submit(ctx, func() {
-			result, err := filewalker.Preposterous(path, o.FileIndex, o.openInputFileHook, o.closeInputFileHook, func() stat.Result {
-				return o.validateFile(ctx, fs, path)
-			})
-			if errors.Is(err, filewalker.ErrSkipFile) {
-				return
-			}
-			if err != nil {
-				slog.Error(err.Error())
-				return
-			}
-			slog := slog.With("file", path, "errors", result.ErrorCount(), "records", result.Records())
-			if result.ErrorCount() == 0 {
-				slog.Info("Valid")
-			} else {
-				slog.Warn("Invalid")
-			}
-			if result.Fatal() != nil {
-				defer cancel()
-				slog.Error(result.Fatal().Error())
-			}
-			for _, err := range result.Errors() {
-				slog.Error(err.Error())
-			}
-		})
-	}
-
 	for _, path := range o.paths {
-		err := o.FileWalker.Walk(path, walkFn)
+		err := o.FileWalker.Walk(ctx, path, func(fs afero.Fs, path string, err error) error {
+			if err != nil {
+				return err
+			}
+
+			workerPool.Submit(func() {
+				result, err := filewalker.Preposterous(fs, path, o.openInputFileHook, o.closeInputFileHook, o.FileIndex, o.handleFile)
+				if errors.Is(err, filewalker.ErrSkipFile) {
+					return
+				} else if err != nil {
+					if !o.continueOnError {
+						cancel()
+					}
+					if result == nil {
+						result = stat.NewResult(path)
+					}
+					result.AddError(err)
+				}
+
+				results <- result
+			})
+
+			return nil
+		})
 		if err != nil {
 			return err
 		}
@@ -247,74 +277,58 @@ func (o *ValidateOptions) Run() error {
 	return nil
 }
 
-func (o *ValidateOptions) validateFile(ctx context.Context, fs afero.Fs, path string) stat.Result {
+func (o *ValidateOptions) handleFile(fs afero.Fs, path string) (stat.Result, error) {
 	result := stat.NewResult(path)
 	var warcInfoId string
 
 	teeReader, err := o.newTeeReader(fs, path)
 	if err != nil {
-		result.AddError(fmt.Errorf("failed to create tee reader: %w", err))
-		return result
-	}
-	defer func() {
-		_ = teeReader.Close(&warcInfoId, result)
-	}()
+		return nil, fmt.Errorf("failed to create tee reader: %w", err)
 
-	warcFileReader, err := gowarc.NewWarcFileReaderFromStream(teeReader, 0, o.warcRecordOptions...)
+	}
+	defer func() { _ = teeReader.Close(&warcInfoId, result) }()
+
+	warcFileReader, err := gowarc.NewWarcFileReaderFromStream(teeReader, o.offset, o.warcRecordOptions...)
 	if err != nil {
-		result.AddError(fmt.Errorf("failed to create warc file reader: %w", err))
-		return result
+		return nil, fmt.Errorf("failed to create warc file reader: %w", err)
 	}
 	defer func() { _ = warcFileReader.Close() }()
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	var lastOffset int64 = -1
 
-	var once sync.Once
-
-	for record := range warc.NewIterator(ctx, warcFileReader, o.filter, o.recordNum, o.recordCount) {
-		handleRecord(record, result)
-		if result.Fatal() != nil {
-			break
+	for record, err := range warc.Records(warcFileReader, o.filter, o.recordNum, o.recordCount) {
+		if err != nil {
+			// When forcing, avoid infinite loop by ensuring the iterator moves forward
+			if o.force && lastOffset != record.Offset {
+				slog.Warn(err.Error(), "offset", record.Offset, "path", path)
+				lastOffset = record.Offset
+				continue
+			}
+			return result, warc.Error(record, err)
 		}
 		// Capture the WARC Record Id of the first warcinfo record in the file.
 		// It is passed to the close output file hook as an environment variable
-		if record.WarcRecord.Type() == gowarc.Warcinfo {
-			once.Do(func() {
-				warcInfoId = record.WarcRecord.WarcHeader().GetId(gowarc.WarcRecordID)
-			})
+		if warcInfoId == "" && record.WarcRecord.Type() == gowarc.Warcinfo {
+			warcInfoId = record.WarcRecord.WarcHeader().GetId(gowarc.WarcRecordID)
+		}
+		err = handleRecord(record, result)
+		if err != nil {
+			return result, warc.Error(record, err)
 		}
 	}
-	return result
+	return result, nil
 }
 
-func handleRecord(record warc.Record, result stat.Result) {
+func handleRecord(record warc.Record, result stat.Result) error {
 	defer record.Close()
 
 	result.IncrRecords()
-	result.IncrProcessed()
 
-	if record.Err != nil {
-		// a record iterator error is fatal because it is not possible to continue processing the file
-		result.SetFatal(warc.Error(record, record.Err))
-		return
+	err := record.WarcRecord.ValidateDigest(record.Validation)
+	for _, err := range *record.Validation {
+		result.AddError(err)
 	}
-	if !record.Validation.Valid() {
-		result.AddError(warc.Error(record, record.Validation))
-	}
-	if err := record.WarcRecord.ValidateDigest(record.Validation); err != nil {
-		result.SetFatal(warc.Error(record, record.Err))
-		return
-	}
-}
-
-type teeReader struct {
-	io.Reader
-	r                   afero.File
-	w                   *os.File
-	inputFileName       string
-	outputFileName      string
-	closeOutputFileHook hooks.CloseOutputFileHook
+	return err
 }
 
 func (o *ValidateOptions) newTeeReader(fs afero.Fs, file string) (*teeReader, error) {
@@ -346,66 +360,4 @@ func (o *ValidateOptions) newTeeReader(fs afero.Fs, file string) (*teeReader, er
 	}
 	teeReader.Reader = NewCountingReader(teeReader.Reader, o.hashFunction)
 	return teeReader, nil
-}
-
-func (reader *teeReader) Close(warcInfoId *string, result stat.Result) (err error) {
-	if reader.r != nil {
-		_ = reader.r.Close()
-		reader.r = nil
-	}
-	if reader.w != nil {
-		_ = reader.w.Close()
-
-		return reader.closeOutputFileHook.
-			WithSrcFileName(reader.inputFileName).
-			WithHash(reader.Hash()).
-			WithErrorCount(result.ErrorCount()).
-			Run(reader.outputFileName, reader.Size(), *warcInfoId)
-	}
-
-	return
-}
-
-func (reader *teeReader) Size() int64 {
-	if countingReader, ok := reader.Reader.(*countingReader); ok {
-		return countingReader.size
-	}
-	return 0
-}
-
-func (reader *teeReader) Hash() string {
-	if countingReader, ok := reader.Reader.(*countingReader); ok && countingReader.hash != nil {
-		return fmt.Sprintf("%0x", countingReader.hash.Sum(nil))
-	}
-	return ""
-}
-
-func NewCountingReader(ioReader io.Reader, hashFunction string) io.Reader {
-	countingReader := &countingReader{Reader: ioReader}
-	switch hashFunction {
-	case "md5":
-		countingReader.hash = crypto.MD5.New()
-	case "sha1":
-		countingReader.hash = crypto.SHA1.New()
-	case "sha256":
-		countingReader.hash = crypto.SHA256.New()
-	case "sha512":
-		countingReader.hash = crypto.SHA512.New()
-	}
-	return countingReader
-}
-
-type countingReader struct {
-	io.Reader
-	size int64
-	hash hash.Hash
-}
-
-func (reader *countingReader) Read(byteSlice []byte) (length int, err error) {
-	length, err = reader.Reader.Read(byteSlice)
-	reader.size += int64(length)
-	if reader.hash != nil {
-		reader.hash.Write(byteSlice[:length])
-	}
-	return
 }

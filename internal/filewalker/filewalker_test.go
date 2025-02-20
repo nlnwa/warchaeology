@@ -1,6 +1,7 @@
 package filewalker_test
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -61,7 +62,7 @@ func TestFilewalker_Walk(t *testing.T) {
 			}
 
 			for _, path := range tt.paths {
-				err := f.Walk(path, walkfunc)
+				err := f.Walk(context.Background(), path, walkfunc)
 				if err != nil {
 					t.Error(err)
 				}

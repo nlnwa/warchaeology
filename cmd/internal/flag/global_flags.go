@@ -16,13 +16,13 @@ const (
 	LogLevelHelp = `log level. Valid values: debug, info, warn, error`
 
 	ConfigFlag = "config"
-	ConfigHelp = `config file. If not set, $XDG_CONFIG_DIRS, /etc/xdg/warc $XDG_CONFIG_HOME/warc and the current directory will be searched for a file named 'config.yaml'`
+	ConfigHelp = `config file. If not set $XDG_CONFIG_DIRS, /etc/xdg/warc $XDG_CONFIG_HOME/warc and the current directory will be searched for a file named 'config.yaml'`
 )
 
 type PersistentFlags struct {
 }
 
-func (f PersistentFlags) AddFlags(cmd *cobra.Command) {
+func AddPersistentFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().String(ConfigFlag, "", ConfigHelp)
 	cmd.PersistentFlags().String(LogLevelFlag, "info", LogLevelHelp)
 	cmd.PersistentFlags().StringP(LogFileNameFlag, "O", "-", LogFileNameHelp)

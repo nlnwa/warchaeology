@@ -1,7 +1,8 @@
 package validate
 
 import (
-	"context"
+	"errors"
+	"io"
 	"path/filepath"
 	"testing"
 
@@ -12,15 +13,15 @@ var testDataDir = filepath.Join("..", "..", "testdata")
 
 func TestValidateFile(t *testing.T) {
 	var tests = []struct {
-		name      string
-		wantError bool
+		name string
+		err  error
 	}{
 		{
 			name: filepath.Join(testDataDir, "warc", "single-record.warc"),
 		},
 		{
-			name:      filepath.Join(testDataDir, "warc", "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz"),
-			wantError: true,
+			name: filepath.Join(testDataDir, "warc", "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz"),
+			err:  io.ErrUnexpectedEOF,
 		},
 	}
 
@@ -30,17 +31,15 @@ func TestValidateFile(t *testing.T) {
 				outputDir: t.TempDir(),
 			}
 
-			results := options.validateFile(context.TODO(), afero.NewOsFs(), tt.name)
-			if !tt.wantError && results.ErrorCount() > 0 {
-				for _, err := range results.Errors() {
-					t.Errorf("validateFile() error = %v", err)
-				}
-				if results.Fatal() != nil {
-					t.Errorf("validateFile() fatal error = %v", results.Fatal())
-				}
+			results, err := options.handleFile(afero.NewOsFs(), tt.name)
+			if err != nil && !errors.Is(err, tt.err) {
+				t.Fatalf("expected error %T: %v, got %T: %v", tt.err, tt.err, err, err)
 			}
-			if tt.wantError && results.ErrorCount() == 0 {
-				t.Errorf("validateFile() expected error, but got none")
+
+			if results.ErrorCount() > 0 {
+				for _, err := range results.Errors() {
+					t.Error(err)
+				}
 			}
 		})
 	}

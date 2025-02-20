@@ -7,11 +7,16 @@ import (
 	"github.com/nlnwa/warchaeology/v3/internal/hooks"
 	"github.com/nlnwa/warchaeology/v3/internal/index"
 	"github.com/nlnwa/warchaeology/v3/internal/stat"
+	"github.com/spf13/afero"
 )
 
-// Preposterous runs a function on a file, and handles open and close input file hooks.
-func Preposterous(path string, fileIndex *index.FileIndex, preHook hooks.OpenInputFileHook, postHook hooks.CloseInputFileHook, fn func() stat.Result) (stat.Result, error) {
-	// Get file stats
+// ErrSkipFile is returned by hooks to signal that the file should be skipped.
+var ErrSkipFile = errors.New("skip file")
+
+type FileHandler func(fs afero.Fs, path string) (stat.Result, error)
+
+// Preposterous wraps the PrePostHook function with result caching.
+func Preposterous(fs afero.Fs, path string, preHook hooks.OpenInputFileHook, postHook hooks.CloseInputFileHook, fileIndex *index.FileIndex, fn FileHandler) (stat.Result, error) {
 	if fileIndex != nil {
 		result, err := fileIndex.GetFileStats(path)
 		if err != nil {
@@ -21,7 +26,21 @@ func Preposterous(path string, fileIndex *index.FileIndex, preHook hooks.OpenInp
 			return result, nil
 		}
 	}
-	// Run open input file hook
+
+	// Wrap the function call with pre and post hooks
+	result, resultErr := PrePostHook(fs, path, preHook, postHook, fn)
+
+	if fileIndex != nil {
+		if err := fileIndex.SaveFileStats(path, result); err != nil {
+			return nil, fmt.Errorf("failed to save file stats: %w", err)
+		}
+	}
+
+	return result, resultErr
+}
+
+// Preposterous runs a function on a file, and handles open and close input file hooks.
+func PrePostHook(fs afero.Fs, path string, preHook hooks.OpenInputFileHook, postHook hooks.CloseInputFileHook, fn func(fs afero.Fs, path string) (stat.Result, error)) (stat.Result, error) {
 	if err := preHook.Run(path); err != nil {
 		if errors.Is(err, ErrSkipFile) {
 			return nil, err
@@ -29,21 +48,11 @@ func Preposterous(path string, fileIndex *index.FileIndex, preHook hooks.OpenInp
 		return nil, fmt.Errorf("failed to run open input file hook: %w", err)
 	}
 
-	// Run the function
-	result := fn()
+	result, resultErr := fn(fs, path)
 
-	// Run close input file hook
 	if err := postHook.Run(path, result.ErrorCount()); err != nil {
 		return nil, fmt.Errorf("failed to run close input file hook: %w", err)
 	}
-	// Save file stats
-	if fileIndex != nil {
-		if err := fileIndex.SaveFileStats(path, result); err != nil {
-			return nil, fmt.Errorf("failed to save file stats: %w", err)
-		}
-	}
-	return result, nil
-}
 
-// ErrSkipFile is returned by hooks to signal that the file should be skipped.
-var ErrSkipFile = errors.New("skip file")
+	return result, resultErr
+}

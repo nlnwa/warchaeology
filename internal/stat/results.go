@@ -1,6 +1,7 @@
 package stat
 
 import (
+	"encoding"
 	"encoding/binary"
 	"fmt"
 	"strings"
@@ -8,34 +9,34 @@ import (
 
 type Result interface {
 	fmt.Stringer
+	error
+	encoding.BinaryMarshaler
+	encoding.BinaryUnmarshaler
 	Log(fileNum int) string
-	GetStats() Stats
+	Name() string
 	IncrRecords()
-	IncrProcessed()
 	IncrDuplicates()
 	AddError(err error)
 	Records() int64
-	Processed() int64
 	ErrorCount() int64
 	Errors() []error
-	SetFatal(error)
-	Fatal() error
 	Duplicates() int64
-	error
 }
 
 type result struct {
 	fileName   string
 	records    int64
-	processed  int64
 	errorCount int64
 	errors     []error
 	duplicates int64
-	fatal      error
 }
 
 func NewResult(fileName string) Result {
 	return &result{fileName: fileName}
+}
+
+func (r *result) Name() string {
+	return r.fileName
 }
 
 func (r *result) IsValid() bool {
@@ -44,10 +45,6 @@ func (r *result) IsValid() bool {
 
 func (r *result) IncrRecords() {
 	r.records++
-}
-
-func (r *result) IncrProcessed() {
-	r.processed++
 }
 
 func (r *result) IncrDuplicates() {
@@ -63,14 +60,7 @@ func (r *result) Records() int64 {
 	return r.records
 }
 
-func (r *result) Processed() int64 {
-	return r.processed
-}
-
 func (r *result) ErrorCount() int64 {
-	if r.fatal != nil {
-		return r.errorCount + 1
-	}
 	return r.errorCount
 }
 
@@ -83,50 +73,31 @@ func (r *result) Errors() []error {
 }
 
 func (r *result) Error() string {
+	if len(r.errors) == 0 {
+		return ""
+	}
 	sb := strings.Builder{}
-	if len(r.errors) > 0 {
-		for i, e := range r.errors {
-			if i > 0 {
-				sb.WriteByte('\n')
-			}
-			sb.WriteString(fmt.Sprintf("   %s", e))
+	for i, e := range r.errors {
+		if i > 0 {
+			sb.WriteByte('\n')
 		}
+		sb.WriteString(fmt.Sprintf("   %s", e))
 	}
 	return sb.String()
 }
 
-func (r *result) SetFatal(e error) {
-	r.fatal = e
-}
-
-func (r *result) Fatal() error {
-	return r.fatal
-}
-
 func (r *result) String() string {
-	return fmt.Sprintf("%s: records: %d, processed: %d, errors: %d, duplicates: %d", r.fileName, r.records, r.processed, r.ErrorCount(), r.duplicates)
+	return fmt.Sprintf("%s: records: %d, errors: %d, duplicates: %d", r.fileName, r.records, r.ErrorCount(), r.duplicates)
 }
 
 func (r *result) Log(fileNum int) string {
 	return fmt.Sprintf("%06d %s", fileNum, r.String())
 }
 
-func (r *result) GetStats() Stats {
-	return &stats{
-		records:    r.records,
-		processed:  r.processed,
-		errors:     r.ErrorCount(),
-		duplicates: r.duplicates,
-	}
-}
-
 func (r *result) UnmarshalBinary(data []byte) error {
 	var read int
 	v, n := binary.Varint(data[read:])
 	r.records = v
-	read += n
-	v, n = binary.Varint(data[read:])
-	r.processed = v
 	read += n
 	v, n = binary.Varint(data[read:])
 	r.duplicates = v
@@ -141,8 +112,6 @@ func (r *result) MarshalBinary() (data []byte, err error) {
 	buf := make([]byte, binary.MaxVarintLen64*3)
 	written := binary.PutVarint(buf, r.records)
 	b := buf[written:]
-	written += binary.PutVarint(b, r.processed)
-	b = buf[written:]
 	written += binary.PutVarint(b, r.duplicates)
 	b = buf[written:]
 	written += binary.PutVarint(b, r.errorCount)

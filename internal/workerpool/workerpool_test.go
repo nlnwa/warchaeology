@@ -1,13 +1,14 @@
 package workerpool
 
 import (
+	"context"
+	"math/rand/v2"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"go.uber.org/goleak"
-	"golang.org/x/exp/rand"
 )
 
 func TestMain(m *testing.M) {
@@ -15,12 +16,12 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreatePool(t *testing.T) {
-	pool := New(1)
+	pool := New(context.Background(), 1)
 	pool.CloseWait()
 }
 
 func TestSubmitJob(t *testing.T) {
-	pool := New(1)
+	pool := New(context.Background(), 1)
 	pool.Jobs <- func() {}
 	pool.CloseWait()
 }
@@ -31,7 +32,7 @@ func TestSubmitToClosedWorkQueue(t *testing.T) {
 			t.Errorf("expected panic")
 		}
 	}()
-	queue := New(1)
+	queue := New(context.Background(), 1)
 	queue.CloseWait()
 	queue.Jobs <- func() {}
 }
@@ -42,12 +43,11 @@ func TestWorkerPool(t *testing.T) {
 	executed := new(atomic.Int32)
 
 	var m sync.Mutex
-	r := rand.New(rand.NewSource(uint64(time.Now().UnixNano())))
 
 	getTimeout := func() time.Duration {
 		m.Lock()
 		defer m.Unlock()
-		return time.Duration(r.Intn(10)) * time.Millisecond
+		return time.Duration(rand.IntN(10)) * time.Millisecond
 	}
 
 	perJobFn := func() {
@@ -55,7 +55,7 @@ func TestWorkerPool(t *testing.T) {
 		executed.Add(1)
 	}
 
-	queue := New(concurrency)
+	queue := New(context.Background(), concurrency)
 	for i := 0; i < jobs; i++ {
 		queue.Jobs <- perJobFn
 	}

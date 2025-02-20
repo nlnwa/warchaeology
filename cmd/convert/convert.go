@@ -10,14 +10,14 @@ import (
 func NewCmdConvert() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "convert",
-		Short: "Convert web archives to warc files. Use subcommands for the supported formats",
+		Short: "Convert web archive files to WARC files. Use subcommands for the supported formats",
 		Long:  ``,
 	}
 
 	// Subcommands
 	cmd.AddCommand(nedlib.NewCmdConvertNedlib())
-	cmd.AddCommand(arc.NewCommand())
-	cmd.AddCommand(warc.NewCommand())
+	cmd.AddCommand(arc.NewCmdConvertArc())
+	cmd.AddCommand(warc.NewCmdConvertWarc())
 
 	return cmd
 }

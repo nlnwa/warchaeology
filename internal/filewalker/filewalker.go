@@ -1,6 +1,7 @@
 package filewalker
 
 import (
+	"context"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -62,37 +63,44 @@ func (fw *FileWalker) hasSuffix(path string) bool {
 	return false
 }
 
-func (fw *FileWalker) Walk(path string, walkFn func(fs afero.Fs, path string, err error) error) error {
-	return fw.walkDir(path, path, walkFn)
+func (fw *FileWalker) Walk(ctx context.Context, path string, walkFn func(fs afero.Fs, path string, err error) error) error {
+	return fw.walkDir(ctx, path, path, walkFn)
 }
 
-func (fw *FileWalker) walkDir(root string, dirName string, walkFn func(fs afero.Fs, path string, err error) error) error {
+func (fw *FileWalker) walkDir(ctx context.Context, root string, dirName string, walkFn func(fs afero.Fs, path string, err error) error) error {
 	return afero.Walk(fw.Fs, dirName, func(path string, info fs.FileInfo, err error) error {
-		// handle error
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		if err != nil {
 			return walkFn(fw.Fs, path, err)
 		}
 
-		// handle directory
 		if info.IsDir() {
+			// skip already processed directories
 			if fw.processedPaths.Contains(path) {
-				// skip directory if already processed
 				return filepath.SkipDir
+			} else {
+				fw.processedPaths.Add(path)
 			}
-			fw.processedPaths.Add(path)
+			// always process the path that is equal to the root directory
 			if root == path {
-				// always process an initial directory
 				return nil
 			}
+			// skip directories when recursive option is not set
 			if !fw.Recursive {
-				// skip directory if not recursive option is set
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
 		// handle symlink
-		if fw.FollowSymlinks && !info.Mode().IsRegular() {
+		if !info.Mode().IsRegular() {
+			if !fw.FollowSymlinks {
+				return nil
+			}
 			linkReader, ok := fw.Fs.(afero.LinkReader)
 			if !ok {
 				return afero.ErrNoReadlink
@@ -104,21 +112,19 @@ func (fw *FileWalker) walkDir(root string, dirName string, walkFn func(fs afero.
 			if !filepath.IsAbs(linkPath) {
 				linkPath = filepath.Join(filepath.Dir(path), linkPath)
 			}
-			return fw.walkDir(root, linkPath, walkFn)
+			return fw.walkDir(ctx, root, linkPath, walkFn)
 		}
-		if !info.Mode().IsRegular() {
-			// skip non-regular files
-			return nil
-		}
+		// filter files by suffix
 		if !fw.hasSuffix(path) {
-			// skip file if suffix does not match
 			return nil
 		}
+		// skip already processed files
 		if fw.processedPaths.Contains(path) {
-			// skip file if already processed
 			return nil
+		} else {
+			fw.processedPaths.Add(path)
 		}
-		fw.processedPaths.Add(path)
+
 		return walkFn(fw.Fs, path, nil)
 	})
 }

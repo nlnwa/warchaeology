@@ -1,10 +1,10 @@
 package index
 
 import (
-	"encoding"
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/nlnwa/warchaeology/v3/internal/stat"
@@ -17,6 +17,9 @@ type FileIndex struct {
 }
 
 func NewFileIndex(indexDir string, subdir string, keepIndex, newIndex bool) (*FileIndex, error) {
+	// Set GOMAXPROCS to 128 as recommended by badger
+	runtime.GOMAXPROCS(128)
+
 	dir := filepath.Join(indexDir, subdir, "files")
 	dir = filepath.Clean(dir)
 
@@ -47,7 +50,7 @@ func (idx *FileIndex) GetFileStats(key string) (result stat.Result, err error) {
 		}
 		return item.Value(func(val []byte) error {
 			result = stat.NewResult("")
-			return result.(encoding.BinaryUnmarshaler).UnmarshalBinary(val)
+			return result.UnmarshalBinary(val)
 		})
 	})
 	if errors.Is(err, badger.ErrKeyNotFound) {
@@ -58,7 +61,10 @@ func (idx *FileIndex) GetFileStats(key string) (result stat.Result, err error) {
 
 func (idx *FileIndex) SaveFileStats(key string, result stat.Result) error {
 	err := idx.db.Update(func(txn *badger.Txn) error {
-		val, err := result.(encoding.BinaryMarshaler).MarshalBinary()
+		if result == nil {
+			return txn.Set([]byte(key), nil)
+		}
+		val, err := result.MarshalBinary()
 		if err != nil {
 			return err
 		}

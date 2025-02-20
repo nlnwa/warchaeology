@@ -11,7 +11,7 @@ type WorkerPool struct {
 	concurrency int
 }
 
-func New(concurrency int) *WorkerPool {
+func New(ctx context.Context, concurrency int) *WorkerPool {
 	jobs := make(chan func(), concurrency)
 
 	pool := &WorkerPool{
@@ -24,7 +24,12 @@ func New(concurrency int) *WorkerPool {
 		go func() {
 			defer pool.waitGroup.Done()
 			for job := range jobs {
-				job()
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					job()
+				}
 			}
 		}()
 	}
@@ -37,20 +42,10 @@ func (pool *WorkerPool) CloseWait() {
 	pool.waitGroup.Wait()
 }
 
-func (pool *WorkerPool) Submit(ctx context.Context, fn func()) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
+func (pool *WorkerPool) Submit(fn func()) {
 	if pool.concurrency == 0 {
 		fn()
-		return nil
-	}
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case pool.Jobs <- fn:
-		return nil
+	} else {
+		pool.Jobs <- fn
 	}
 }
