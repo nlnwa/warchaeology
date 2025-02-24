@@ -10,7 +10,7 @@ require (
 	github.com/jackc/puddle v1.3.0
 	github.com/jlaffaye/ftp v0.2.0
 	github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f
-	github.com/klauspost/compress v1.17.11
+	github.com/klauspost/compress v1.18.0
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/nlnwa/gowarc/v2 v2.0.1
 	github.com/nlnwa/whatwg-url v0.5.1
