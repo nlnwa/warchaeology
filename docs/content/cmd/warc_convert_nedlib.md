@@ -1,5 +1,5 @@
 ---
-date: 2024-09-03T09:54:19+02:00
+date: 2025-02-26T20:24:03+01:00
 title: "warc convert nedlib"
 slug: warc_convert_nedlib
 url: /cmd/warc_convert_nedlib/
@@ -9,7 +9,7 @@ url: /cmd/warc_convert_nedlib/
 Convert directory with files harvested with Nedlib into warc files
 
 ```
-warc convert nedlib <files/dirs> [flags]
+warc convert nedlib FILE/DIR ... [flags]
 ```
 
 ### Options
@@ -29,12 +29,13 @@ warc convert nedlib <files/dirs> [flags]
                                         	WARC_SRC_FILE_NAME contains the file name of the input file if the output file is generated from an input file
                                         	WARC_HASH contains the hash of the output file if computed
                                         	WARC_ERROR_COUNT contains the number of errors found if the file was validated and the validation failed
-  -z, --compress                        use gzip compression for WARC files
-      --compression-level int           the gzip compression level to use (value between 1 and 9) (default -1)
+  -z, --compress                        use gzip compression for WARC files (default true)
+      --compression-level int           the gzip compression level to use (value between 1 and 9, -1 means the gzip library default level) (default -1)
   -c, --concurrency int                 number of input files to process simultaneously. (default 24)
   -C, --concurrent-writers int          maximum concurrent WARC writers. This is the number of WARC-files simultaneously written to.
                                         	A consequence is that at least this many WARC files are created even if there is only one input file. (default 16)
-      --default-date string             fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2024-9-3")
+      --continue-on-error               continue on error. Will continue processing files and directories in spite of errors.
+      --default-date string             fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2025-2-26")
       --file-size string                The maximum size for WARC files (default "1GB")
       --flush                           if true, sync WARC file to disk after writing each record
       --ftp-pool-size int32             size of the ftp pool (default 1)
@@ -50,7 +51,7 @@ warc convert nedlib <files/dirs> [flags]
                                         output file name (prefix and suffix might still change). In this mode exactly one file is generated for every input file (default "default")
   -K, --new-index                       true to start from a fresh index, deleting eventual index from last run
       --one-to-one                      write each input file to a separate output file
-                                        The same as --concurrent-writers=1, and --name-generator=identity
+                                        The same as --concurrent-writers=1, --file-size=0 and --name-generator=identity
       --open-input-file-hook string     a command to run before opening each input file. The command has access to data as environment variables.
                                         	WARC_COMMAND contains the subcommand name
                                         	WARC_HOOK_TYPE contains the hook type (OpenInputFile, CloseInputFile, OpenOutputFile, CloseOutputFile)
@@ -81,7 +82,7 @@ warc convert nedlib <files/dirs> [flags]
 ### Options inherited from parent commands
 
 ```
-      --config string       config file. If not set, $XDG_CONFIG_DIRS, /etc/xdg/warc $XDG_CONFIG_HOME/warc and the current directory will be searched for a file named 'config.yaml'
+      --config string       config file. If not set $XDG_CONFIG_DIRS, /etc/xdg/warc $XDG_CONFIG_HOME/warc and the current directory will be searched for a file named 'config.yaml'
   -O, --log-file string     log to file (default "-")
       --log-format string   log format. Valid values: text, json (default "text")
       --log-level string    log level. Valid values: debug, info, warn, error (default "info")
@@ -89,5 +90,5 @@ warc convert nedlib <files/dirs> [flags]
 
 ### SEE ALSO
 
-* [warc convert](../warc_convert/)	 - Convert web archives to warc files. Use subcommands for the supported formats
+* [warc convert](../warc_convert/)	 - Convert web archive files to WARC files. Use subcommands for the supported formats
 

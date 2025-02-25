@@ -1,5 +1,5 @@
 ---
-date: 2024-09-03T09:54:19+02:00
+date: 2025-02-26T20:24:03+01:00
 title: "warc version"
 slug: warc_version
 url: /cmd/warc_version/
@@ -22,7 +22,7 @@ warc version [flags]
 ### Options inherited from parent commands
 
 ```
-      --config string       config file. If not set, $XDG_CONFIG_DIRS, /etc/xdg/warc $XDG_CONFIG_HOME/warc and the current directory will be searched for a file named 'config.yaml'
+      --config string       config file. If not set $XDG_CONFIG_DIRS, /etc/xdg/warc $XDG_CONFIG_HOME/warc and the current directory will be searched for a file named 'config.yaml'
   -O, --log-file string     log to file (default "-")
       --log-format string   log format. Valid values: text, json (default "text")
       --log-level string    log level. Valid values: debug, info, warn, error (default "info")
