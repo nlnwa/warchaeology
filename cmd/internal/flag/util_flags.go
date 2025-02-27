@@ -7,18 +7,18 @@ import (
 )
 
 const (
-	MinFreeDisk     = "min-free-disk"
-	MinFreeDiskHelp = `minimum free space on disk to allow WARC writing`
+	MinDiskFree     = "min-disk-free"
+	MinDiskFreeHelp = `minimum free space on disk to allow WARC writing`
 )
 
 type UtilFlags struct {
 }
 
 func (u UtilFlags) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().String(MinFreeDisk, "256MB", MinFreeDiskHelp)
+	cmd.Flags().String(MinDiskFree, "1GB", MinDiskFreeHelp)
 }
 
 func (u UtilFlags) MinFreeDisk() int64 {
-	minFreeDisk := viper.GetString(MinFreeDisk)
+	minFreeDisk := viper.GetString(MinDiskFree)
 	return util.ParseSizeInBytes(minFreeDisk)
 }

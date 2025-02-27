@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -16,30 +18,35 @@ import (
 	"github.com/nlnwa/warchaeology/v3/cmd/validate"
 	"github.com/nlnwa/warchaeology/v3/cmd/version"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 // NewWarcCommand returns a new cobra.Command implementing the root command for warc
 func NewWarcCommand() *cobra.Command {
-	flags := flag.PersistentFlags{}
+	var logCloser io.Closer
 
 	cmd := &cobra.Command{
 		Use:   "warc",
 		Short: "A tool for handling warc files",
 		Long:  ``,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			viper.SetEnvPrefix("WARC")
-			viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-			viper.AutomaticEnv()
-			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+			err := loadConfig(cmd.Flags())
+			if err != nil {
 				return err
 			}
-			return loadConfig()
+			logCloser, err = initLogger(os.Stderr, flag.LogFileName(), flag.LogLevel(), flag.LogFormat())
+			return err
+		},
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+			if logCloser != nil {
+				_ = logCloser.Close()
+			}
 		},
 	}
 
 	// Add flags
-	flags.AddFlags(cmd)
+	flag.AddPersistentFlags(cmd)
 
 	// Add subcommands
 	cmd.AddCommand(ls.NewCmdList())           // ls
@@ -54,7 +61,15 @@ func NewWarcCommand() *cobra.Command {
 	return cmd
 }
 
-func loadConfig() error {
+func loadConfig(flags *pflag.FlagSet) error {
+	viper.SetEnvPrefix("WARC")
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	viper.AutomaticEnv()
+	err := viper.BindPFlags(flags)
+	if err != nil {
+		return err
+	}
+
 	if viper.IsSet("config") {
 		// Read config file specified by 'config' flag
 		viper.SetConfigFile(viper.GetString("config"))
@@ -93,4 +108,45 @@ func readConfigFile() error {
 		return err
 	}
 	return nil
+}
+
+func initLogger(out io.WriteCloser, file string, format string, level string) (io.Closer, error) {
+	if file == "-" {
+		return out, nil
+	}
+	w, err := os.Create(file)
+	if err != nil {
+		return nil, err
+	}
+
+	levelVar := new(slog.LevelVar)
+	levelVar.Set(toLogLevel(level))
+
+	opts := &slog.HandlerOptions{Level: levelVar}
+
+	var handler slog.Handler
+	if format == "json" {
+		handler = slog.NewJSONHandler(w, opts)
+	} else {
+		handler = slog.NewTextHandler(w, opts)
+	}
+
+	slog.SetDefault(slog.New(handler))
+
+	return w, nil
+}
+
+func toLogLevel(level string) slog.Level {
+	switch level {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }

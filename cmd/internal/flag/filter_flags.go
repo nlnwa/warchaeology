@@ -16,7 +16,7 @@ import (
 
 const (
 	RecordId     = "id"
-	RecordIdHelp = `filter record ID's. For more than one, repeat flag or comma separated list.`
+	RecordIdHelp = `filter record ID's. For more than one, repeat flag or use comma separated list.`
 
 	RecordType     = "record-type"
 	RecordTypeHelp = `filter records by type. For more than one, repeat the flag or use a comma separated list.
@@ -32,7 +32,7 @@ Example:
 	-400	- all response codes below 400`
 
 	MimeType     = "mime-type"
-	MimeTypeHelp = `filter records with given mime-types. For more than one, repeat flag or comma separated list.`
+	MimeTypeHelp = `filter records with given mime-types. For more than one, repeat flag or use a comma separated list.`
 )
 
 type FilterFlags struct {

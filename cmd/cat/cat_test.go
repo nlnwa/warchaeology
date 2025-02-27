@@ -3,13 +3,12 @@ package cat
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
+	"errors"
 	"io"
 	"math"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/nlnwa/gowarc/v2"
 	"github.com/nlnwa/warchaeology/v3/internal/warc"
@@ -25,15 +24,31 @@ var testFiles = map[string]string{
 	"samsung-with-error": filepath.Join(testDataDir, "warc", "samsung-with-error", "rec-33318048d933-20240317162652059-0.warc.gz"),
 }
 
+var tests = []struct {
+	name string
+	err  error
+}{
+	{
+		name: "empty",
+	},
+	{
+		name: "single-record",
+	},
+	{
+		name: "samsung-with-error",
+		err:  io.ErrUnexpectedEOF,
+	},
+}
+
 // TestWriteWarcRecord tests the writeWarcRecord function.
 func TestWriteWarcRecord(t *testing.T) {
-	for name, testFile := range testFiles {
-		t.Run(name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			// capture testFile variable from outer scope
-			testFile := testFile
+			test := test
 
 			// resolve test file path
-			testFile, err := filepath.Abs(testFile)
+			testFile, err := filepath.Abs(testFiles[test.name])
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -114,8 +129,11 @@ func TestWriteWarcRecord(t *testing.T) {
 			got := new(bytes.Buffer)
 			var currentOffset int64
 
-			for record := range warc.NewIterator(context.Background(), warcFileReader, nil, 0, 0) {
-				if record.Err != nil {
+			for record, err := range warc.Records(warcFileReader, nil, 0, 0) {
+				if err != nil {
+					if !errors.Is(err, test.err) {
+						t.Fatal(err)
+					}
 					break
 				}
 
@@ -153,13 +171,5 @@ want is %d bytes, got is %d bytes
 					got.Bytes()[len(got.Bytes())-n:])
 			}
 		})
-	}
-}
-
-func BenchmarkDummy(b *testing.B) {
-	// This is a dummy test, it should be replaced with something more
-	// meaningful in a later commit
-	for i := 0; i < b.N; i++ {
-		time.Sleep(1 * time.Nanosecond)
 	}
 }

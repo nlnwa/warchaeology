@@ -3,7 +3,6 @@ package version
 import (
 	"fmt"
 	"runtime"
-	"runtime/debug"
 )
 
 var Version Info
@@ -36,8 +35,5 @@ func Set(version, commit, date string) {
 }
 
 func SoftwareVersion() string {
-	if bi, ok := debug.ReadBuildInfo(); ok {
-		return bi.Main.Path + "/tree/" + Version.GitVersion
-	}
-	return Version.GitVersion
+	return fmt.Sprintf("%s %s", "Warchaeology", Version.GitVersion)
 }

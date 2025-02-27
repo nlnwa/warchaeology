@@ -1,7 +1,8 @@
 package warc
 
 import (
-	"context"
+	"errors"
+	"io"
 	"path/filepath"
 	"testing"
 
@@ -19,10 +20,12 @@ var testFiles = map[string]string{
 }
 
 var tests = []struct {
-	file         string   // path to WARC file
-	iterator     Iterator // iterator configuration
-	wantCount    int      // expected number of records from iterator
-	wantRecordId string   // expected record id
+	file         string // path to WARC file
+	limit        int    // limit number of recor
+	nth          int    // return only the Nth record
+	wantCount    int    // expected number of records from iterator
+	wantRecordId string // expected record id
+	err          error  // expected error
 }{
 	{
 		file:      testFiles["empty"],
@@ -34,20 +37,17 @@ var tests = []struct {
 	},
 	{
 		file:      testFiles["samsung-with-error"],
-		wantCount: 54,
+		wantCount: 53,
+		err:       io.ErrUnexpectedEOF,
 	},
 	{
-		file: testFiles["samsung-with-error"],
-		iterator: Iterator{
-			Limit: 50,
-		},
+		file:      testFiles["samsung-with-error"],
+		limit:     50,
 		wantCount: 50,
 	},
 	{
-		file: testFiles["samsung-with-error"],
-		iterator: Iterator{
-			Nth: 7,
-		},
+		file:         testFiles["samsung-with-error"],
+		nth:          7,
 		wantCount:    1,
 		wantRecordId: "urn:uuid:60331c1b-c2f4-486a-a14f-bd448ba6e1c7",
 	},
@@ -71,21 +71,17 @@ func TestIterator(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// create records channel
-			records := make(chan Record)
-
-			// configure iterator
-			test.iterator.Records = records
-			test.iterator.WarcFileReader = warcFileReader
-
-			// run iterator
-			go test.iterator.iterate(context.Background())
-
 			// count records
 			count := 0
 
 			// iterate over the records channel
-			for record := range records {
+			for record, err := range Records(warcFileReader, nil, test.nth, test.limit) {
+				if err != nil {
+					if !errors.Is(err, test.err) {
+						t.Fatal(err)
+					}
+					break
+				}
 				count++
 
 				if test.wantRecordId != "" {

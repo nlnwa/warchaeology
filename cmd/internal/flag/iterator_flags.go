@@ -7,14 +7,16 @@ import (
 
 const (
 	Offset     = "offset"
-	OffsetHelp = `record offset`
+	OffsetHelp = `start processing from this byte offset in file. Defaults to 0.`
 
-	RecordNum     = "num"
-	RecordNumHelp = `print the n'th record. Only records that are not filtered out by other options are counted.`
+	RecordNum     = "nth"
+	RecordNumHelp = `only process the n'th record. Only records that are not filtered out by other options are counted.`
 
 	Limit     = "limit"
-	LimitHelp = `The maximum number of records to show. Defaults to show all records.
-If -o or -n option is set limit is set to 1.`
+	LimitHelp = `limit the number of records to process. If the -n option is specified the limit is ignored.`
+
+	Force     = "force"
+	ForceHelp = `force the record iterator to continue regardless of errors.`
 )
 
 type WarcIteratorFlags struct {
@@ -29,6 +31,7 @@ func (f WarcIteratorFlags) AddFlags(cmd *cobra.Command) {
 	flags.Int64P(Offset, "o", 0, OffsetHelp)
 	flags.IntP(RecordNum, "n", 0, RecordNumHelp)
 	flags.IntP(Limit, "l", 0, LimitHelp)
+	flags.BoolP(Force, "f", false, ForceHelp)
 }
 
 func (f WarcIteratorFlags) Offset() int64 {
@@ -41,4 +44,8 @@ func (f WarcIteratorFlags) RecordNum() int {
 
 func (f WarcIteratorFlags) Limit() int {
 	return viper.GetInt(Limit)
+}
+
+func (f WarcIteratorFlags) Force() bool {
+	return viper.GetBool(Force)
 }

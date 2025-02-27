@@ -1,7 +1,6 @@
 package arcreader
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 
@@ -43,9 +42,9 @@ func TestArcReader(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			for record := range warc.NewIterator(context.Background(), arcFileReader, nil, 0, 0) {
-				if record.Err != nil {
-					t.Errorf("unexpected error: %v", record.Err)
+			for _, err := range warc.Records(arcFileReader, nil, 0, 0) {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
 				}
 			}
 		})

@@ -2,7 +2,6 @@ package aart
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"image"
@@ -11,7 +10,6 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
-	"os"
 
 	"github.com/nfnt/resize"
 	"github.com/nlnwa/gowarc/v2"
@@ -72,7 +70,7 @@ func NewCmdAart() *cobra.Command {
 	flags := AartFlags{}
 
 	cmd := &cobra.Command{
-		Use:    "aart",
+		Use:    "aart FILE",
 		Short:  "Show images",
 		Long:   ``,
 		Hidden: true,
@@ -123,27 +121,41 @@ func (o *AartOptions) Run() error {
 		return fmt.Errorf("failed to create WARC reader: %v", err)
 	}
 
-	for record := range warc.NewIterator(context.TODO(), wf, o.filter, o.recordNum, o.recordCount) {
-		if record.Err != nil {
-			return fmt.Errorf("failed reading records: %w", record.Err)
+	for record, err := range warc.Records(wf, o.filter, o.recordNum, o.recordCount) {
+		if err != nil {
+			return err
 		}
-		wr := record.WarcRecord
-
-		if b, ok := wr.Block().(gowarc.HttpResponseBlock); ok {
-			fmt.Printf("\u001B[2J\u001B[HUrl: %s\n\n", wr.WarcHeader().Get(gowarc.WarcTargetURI))
-			r, err := b.PayloadBytes()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to get payload bytes: %v\n", err)
-			}
-			err = display(r, o.width)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to display: %v\n", err)
-				continue
-			}
-			fmt.Printf("Hit enter to continue\n")
-			_, _ = fmt.Scanln()
+		err = o.handleRecord(record)
+		if err != nil {
+			return err
 		}
 	}
+	return nil
+}
+
+const ansiClearScreenEscapeSequence = "\u001B[2J\u001B[H"
+
+func (o *AartOptions) handleRecord(record warc.Record) error {
+	wr := record.WarcRecord
+
+	block, ok := wr.Block().(gowarc.HttpResponseBlock)
+	if !ok {
+		return nil
+	}
+
+	fmt.Print(ansiClearScreenEscapeSequence)
+	fmt.Printf("Url: %s\n\n", wr.WarcHeader().Get(gowarc.WarcTargetURI))
+	b, err := block.PayloadBytes()
+	if err != nil {
+		return fmt.Errorf("failed to get payload bytes: %w", err)
+	}
+	err = display(b, o.width)
+	if err != nil {
+		return fmt.Errorf("failed to display: %w", err)
+	}
+	fmt.Printf("Hit enter to continue\n")
+	_, _ = fmt.Scanln()
+
 	return nil
 }
 

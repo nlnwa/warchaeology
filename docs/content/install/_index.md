@@ -11,15 +11,15 @@ weight: 1
 ### RPM package
 
 ```shell
-curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology-{{<version>}}.x86_64.rpm
-sudo rpm -Uvh warchaeology-{{<version>}}.x86_64.rpm
+curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology-{{< version ".rpm" >}}.x86_64.rpm
+sudo rpm -Uvh warchaeology-{{< version ".rpm" >}}.x86_64.rpm
 ```
 
 ### Debian package
 
 ```shell
-curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology_{{<version>}}_amd64.deb
-sudo dpkg -i warchaeology_{{<version>}}_amd64.deb
+curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology_{{< version >}}_amd64.deb
+sudo dpkg -i warchaeology_{{< version >}}_amd64.deb
 ```
 
 ### Binary download

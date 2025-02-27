@@ -17,7 +17,7 @@ type ArcFileReader struct {
 }
 
 func NewArcFileReader(fs afero.Fs, filename string, offset int64, opts ...gowarc.WarcRecordOption) (*ArcFileReader, error) {
-	file, err := fs.Open(filename) // For read access.
+	file, err := fs.Open(filename)
 	if err != nil {
 		return nil, err
 	}

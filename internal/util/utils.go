@@ -27,13 +27,12 @@ func AbsInt64(n int64) int64 {
 	return (n ^ y) - y
 }
 
-func DiskFree(path string) (free int64) {
-	s, e := disk.Usage(path)
-	if e != nil {
-		fmt.Printf("ERROR: %v\n", e)
-		return 0
+func DiskFree(path string) (free int64, err error) {
+	s, err := disk.Usage(path)
+	if err != nil {
+		return 0, err
 	}
-	return int64(s.Free)
+	return int64(s.Free), nil
 }
 
 // ParseSizeInBytes converts strings like 1GB or 12 mb into an unsigned integer number of bytes

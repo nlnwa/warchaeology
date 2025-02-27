@@ -1,7 +1,6 @@
 package nedlib
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 
@@ -52,16 +51,9 @@ func Test(t *testing.T) {
 				WarcWriterConfig: warcWriterConfig,
 			}
 
-			result := o.readFile(context.Background(), afero.NewOsFs(), filename)
-			if !tt.wantError && result.ErrorCount() > 0 {
-				for _, err := range result.Errors() {
-					t.Errorf("readFile() error = %v", err)
-				}
-				if result.Fatal() != nil {
-					t.Errorf("readFile() fatal = %v", result.Fatal())
-				}
-			} else if tt.wantError && result.ErrorCount() == 0 {
-				t.Errorf("readFile() expected error, got none")
+			_, err = o.handleFile(afero.NewOsFs(), filename)
+			if err != nil && !tt.wantError {
+				t.Fatal(err)
 			}
 		})
 	}

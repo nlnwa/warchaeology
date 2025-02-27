@@ -11,9 +11,7 @@ import (
 
 	"github.com/nlnwa/gowarc/v2"
 	"github.com/nlnwa/warchaeology/v3/cmd/internal/flag"
-	"github.com/nlnwa/warchaeology/v3/cmd/internal/log"
 	"github.com/nlnwa/warchaeology/v3/internal/filewalker"
-	"github.com/nlnwa/warchaeology/v3/internal/filter"
 	"github.com/nlnwa/warchaeology/v3/internal/hooks"
 	"github.com/nlnwa/warchaeology/v3/internal/index"
 	"github.com/nlnwa/warchaeology/v3/internal/stat"
@@ -32,10 +30,12 @@ const (
 
 	DedupSizeGain     = "min-size-gain"
 	DedupSizeGainHelp = `minimum bytes one must earn to perform a deduplication`
+
+	MinIndexDiskFree     = "min-index-disk-free"
+	MinIndexDiskFreeHelp = `minimum free space on disk to allow index writing`
 )
 
 type DedupOptions struct {
-	Filter              *filter.RecordFilter
 	Paths               []string
 	Concurrency         int
 	DigestIndex         *index.DigestIndex
@@ -43,6 +43,8 @@ type DedupOptions struct {
 	WarcWriterConfig    *warcwriterconfig.WarcWriterConfig
 	MinimumSizeGain     int64
 	MinWARCDiskFree     int64
+	MinIndexDiskFree    int64
+	ContinueOnError     bool
 	FileWalker          *filewalker.FileWalker
 	WarcRecordOptions   []gowarc.WarcRecordOption
 	OpenInputFileHook   hooks.OpenInputFileHook
@@ -52,7 +54,6 @@ type DedupOptions struct {
 }
 
 type DedupFlags struct {
-	FilterFlags           flag.FilterFlags
 	WarcFileFlags         flag.WarcIteratorFlags
 	InputHookFlags        *flag.InputHookFlags
 	OutputHookFlags       *flag.OutputHookFlags
@@ -63,6 +64,7 @@ type DedupFlags struct {
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
 	IndexFlags            *flag.IndexFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
+	ErrorFlags            flag.ErrorFlags
 }
 
 func NewDedupFlags() DedupFlags {
@@ -75,7 +77,6 @@ func NewDedupFlags() DedupFlags {
 }
 
 func (f DedupFlags) AddFlags(cmd *cobra.Command) {
-	f.FilterFlags.AddFlags(cmd)
 	f.WarcFileFlags.AddFlags(cmd)
 	f.InputHookFlags.AddFlags(cmd)
 	f.OutputHookFlags.AddFlags(cmd)
@@ -86,10 +87,12 @@ func (f DedupFlags) AddFlags(cmd *cobra.Command) {
 	f.WarcRecordOptionFlags.AddFlags(cmd)
 	f.IndexFlags.AddFlags(cmd)
 	f.ConcurrencyFlags.AddFlags(cmd)
+	f.ErrorFlags.AddFlags(cmd)
 
 	flags := cmd.Flags()
 	flags.String(BufferMaxMem, "1MB", BufferMaxMemHelp)
 	flags.StringP(DedupSizeGain, "g", "2KB", DedupSizeGainHelp)
+	flags.String(MinIndexDiskFree, "1 * 1024 * 1024", MinIndexDiskFreeHelp)
 }
 
 func (f DedupFlags) BufferMaxMem() int64 {
@@ -100,13 +103,12 @@ func (f DedupFlags) DedupSizeGain() int64 {
 	return util.ParseSizeInBytes(viper.GetString(DedupSizeGain))
 }
 
+func (f DedupFlags) MinIndexDiskFree() int64 {
+	return util.ParseSizeInBytes(viper.GetString(MinIndexDiskFree))
+}
+
 func (f DedupFlags) ToDedupOptions() (*DedupOptions, error) {
 	concurrency := f.ConcurrencyFlags.Concurrency()
-
-	filter, err := f.FilterFlags.ToFilter()
-	if err != nil {
-		return nil, err
-	}
 
 	warcWriterConfig, err := f.WarcWriterConfigFlags.ToWarcWriterConfig()
 	if err != nil {
@@ -173,12 +175,13 @@ func (f DedupFlags) ToDedupOptions() (*DedupOptions, error) {
 	}
 
 	return &DedupOptions{
-		Filter:             filter,
 		Paths:              fileList,
 		Concurrency:        concurrency,
 		MinimumSizeGain:    f.DedupSizeGain(),
 		MinWARCDiskFree:    f.UtilFlags.MinFreeDisk(),
+		MinIndexDiskFree:   f.MinIndexDiskFree(),
 		FileWalker:         fileWalker,
+		ContinueOnError:    f.ErrorFlags.ContinueOnError(),
 		WarcWriterConfig:   warcWriterConfig,
 		WarcRecordOptions:  warcRecordOptions,
 		DigestIndex:        digestIndex,
@@ -192,7 +195,7 @@ func NewCmdDedup() *cobra.Command {
 	flags := NewDedupFlags()
 
 	var cmd = &cobra.Command{
-		Use:   "dedup",
+		Use:   "dedup FILE/DIR ...",
 		Short: "Deduplicate WARC files",
 		Long: `Deduplicate WARC files.
 
@@ -210,7 +213,11 @@ The remaining records are written as is.`,
 				return err
 			}
 			cmd.SilenceUsage = true
-			return o.Run()
+			err = o.Run()
+			if errors.Is(err, context.Canceled) {
+				os.Exit(1)
+			}
+			return err
 		},
 		ValidArgsFunction: flag.SuffixCompletionFn,
 	}
@@ -221,11 +228,6 @@ The remaining records are written as is.`,
 }
 
 func (o *DedupOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := util.CheckFileDescriptorLimit(util.BadgerRecommendedMaxFileDescr)
-	if err != nil {
-		slog.Warn(err.Error())
-	}
-
 	o.Paths = append(o.Paths, args...)
 
 	return nil
@@ -238,19 +240,48 @@ func (o *DedupOptions) Validate() error {
 	if len(o.Paths) == 0 {
 		return errors.New("missing file or directory name")
 	}
-
 	return nil
 }
 
 func (o *DedupOptions) Run() error {
+	done := make(chan struct{})
+	exitCode := 0
+
+	defer func() {
+		<-done
+		os.Exit(exitCode)
+	}()
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	closer, err := log.InitLogger(os.Stderr)
-	if err != nil {
-		return err
-	}
-	defer closer.Close()
+	results := make(chan stat.Result)
+	go func() {
+		defer close(done)
+
+		stats := stat.NewStats()
+		defer func() {
+			slog.Info("Total", "errors", stats.Errors, "records", stats.Records, "duplicates", stats.Duplicates)
+		}()
+
+		for result := range results {
+			slog := slog.With("path", result.Name())
+			for _, err := range result.Errors() {
+				var recordErr warc.RecordError
+				if errors.As(err, &recordErr) {
+					slog.Error("Validation error", "error", recordErr.Error(), "offset", recordErr.Offset())
+				} else {
+					slog.Error("Validation error", "error", err.Error())
+				}
+			}
+			slog.Info("Deduplicated file", "errors", result.ErrorCount(), "records", result.Records(), "duplicates", result.Duplicates())
+			stats.Merge(result)
+		}
+		if stats.Errors > 0 {
+			exitCode = 1
+		}
+	}()
+	defer close(results)
 
 	if o.FileIndex != nil {
 		defer o.FileIndex.Close()
@@ -258,56 +289,72 @@ func (o *DedupOptions) Run() error {
 	if o.DigestIndex != nil {
 		defer o.DigestIndex.Close()
 	}
+
 	defer o.WarcWriterConfig.Close()
 
-	workerPool := workerpool.New(o.Concurrency)
+	workerPool := workerpool.New(ctx, o.Concurrency)
 	defer workerPool.CloseWait()
 
-	walkFn := func(fs afero.Fs, path string, err error) error {
-		if err != nil {
-			return err
-		}
-
-		slog := slog.With("path", path)
-
-		return workerPool.Submit(ctx, func() {
-			if o.MinWARCDiskFree > 0 {
-				diskFree := util.DiskFree(o.WarcWriterConfig.OutDir)
-				if diskFree < o.MinWARCDiskFree {
-					cancel()
-					slog.Error("not enough space left on device", "space", diskFree, "dir", o.WarcWriterConfig.OutDir)
-					return
-				}
-			}
-
-			if err = o.DigestIndex.HasDiskSpace(); err != nil {
-				slog.Error(err.Error())
-				return
-			}
-
-			result, err := filewalker.Preposterous(path, o.FileIndex, o.OpenInputFileHook, o.CloseInputFileHook, func() stat.Result {
-				return o.dedupFile(ctx, fs, path)
-			})
-			if errors.Is(err, filewalker.ErrSkipFile) {
-				return
-			}
-			if err != nil {
-				cancel()
-				slog.Error(err.Error())
-				return
-			}
-			for _, err := range result.Errors() {
-				slog.Error(err.Error())
-			}
-			if result.Fatal() != nil {
-				cancel()
-				slog.Error(result.Fatal().Error())
-			}
-		})
+	// Warn when file descriptor limit is below recommended value
+	err := util.CheckFileDescriptorLimit(util.BadgerRecommendedMaxFileDescr)
+	if err != nil {
+		slog.Warn(err.Error())
 	}
 
 	for _, path := range o.Paths {
-		err := o.FileWalker.Walk(path, walkFn)
+		err := o.FileWalker.Walk(ctx, path, func(fs afero.Fs, path string, err error) error {
+			if err != nil {
+				return err
+			}
+
+			workerPool.Submit(func() {
+				// Assert WARC disk has enough free space
+				if o.MinWARCDiskFree > 0 {
+					diskFree, err := util.DiskFree(o.WarcWriterConfig.OutDir)
+					if err != nil {
+						cancel()
+						slog.Error("Failed to get free space on device", "path", o.WarcWriterConfig.OutDir, "error", err)
+						return
+					}
+					if diskFree < o.MinWARCDiskFree {
+						cancel()
+						slog.Error("Not enough free space on device", "bytesFree", diskFree, "path", o.WarcWriterConfig.OutDir)
+						return
+					}
+				}
+				// Assert index disk has enough free space
+				if o.MinIndexDiskFree > 0 {
+					diskFree, err := util.DiskFree(o.DigestIndex.GetDir())
+					if err != nil {
+						cancel()
+						slog.Error("Failed to get free space on device", "path", o.DigestIndex.GetDir(), "error", err)
+						return
+					}
+					if diskFree < o.MinIndexDiskFree {
+						cancel()
+						slog.Error("Not enough free space on device", "bytesFree", diskFree, "path", o.DigestIndex.GetDir())
+						return
+					}
+				}
+
+				result, err := filewalker.Preposterous(fs, path, o.OpenInputFileHook, o.CloseInputFileHook, o.FileIndex, o.handleFile)
+				if errors.Is(err, filewalker.ErrSkipFile) {
+					return
+				} else if err != nil {
+					if !o.ContinueOnError {
+						cancel()
+					}
+					if result == nil {
+						result = stat.NewResult(path)
+					}
+					result.AddError(err)
+				}
+
+				results <- result
+			})
+
+			return nil
+		})
 		if err != nil {
 			return err
 		}
@@ -315,152 +362,133 @@ func (o *DedupOptions) Run() error {
 	return nil
 }
 
-func (o *DedupOptions) dedupFile(ctx context.Context, fs afero.Fs, fileName string) stat.Result {
-	result := stat.NewResult(fileName)
+func (o *DedupOptions) handleFile(fs afero.Fs, path string) (stat.Result, error) {
+	result := stat.NewResult(path)
 
-	file, err := fs.Open(fileName)
+	file, err := fs.Open(path)
 	if err != nil {
-		result.AddError(err)
-		return result
+		return nil, err
 	}
 	defer func() { _ = file.Close() }()
 
 	warcReader, err := gowarc.NewWarcFileReaderFromStream(file, 0, o.WarcRecordOptions...)
 	if err != nil {
-		result.AddError(err)
-		return result
+		return nil, fmt.Errorf("failed to create warc file reader: %w", err)
 	}
 	defer func() { _ = warcReader.Close() }()
 
-	var warcWriter *gowarc.WarcFileWriter
+	var writer *gowarc.WarcFileWriter
 	if o.WarcWriterConfig.OneToOneWriter {
 		defer func() {
-			if warcWriter != nil {
-				_ = warcWriter.Close()
+			if writer != nil {
+				_ = writer.Close()
 			}
 		}()
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	for record, err := range warc.Records(warcReader, nil, 0, 0) {
+		if err != nil {
+			return result, warc.Error(record, err)
+		}
 
-	for record := range warc.NewIterator(ctx, warcReader, o.Filter, 0, 0) {
-		if warcWriter == nil {
+		if writer == nil || !o.WarcWriterConfig.OneToOneWriter {
 			warcDate := record.WarcRecord.WarcHeader().Get(gowarc.WarcDate)
-			warcWriter, err = o.WarcWriterConfig.GetWarcWriter(fileName, warcDate)
+			writer, err = o.WarcWriterConfig.GetWarcWriter(path, warcDate)
 			if err != nil {
-				result.SetFatal(warc.Error(record, err))
-				break
+				return result, warc.Error(record, err)
 			}
 		}
-		o.handleRecord(warcWriter, record, result)
-		if result.Fatal() != nil {
-			break
-		}
-		if !o.WarcWriterConfig.OneToOneWriter {
-			warcWriter = nil
+		err = o.handleRecord(writer, record, result)
+		if err != nil {
+			return result, warc.Error(record, err)
 		}
 	}
 
-	return result
+	return result, nil
 }
 
-// handleRecord processes one record
-// The input parameter writer and output parameter writerOut is only used for identity transformation. In this case there is one writer
-// per file which should be closed by readFile when the file is processed. But since we need the warc date of the first record to open
-// the writer, it must be opened in this function. These parameters are used for giving readFile access to the writer.
-func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record warc.Record, result stat.Result) {
+func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record warc.Record, result stat.Result) error {
 	defer record.Close()
 
 	result.IncrRecords()
-	result.IncrProcessed()
-
-	if record.Err != nil {
-		result.SetFatal(warc.Error(record, record.Err))
-		return
-	}
-	if !record.Validation.Valid() {
-		result.AddError(warc.Error(record, record.Validation))
-	}
 
 	warcRecord := record.WarcRecord
 
-	length := payloadLength(warcRecord)
 	digest, err := getDigest(warcRecord, record.Validation)
 	if err != nil {
-		result.AddError(warc.Error(record, fmt.Errorf("failed to get digest: %w", err)))
+		result.AddError(fmt.Errorf("failed to get digest: %w", err))
 	}
+	if !record.Validation.Valid() {
+		result.AddError(record.Validation)
+	}
+
+	// write response if no digest is found because we can't make a revisit record without a digest)
 	if digest == "" {
-		err = writeRecord(writer, warcRecord)
-		if err != nil {
-			result.SetFatal(warc.Error(record, fmt.Errorf("failed to write record: %w", err)))
-			return
-		}
+		return writeRecord(writer, warcRecord)
 	}
 
 	profile := getRevisitProfile(warcRecord)
-	revisitRef, _ := warcRecord.CreateRevisitRef(profile)
 
+	// Write response if no profile is found (can't make a revisit record without a profile)
+	if profile == "" {
+		return writeRecord(writer, warcRecord)
+	}
+
+	revisitRef, err := warcRecord.CreateRevisitRef(profile)
+	if err != nil {
+		result.AddError(fmt.Errorf("error creating revisit ref: %w", err))
+	}
+
+	// determine if the record is a revisit record
 	revisitReference, err := o.DigestIndex.IsRevisit(digest, revisitRef)
 	if err != nil {
-		result.AddError(warc.Error(record, fmt.Errorf("error getting revisit ref: %w", err)))
+		result.AddError(fmt.Errorf("error getting revisit ref: %w", err))
 	}
+
 	// write a normal record if one of:
 	// a - no revisit reference is found
 	// b - the revisit reference is too large compared to the original record (not enough size gain to warrant writing a revisit record)
 	if revisitReference == nil ||
-		int64(revisitRefSize(revisitReference)) >= length-o.MinimumSizeGain {
-
-		err = writeRecord(writer, warcRecord)
-		if err != nil {
-			result.SetFatal(warc.Error(record, fmt.Errorf("failed to write record: %w", err)))
-		}
-
-		return
+		int64(revisitRefSize(revisitReference)) >= payloadLength(warcRecord)-o.MinimumSizeGain {
+		return writeRecord(writer, warcRecord)
 	}
 
-	if revisitReference.Profile == "" {
-		result.AddError(warc.Error(record, fmt.Errorf("revisit reference has no profile: %v", revisitReference)))
-	}
-
-	// Write a revisit record. If it fails, write the original record.
+	// Make a revisit record. If it fails, write the original record.
 	revisit, err := warcRecord.ToRevisitRecord(revisitReference)
 	if err != nil {
-		result.AddError(warc.Error(record, fmt.Errorf("error creating revisit record: %w", err)))
-		err = writeRecord(writer, warcRecord)
-		if err != nil {
-			result.SetFatal(warc.Error(record, fmt.Errorf("failed to write record: %w", err)))
-		}
-		return
+		result.AddError(fmt.Errorf("error creating revisit record: %w", err))
+		return writeRecord(writer, warcRecord)
 	}
+
+	// Write revisit record
 	err = writeRecord(writer, revisit)
-	if err != nil {
-		result.SetFatal(warc.Error(record, fmt.Errorf("failed to write record: %w", err)))
-	} else {
+	if err == nil {
 		result.IncrDuplicates()
 	}
+	return err
 }
 
 func writeRecord(writer *gowarc.WarcFileWriter, warcRecord gowarc.WarcRecord) error {
 	writeResponse := writer.Write(warcRecord)
-	if len(writeResponse) == 0 {
-		return nil
-	}
-	if writeResponse[0].Err != nil {
+	if len(writeResponse) > 0 {
 		return writeResponse[0].Err
 	}
 	return nil
 }
 
+// getRevisitProfile returns the revisit profile for a record
 func getRevisitProfile(warcRecord gowarc.WarcRecord) string {
 	switch warcRecord.Version() {
 	case gowarc.V1_0:
 		return gowarc.ProfileIdenticalPayloadDigestV1_0
-	default:
+	case gowarc.V1_1:
 		return gowarc.ProfileIdenticalPayloadDigestV1_1
+	default:
+		return ""
 	}
 }
 
+// getDigest returns the digest of a record. If the record does not have a digest, it will be calculated and validated.
 func getDigest(warcRecord gowarc.WarcRecord, validation *gowarc.Validation) (string, error) {
 	var digest string
 	if warcRecord.WarcHeader().Has(gowarc.WarcPayloadDigest) {

@@ -1,7 +1,6 @@
 package arc
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 
@@ -44,13 +43,15 @@ func TestConvertArcFile(t *testing.T) {
 				WarcWriterConfig: warcWriterConfig,
 			}
 
-			result := o.readFile(context.Background(), afero.NewOsFs(), filename)
+			result, err := o.handleFile(afero.NewOsFs(), filename)
+			if err != nil {
+				if !tt.wantError {
+					t.Fatal(err)
+				}
+			}
 			if !tt.wantError && result.ErrorCount() > 0 {
 				for _, err := range result.Errors() {
-					t.Errorf("readFile() error = %v", err)
-				}
-				if result.Fatal() != nil {
-					t.Errorf("readFile() fatal = %v", result.Fatal())
+					t.Error(err)
 				}
 			} else if tt.wantError && result.ErrorCount() == 0 {
 				t.Errorf("readFile() expected error, got none")

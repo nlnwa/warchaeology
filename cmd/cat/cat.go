@@ -13,7 +13,6 @@ import (
 
 	"github.com/nlnwa/gowarc/v2"
 	"github.com/nlnwa/warchaeology/v3/cmd/internal/flag"
-	"github.com/nlnwa/warchaeology/v3/cmd/internal/log"
 	"github.com/nlnwa/warchaeology/v3/internal/filewalker"
 	"github.com/nlnwa/warchaeology/v3/internal/filter"
 	"github.com/nlnwa/warchaeology/v3/internal/warc"
@@ -34,6 +33,10 @@ const (
 	ShowPayload      = "payload"
 	ShowPayloadShort = "P"
 	ShowPayloadHelp  = "show payload"
+
+	Compression      = "compress"
+	CompressionShort = "z"
+	CompressionHelp  = "compress output (per record)"
 )
 
 type CatOptions struct {
@@ -41,7 +44,9 @@ type CatOptions struct {
 	offset            int64
 	recordNum         int
 	recordCount       int
+	force             bool
 	compress          bool
+	continueOnError   bool
 	filter            *filter.RecordFilter
 	writer            *writer
 	fileWalker        *filewalker.FileWalker
@@ -53,6 +58,7 @@ type CatFlags struct {
 	FilterFlags           flag.FilterFlags
 	WarcIteratorFlags     flag.WarcIteratorFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
+	ErrorFlags            flag.ErrorFlags
 }
 
 func (f CatFlags) AddFlags(cmd *cobra.Command) {
@@ -61,11 +67,12 @@ func (f CatFlags) AddFlags(cmd *cobra.Command) {
 	f.FilterFlags.AddFlags(cmd)
 	f.WarcIteratorFlags.AddFlags(cmd)
 	f.WarcRecordOptionFlags.AddFlags(cmd)
+	f.ErrorFlags.AddFlags(cmd)
 
 	flags.BoolP(ShowWarcHeader, ShowWarcHeaderShort, false, ShowWarcHeaderHelp)
 	flags.BoolP(ShowProtocolHeader, ShowProtocolHeaderShort, false, ShowProtocolHeaderHelp)
 	flags.BoolP(ShowPayload, ShowPayloadShort, false, ShowPayloadHelp)
-	flags.BoolP("compress", "z", false, "output is compressed (per record)")
+	flags.BoolP(Compression, CompressionShort, false, CompressionHelp)
 }
 
 func (f CatFlags) ShowWarcHeader() bool {
@@ -108,11 +115,13 @@ func (f CatFlags) ToOptions() (*CatOptions, error) {
 
 	return &CatOptions{
 		paths:             fileList,
-		fileWalker:        fileWalker,
-		filter:            filter,
 		offset:            f.WarcIteratorFlags.Offset(),
 		recordCount:       f.WarcIteratorFlags.Limit(),
 		recordNum:         f.WarcIteratorFlags.RecordNum(),
+		force:             f.WarcIteratorFlags.Force(),
+		filter:            filter,
+		continueOnError:   f.ErrorFlags.ContinueOnError(),
+		fileWalker:        fileWalker,
 		compress:          f.Compress(),
 		writer:            writer,
 		warcRecordOptions: f.WarcRecordOptionFlags.ToWarcRecordOptions(),
@@ -126,10 +135,11 @@ func NewCmdCat() *cobra.Command {
 		Use:   "cat FILE/DIR ...",
 		Short: "Concatenate and print warc files",
 		Long:  ``,
-		Example: `Print all content from a WARC file
+		Example: `
+# Print all content from a WARC file (in principle the same as zcat)
 warc cat file1.warc.gz
 
-# Pipe payload from record #4 into the image viewer feh
+# Pipe the payload of the 4th record into the image viewer feh
 warc cat -n4 -P file1.warc.gz | feh -`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			o, err := flags.ToOptions()
@@ -145,7 +155,11 @@ warc cat -n4 -P file1.warc.gz | feh -`,
 				return err
 			}
 			cmd.SilenceUsage = true
-			return o.Run()
+			err = o.Run()
+			if errors.Is(err, context.Canceled) {
+				os.Exit(1)
+			}
+			return err
 		},
 	}
 
@@ -181,24 +195,27 @@ func (o *CatOptions) Run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	closer, err := log.InitLogger(os.Stderr)
-	if err != nil {
-		return err
-	}
-	defer closer.Close()
+	for _, path := range o.paths {
+		err := o.fileWalker.Walk(ctx, path, func(fs afero.Fs, path string, err error) error {
+			if err != nil {
+				return err
+			}
 
-	walkFn := func(fs afero.Fs, path string, err error) error {
-		if err != nil {
-			return err
-		}
-		if err := o.catFile(ctx, fs, path); err != nil {
-			slog.Error(err.Error(), "path", path)
-		}
-		return nil
-	}
+			err = o.handleFile(ctx, fs, path)
+			if err != nil {
+				if !o.continueOnError {
+					cancel()
+				}
+				var recordErr warc.RecordError
+				if errors.As(err, &recordErr) {
+					slog.Error(recordErr.Error(), "path", path, "offset", recordErr.Offset())
+				} else {
+					slog.Error(err.Error(), "path", path)
+				}
+			}
 
-	for _, file := range o.paths {
-		err := o.fileWalker.Walk(file, walkFn)
+			return nil
+		})
 		if err != nil {
 			return err
 		}
@@ -206,8 +223,8 @@ func (o *CatOptions) Run() error {
 	return nil
 }
 
-// catFile reads a WARC file and writes the content to stdout
-func (o *CatOptions) catFile(ctx context.Context, fs afero.Fs, path string) error {
+// handleFile reads a WARC file and writes the content to stdout
+func (o *CatOptions) handleFile(ctx context.Context, fs afero.Fs, path string) error {
 	f, err := fs.Open(path)
 	if err != nil {
 		return err
@@ -216,14 +233,29 @@ func (o *CatOptions) catFile(ctx context.Context, fs afero.Fs, path string) erro
 	if err != nil {
 		return err
 	}
-	defer func() { _ = warcFileReader.Close() }()
+	defer func() {
+		_ = warcFileReader.Close()
+	}()
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	var lastOffset int64 = -1
 
-	for record := range warc.NewIterator(ctx, warcFileReader, o.filter, o.recordNum, o.recordCount) {
+	for record, err := range warc.Records(warcFileReader, o.filter, o.recordNum, o.recordCount) {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		if err != nil {
+			// When forcing, avoid infinite loop by ensuring the iterator moves forward
+			if o.force && lastOffset != record.Offset {
+				slog.Warn(err.Error(), "offset", record.Offset, "path", path)
+				lastOffset = record.Offset
+				continue
+			}
+			return warc.Error(record, err)
+		}
 		if err := o.handleRecord(record); err != nil {
-			return err
+			return warc.Error(record, err)
 		}
 	}
 	return nil
@@ -231,9 +263,6 @@ func (o *CatOptions) catFile(ctx context.Context, fs afero.Fs, path string) erro
 
 func (o *CatOptions) handleRecord(record warc.Record) error {
 	defer record.Close()
-	if record.Err != nil {
-		return record.Err
-	}
 	var w io.Writer
 	if o.compress {
 		gw := gzip.NewWriter(os.Stdout)

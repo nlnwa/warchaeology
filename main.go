@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/nlnwa/warchaeology/v3/cmd"
 	cmdversion "github.com/nlnwa/warchaeology/v3/internal/version"
 )
@@ -18,5 +20,7 @@ func main() {
 	cmd.Version = cmdversion.Version.GitVersion
 	cmd.SetVersionTemplate(`{{printf "%s\n" .Version}}`)
 
-	_ = cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

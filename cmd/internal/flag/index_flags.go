@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/nlnwa/warchaeology/v3/internal/index"
 	"github.com/spf13/cobra"
@@ -28,9 +27,6 @@ type IndexFlags struct {
 
 func (f *IndexFlags) AddFlags(cmd *cobra.Command, options ...func(*IndexFlags)) {
 	f.name = cmd.Name()
-
-	// Set GOMAXPROCS to 128 as recommended by badger
-	runtime.GOMAXPROCS(128)
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {

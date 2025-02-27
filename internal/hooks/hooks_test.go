@@ -14,6 +14,8 @@ const (
 	windowsOs = "windows"
 )
 
+var testHook = "./testdata/test_hook.sh"
+
 func TestOpenInputFileHook(t *testing.T) {
 	if runtime.GOOS == windowsOs {
 		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/89): This test fails on windows")
@@ -26,10 +28,10 @@ func TestOpenInputFileHook(t *testing.T) {
 		want     []string
 		wantErr  string
 	}{
-		{"ok", "test", "./test_hook.sh", "test.warc.gz", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, ""},
+		{"ok", "test", testHook, "test.warc.gz", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, ""},
 		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", nil, "executable file 'test_hook.sh' not found in $PATH for OpenInputFileHook"},
-		{"exit status error", "test general error", "./test_hook.sh", "test.warc.gz", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
-		{"exit status skip", "test skip file", "./test_hook.sh", "test.warc.gz", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, ErrSkipFile.Error()},
+		{"exit status error", "test general error", testHook, "test.warc.gz", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
+		{"exit status skip", "test skip file", testHook, "test.warc.gz", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, ErrSkipFile.Error()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -76,10 +78,10 @@ func TestCloseInputFileHook(t *testing.T) {
 		want       []string
 		wantErr    string
 	}{
-		{"no error", "test", "./test_hook.sh", "test.warc.gz", 0, []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseInputFile"}, ""},
-		{"error", "test", "./test_hook.sh", "test.warc.gz", 2, []string{"WARC_COMMAND=test", "WARC_ERROR_COUNT=2", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseInputFile"}, ""},
+		{"no error", "test", testHook, "test.warc.gz", 0, []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseInputFile"}, ""},
+		{"error", "test", testHook, "test.warc.gz", 2, []string{"WARC_COMMAND=test", "WARC_ERROR_COUNT=2", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseInputFile"}, ""},
 		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", 0, nil, "executable file 'test_hook.sh' not found in $PATH for CloseInputFileHook"},
-		{"exit status error", "test general error", "./test_hook.sh", "test.warc.gz", 0, []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
+		{"exit status error", "test general error", testHook, "test.warc.gz", 0, []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -128,10 +130,10 @@ func TestOpenOutputFileHook(t *testing.T) {
 		want        []string
 		wantErr     string
 	}{
-		{"no srcFile", "test", "./test_hook.sh", "test.warc.gz", "", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenOutputFile"}, ""},
-		{"srcFile", "test", "./test_hook.sh", "test.warc.gz", "TestSource", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenOutputFile", "WARC_SRC_FILE_NAME=TestSource"}, ""},
+		{"no srcFile", "test", testHook, "test.warc.gz", "", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenOutputFile"}, ""},
+		{"srcFile", "test", testHook, "test.warc.gz", "TestSource", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenOutputFile", "WARC_SRC_FILE_NAME=TestSource"}, ""},
 		{"unknown hook", "test", "test_hook.sh", "test.warc.gz", "", nil, "executable file 'test_hook.sh' not found in $PATH for OpenOutputFileHook"},
-		{"exit status error", "test general error", "./test_hook.sh", "test.warc.gz", "", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
+		{"exit status error", "test general error", testHook, "test.warc.gz", "", []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -184,29 +186,29 @@ func TestCloseOutputFileHook(t *testing.T) {
 		want        []string
 		wantErr     string
 	}{
-		{"no extras", "test", "./test_hook.sh", "test.warc.gz",
+		{"no extras", "test", testHook, "test.warc.gz",
 			1234, "", "", 0,
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_SIZE=1234"},
 			""},
-		{"error", "test", "./test_hook.sh", "test.warc.gz",
+		{"error", "test", testHook, "test.warc.gz",
 			1234, "", "", 2,
 			[]string{"WARC_COMMAND=test", "WARC_ERROR_COUNT=2", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_SIZE=1234"},
 			""},
-		{"warcInfoId", "test", "./test_hook.sh", "test.warc.gz",
+		{"warcInfoId", "test", testHook, "test.warc.gz",
 			1234, "TestId", "", 0,
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_INFO_ID=TestId", "WARC_SIZE=1234"},
 			""},
-		{"srcFile", "test", "./test_hook.sh", "test.warc.gz",
+		{"srcFile", "test", testHook, "test.warc.gz",
 			1234, "", "TestSource", 0,
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_SIZE=1234", "WARC_SRC_FILE_NAME=TestSource"},
 			""},
-		{"warcInfoId + srcFile", "test", "./test_hook.sh", "test.warc.gz",
+		{"warcInfoId + srcFile", "test", testHook, "test.warc.gz",
 			1234, "TestId", "TestSource", 0,
 			[]string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=CloseOutputFile", "WARC_INFO_ID=TestId", "WARC_SIZE=1234", "WARC_SRC_FILE_NAME=TestSource"},
 			""},
 		{"unknown hook", "test", "test_hook.sh", "test.warc.gz",
 			0, "", "", 0, nil, "executable file 'test_hook.sh' not found in $PATH for CloseOutputFileHook"},
-		{"exit status error", "test general error", "./test_hook.sh", "test.warc.gz",
+		{"exit status error", "test general error", testHook, "test.warc.gz",
 			0, "", "", 0, []string{"WARC_COMMAND=test", "WARC_FILE_NAME=test.warc.gz", "WARC_HOOK_TYPE=OpenInputFile"}, "exit status error"},
 	}
 	for _, tt := range tests {
@@ -251,7 +253,7 @@ func Test_checkExists(t *testing.T) {
 		wantExistence bool
 	}{
 		{"test_hook.sh", "test_hook.sh", false},
-		{"./test_hook.sh", "./test_hook.sh", true},
+		{testHook, testHook, true},
 		{"ls", "ls", true},
 		{"foo", "foo", false},
 	}
