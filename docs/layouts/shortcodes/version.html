@@ -1,1 +1,14 @@
-{{- print (strings.TrimLeft "v" (os.Getenv "GITHUB_REF_NAME")) -}}
+{{- $version := (os.Getenv "GITHUB_REF_NAME") -}}
+{{- $version = strings.TrimLeft "v" $version -}}
+
+{{- /* Convert pre-release versions for package naming */ -}}
+{{- if in $version "-" -}}
+  {{- $version = strings.Replace $version "-" "." 1 -}}
+{{- end -}}
+
+{{- /* If rendering an RPM link, append "-1" */ -}}
+{{- if in (.Get 0) ".rpm" -}}
+  {{- print $version "-1" -}}
+{{- else -}}
+  {{- print $version -}}
+{{- end -}}
