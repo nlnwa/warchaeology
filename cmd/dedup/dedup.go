@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"slices"
 	"syscall"
 
 	"github.com/nlnwa/gowarc/v2"
@@ -33,6 +34,9 @@ const (
 
 	MinIndexDiskFree     = "min-index-disk-free"
 	MinIndexDiskFreeHelp = `minimum free space on disk to allow index writing`
+
+	RecordTypes     = "record-types"
+	RecordTypesHelp = `comma separated list of record types to deduplicate. Other record types are written as is.`
 )
 
 type DedupOptions struct {
@@ -45,6 +49,7 @@ type DedupOptions struct {
 	MinWARCDiskFree     int64
 	MinIndexDiskFree    int64
 	ContinueOnError     bool
+	RecordTypes         []gowarc.RecordType
 	FileWalker          *filewalker.FileWalker
 	WarcRecordOptions   []gowarc.WarcRecordOption
 	OpenInputFileHook   hooks.OpenInputFileHook
@@ -93,6 +98,7 @@ func (f DedupFlags) AddFlags(cmd *cobra.Command) {
 	flags.String(BufferMaxMem, "1MB", BufferMaxMemHelp)
 	flags.StringP(DedupSizeGain, "g", "2KB", DedupSizeGainHelp)
 	flags.String(MinIndexDiskFree, "1 * 1024 * 1024", MinIndexDiskFreeHelp)
+	flags.StringSlice(RecordTypes, []string{"response", "resource"}, RecordTypesHelp)
 }
 
 func (f DedupFlags) BufferMaxMem() int64 {
@@ -107,7 +113,23 @@ func (f DedupFlags) MinIndexDiskFree() int64 {
 	return util.ParseSizeInBytes(viper.GetString(MinIndexDiskFree))
 }
 
+func (f DedupFlags) RecordTypes() []string {
+	return viper.GetStringSlice(RecordTypes)
+}
+
 func (f DedupFlags) ToDedupOptions() (*DedupOptions, error) {
+	var recordTypes []gowarc.RecordType
+	for _, rt := range f.RecordTypes() {
+		recordType := stringToRecordType(rt)
+		if recordType == gowarc.Revisit {
+			return nil, fmt.Errorf("revisit records cannot be deduplicated")
+		}
+		if recordType == 0 {
+			return nil, fmt.Errorf("invalid record type: %s", rt)
+		}
+		recordTypes = append(recordTypes, stringToRecordType(rt))
+	}
+
 	concurrency := f.ConcurrencyFlags.Concurrency()
 
 	warcWriterConfig, err := f.WarcWriterConfigFlags.ToWarcWriterConfig()
@@ -182,6 +204,7 @@ func (f DedupFlags) ToDedupOptions() (*DedupOptions, error) {
 		MinIndexDiskFree:   f.MinIndexDiskFree(),
 		FileWalker:         fileWalker,
 		ContinueOnError:    f.ErrorFlags.ContinueOnError(),
+		RecordTypes:        recordTypes,
 		WarcWriterConfig:   warcWriterConfig,
 		WarcRecordOptions:  warcRecordOptions,
 		DigestIndex:        digestIndex,
@@ -239,6 +262,9 @@ func (o *DedupOptions) Validate() error {
 	}
 	if len(o.Paths) == 0 {
 		return errors.New("missing file or directory name")
+	}
+	if len(o.RecordTypes) == 0 {
+		return errors.New("missing record type(s)")
 	}
 	return nil
 }
@@ -414,6 +440,11 @@ func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record warc.R
 
 	warcRecord := record.WarcRecord
 
+	// if the record type is not in the list of record types to deduplicate, write the record as is
+	if !slices.Contains(o.RecordTypes, warcRecord.Type()) {
+		return writeRecord(writer, warcRecord)
+	}
+
 	digest, err := getDigest(warcRecord, record.Validation)
 	if err != nil {
 		result.AddError(fmt.Errorf("failed to get digest: %w", err))
@@ -534,4 +565,27 @@ func revisitRefSize(revisitReference *gowarc.RevisitRef) int {
 		length += len(gowarc.WarcRefersToDate) + len(revisitReference.TargetDate)
 	}
 	return length
+}
+
+func stringToRecordType(rt string) gowarc.RecordType {
+	switch rt {
+	case "warcinfo":
+		return gowarc.Warcinfo
+	case "response":
+		return gowarc.Response
+	case "resource":
+		return gowarc.Resource
+	case "request":
+		return gowarc.Request
+	case "metadata":
+		return gowarc.Metadata
+	case "revisit":
+		return gowarc.Revisit
+	case "conversion":
+		return gowarc.Conversion
+	case "continuation":
+		return gowarc.Continuation
+	default:
+		return 0
+	}
 }
