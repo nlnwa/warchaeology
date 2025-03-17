@@ -2,7 +2,7 @@ module github.com/nlnwa/warchaeology/v3
 
 go 1.23.0
 
-toolchain go1.23.6
+toolchain go1.24.1
 
 require (
 	github.com/awesome-gocui/gocui v1.1.0
@@ -15,7 +15,7 @@ require (
 	github.com/nlnwa/gowarc/v2 v2.0.1
 	github.com/nlnwa/whatwg-url v0.5.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
-	github.com/spf13/afero v1.12.0
+	github.com/spf13/afero v1.14.0
 	github.com/spf13/cast v1.7.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
@@ -68,7 +68,7 @@ require (
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/term v0.29.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
