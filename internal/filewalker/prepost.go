@@ -30,7 +30,7 @@ func Preposterous(fs afero.Fs, path string, preHook hooks.OpenInputFileHook, pos
 	// Wrap the function call with pre and post hooks
 	result, resultErr := PrePostHook(fs, path, preHook, postHook, fn)
 
-	if fileIndex != nil {
+	if fileIndex != nil && resultErr != nil {
 		if err := fileIndex.SaveFileStats(path, result); err != nil {
 			return nil, fmt.Errorf("failed to save file stats: %w", err)
 		}
@@ -39,7 +39,7 @@ func Preposterous(fs afero.Fs, path string, preHook hooks.OpenInputFileHook, pos
 	return result, resultErr
 }
 
-// Preposterous runs a function on a file, and handles open and close input file hooks.
+// PrePostHook wraps a function with calls to open and close input file hooks.
 func PrePostHook(fs afero.Fs, path string, preHook hooks.OpenInputFileHook, postHook hooks.CloseInputFileHook, fn func(fs afero.Fs, path string) (stat.Result, error)) (stat.Result, error) {
 	if err := preHook.Run(path); err != nil {
 		if errors.Is(err, ErrSkipFile) {
@@ -50,8 +50,10 @@ func PrePostHook(fs afero.Fs, path string, preHook hooks.OpenInputFileHook, post
 
 	result, resultErr := fn(fs, path)
 
-	if err := postHook.Run(path, result.ErrorCount()); err != nil {
-		return nil, fmt.Errorf("failed to run close input file hook: %w", err)
+	if resultErr != nil {
+		if err := postHook.Run(path, result.ErrorCount()); err != nil {
+			return nil, fmt.Errorf("failed to run close input file hook: %w", err)
+		}
 	}
 
 	return result, resultErr
