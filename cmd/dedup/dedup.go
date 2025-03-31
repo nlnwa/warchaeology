@@ -521,21 +521,20 @@ func getRevisitProfile(warcRecord gowarc.WarcRecord) string {
 
 // getDigest returns the digest of a record. If the record does not have a digest, it will be calculated and validated.
 func getDigest(warcRecord gowarc.WarcRecord, validation *gowarc.Validation) (string, error) {
-	var digest string
 	if warcRecord.WarcHeader().Has(gowarc.WarcPayloadDigest) {
-		digest = warcRecord.WarcHeader().Get(gowarc.WarcPayloadDigest)
-	} else if warcRecord.WarcHeader().Has(gowarc.WarcBlockDigest) {
-		digest = warcRecord.WarcHeader().Get(gowarc.WarcBlockDigest)
-	} else {
-		if err := warcRecord.Block().Cache(); err != nil {
-			return digest, fmt.Errorf("could not cache record: %w", err)
-		}
-		if err := warcRecord.ValidateDigest(validation); err != nil {
-			return digest, fmt.Errorf("failed to validate digest: %w", err)
-		}
-		return getDigest(warcRecord, validation)
+		return warcRecord.WarcHeader().Get(gowarc.WarcPayloadDigest), nil
 	}
-	return digest, nil
+	if warcRecord.WarcHeader().Has(gowarc.WarcBlockDigest) {
+		return warcRecord.WarcHeader().Get(gowarc.WarcBlockDigest), nil
+	}
+	if err := warcRecord.Block().Cache(); err != nil {
+		return "", fmt.Errorf("could not cache record: %w", err)
+	}
+	if err := warcRecord.ValidateDigest(validation); err != nil {
+		return "", fmt.Errorf("failed to validate digest: %w", err)
+	}
+
+	return getDigest(warcRecord, validation)
 }
 
 func payloadLength(warcRecord gowarc.WarcRecord) int64 {
