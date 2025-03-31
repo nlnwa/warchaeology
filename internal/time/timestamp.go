@@ -29,6 +29,9 @@ func UTC14(t time.Time) string {
 	return t.In(time.UTC).Format("20060102150405")
 }
 
-func UTCW3cIso8601(t time.Time) string {
-	return t.In(time.UTC).Format(time.RFC3339)
+// UTCW3CDTF returns the time in UTC formatted according to W3C Date and Time Formats with up to nanosecond precision.
+//
+// See https://www.w3.org/TR/NOTE-datetime
+func UTCW3CDTF(t time.Time) string {
+	return t.UTC().Format(time.RFC3339Nano)
 }

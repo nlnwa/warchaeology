@@ -217,7 +217,7 @@ func (recordWriter *RecordWriter) createFieldFunc(t *field) {
 	// The following fields are supported:
 	// a - original URL
 	// b - date in 14 digit format
-	// B - date in RFC3339 format
+	// B - date in RFC3339 format (up to 9 fractional digits)
 	// e - IP
 	// g - file name
 	// h - original host
@@ -243,10 +243,10 @@ func (recordWriter *RecordWriter) createFieldFunc(t *field) {
 	case 'B':
 		t.fn = createStringFn(t.align, t.length, func(record warc.Record, file string) string {
 			t, err := warc.Date(record.WarcRecord)
-			if err == nil {
-				return time.UTCW3cIso8601(t)
+			if err != nil {
+				return "                         "
 			}
-			return "                         "
+			return time.UTCW3CDTF(t)
 		})
 	case 'e':
 		t.fn = createStringFn(t.align, t.length, func(record warc.Record, file string) string {
