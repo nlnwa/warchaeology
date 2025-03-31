@@ -1,5 +1,5 @@
 ---
-date: 2025-02-26T20:24:03+01:00
+date: 2025-03-31T14:23:40+02:00
 title: "warc convert"
 slug: warc_convert
 url: /cmd/warc_convert/

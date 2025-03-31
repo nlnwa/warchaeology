@@ -1,5 +1,5 @@
 ---
-date: 2025-02-26T20:24:03+01:00
+date: 2025-03-31T14:23:40+02:00
 title: "warc convert arc"
 slug: warc_convert_arc
 url: /cmd/warc_convert_arc/
@@ -35,12 +35,12 @@ warc convert arc FILE/DIR ... [flags]
   -C, --concurrent-writers int          maximum concurrent WARC writers. This is the number of WARC-files simultaneously written to.
                                         	A consequence is that at least this many WARC files are created even if there is only one input file. (default 16)
       --continue-on-error               continue on error. Will continue processing files and directories in spite of errors.
-      --default-date string             fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2025-2-26")
+      --default-date string             fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2025-3-31")
       --file-size string                The maximum size for WARC files (default "1GB")
       --flush                           if true, sync WARC file to disk after writing each record
       --ftp-pool-size int32             size of the ftp pool (default 1)
   -h, --help                            help for arc
-      --index-dir string                directory to store indexes (default "/home/mariusb/.cache/arc")
+      --index-dir string                directory to store indexes (default "/home/mariusb/.cache/warchaeology/arc")
   -i, --input-file string               input file (system). Default is to use OS file system.
                                         Legal values:
                                         	/path/to/archive.( tar | tar.gz | tgz | zip | wacz )
