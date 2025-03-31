@@ -9,8 +9,7 @@ func To14(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	return t.Format("20060102150405"), nil
+	return t.UTC().Format("20060102150405"), nil
 }
 
 func FromTimeTo14(t time.Time) string {
