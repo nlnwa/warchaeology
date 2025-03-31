@@ -97,7 +97,7 @@ func (f DedupFlags) AddFlags(cmd *cobra.Command) {
 	flags := cmd.Flags()
 	flags.String(BufferMaxMem, "1MB", BufferMaxMemHelp)
 	flags.StringP(DedupSizeGain, "g", "2KB", DedupSizeGainHelp)
-	flags.String(MinIndexDiskFree, "1 * 1024 * 1024", MinIndexDiskFreeHelp)
+	flags.String(MinIndexDiskFree, "1MB", MinIndexDiskFreeHelp)
 	flags.StringSlice(RecordTypes, []string{"response", "resource"}, RecordTypesHelp)
 }
 
