@@ -21,22 +21,15 @@ const (
 	IndexDirHelp = `directory to store indexes`
 )
 
-type IndexFlags struct {
-	name string
-}
+type IndexFlags struct{}
 
-func (f *IndexFlags) AddFlags(cmd *cobra.Command, options ...func(*IndexFlags)) {
-	f.name = cmd.Name()
-
+func (f IndexFlags) AddFlags(cmd *cobra.Command) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		panic(fmt.Errorf("failed to get user cache dir: %v", err))
 	}
 
-	cacheDir = filepath.Join(cacheDir, f.name)
-	if f.name == "" {
-		cacheDir = filepath.Join(cacheDir, "index")
-	}
+	cacheDir = filepath.Join(cacheDir, "warchaeology", cmd.Name())
 
 	flags := cmd.Flags()
 	flags.BoolP(KeepIndex, "k", false, KeepIndexHelp)
@@ -48,22 +41,22 @@ func (f *IndexFlags) AddFlags(cmd *cobra.Command, options ...func(*IndexFlags)) 
 	}
 }
 
-func (f *IndexFlags) IndexDir() string {
+func (f IndexFlags) IndexDir() string {
 	return viper.GetString(IndexDir)
 }
 
-func (f *IndexFlags) KeepIndex() bool {
+func (f IndexFlags) KeepIndex() bool {
 	return viper.GetBool(KeepIndex)
 }
 
-func (f *IndexFlags) NewIndex() bool {
+func (f IndexFlags) NewIndex() bool {
 	return viper.GetBool(NewIndex)
 }
 
-func (f *IndexFlags) ToDigestIndex() (*index.DigestIndex, error) {
-	return index.NewDigestIndex(f.IndexDir(), f.name, f.KeepIndex(), f.NewIndex())
+func (f IndexFlags) ToDigestIndex() (*index.DigestIndex, error) {
+	return index.NewDigestIndex(f.IndexDir(), f.KeepIndex(), f.NewIndex())
 }
 
-func (f *IndexFlags) ToFileIndex() (*index.FileIndex, error) {
-	return index.NewFileIndex(f.IndexDir(), f.name, f.KeepIndex(), f.NewIndex())
+func (f IndexFlags) ToFileIndex() (*index.FileIndex, error) {
+	return index.NewFileIndex(f.IndexDir(), f.KeepIndex(), f.NewIndex())
 }

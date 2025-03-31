@@ -67,7 +67,7 @@ type DedupFlags struct {
 	UtilFlags             flag.UtilFlags
 	RepairFlags           flag.RepairFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
-	IndexFlags            *flag.IndexFlags
+	IndexFlags            flag.IndexFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
 	ErrorFlags            flag.ErrorFlags
 }
@@ -77,7 +77,6 @@ func NewDedupFlags() DedupFlags {
 		InputHookFlags:        &flag.InputHookFlags{},
 		OutputHookFlags:       &flag.OutputHookFlags{},
 		WarcWriterConfigFlags: &flag.WarcWriterConfigFlags{},
-		IndexFlags:            &flag.IndexFlags{},
 	}
 }
 

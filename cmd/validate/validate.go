@@ -52,14 +52,13 @@ type ValidateOptions struct {
 
 func NewValidateFlags() ValidateFlags {
 	return ValidateFlags{
-		IndexFlags:      &flag.IndexFlags{},
 		OutputHookFlags: &flag.OutputHookFlags{},
 		InputHookFlags:  &flag.InputHookFlags{},
 	}
 }
 
 type ValidateFlags struct {
-	IndexFlags            *flag.IndexFlags
+	IndexFlags            flag.IndexFlags
 	OutputHookFlags       *flag.OutputHookFlags
 	InputHookFlags        *flag.InputHookFlags
 	FileWalkerFlags       flag.FileWalkerFlags
