@@ -44,7 +44,7 @@ type ConvertWarcOptions struct {
 
 type ConvertWarcFlags struct {
 	FileWalkerFlags       flag.FileWalkerFlags
-	IndexFlags            *flag.IndexFlags
+	IndexFlags            flag.IndexFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
 	WarcWriterConfigFlags *flag.WarcWriterConfigFlags
 	OutputHookFlags       *flag.OutputHookFlags
@@ -58,7 +58,6 @@ type ConvertWarcFlags struct {
 
 func NewConvertWarcFlags() ConvertWarcFlags {
 	return ConvertWarcFlags{
-		IndexFlags:            &flag.IndexFlags{},
 		OutputHookFlags:       &flag.OutputHookFlags{},
 		InputHookFlags:        &flag.InputHookFlags{},
 		WarcWriterConfigFlags: &flag.WarcWriterConfigFlags{},
@@ -360,7 +359,9 @@ func (o *ConvertWarcOptions) handleRecord(warcFileWriter *gowarc.WarcFileWriter,
 	result.IncrRecords()
 
 	if !record.Validation.Valid() {
-		result.AddError(record.Validation)
+		for _, err := range *record.Validation {
+			result.AddError(warc.Error(record, err))
+		}
 	}
 
 	warcRecord := record.WarcRecord

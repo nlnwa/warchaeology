@@ -21,6 +21,8 @@ type Result interface {
 	ErrorCount() int64
 	Errors() []error
 	Duplicates() int64
+	SetHash(hash string)
+	Hash() string
 }
 
 type result struct {
@@ -29,6 +31,7 @@ type result struct {
 	errorCount int64
 	errors     []error
 	duplicates int64
+	hash       string
 }
 
 func NewResult(fileName string) Result {
@@ -92,6 +95,14 @@ func (r *result) String() string {
 
 func (r *result) Log(fileNum int) string {
 	return fmt.Sprintf("%06d %s", fileNum, r.String())
+}
+
+func (r *result) SetHash(hash string) {
+	r.hash = hash
+}
+
+func (r *result) Hash() string {
+	return r.hash
 }
 
 func (r *result) UnmarshalBinary(data []byte) error {

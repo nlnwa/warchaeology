@@ -50,7 +50,8 @@ To use this hook, specify the path to the executable file using the `--close-inp
 * `WARC_COMMAND`: Contains the subcommand name.
 * `WARC_HOOK_TYPE`: Contains the hook type: CloseInputFile.
 * `WARC_FILE_NAME`: Contains the file name of the input file.
-* `WARC_ERROR_COUNT`: Contains the number of errors found if the file was validated and the validation failed.
+* `WARC_ERROR`: Contains the error message if there was an error processing the file.
+* `WARC_ERROR_COUNT`: Contains the number of errors found processing the file.
 * `WARC_HASH`: Contains the hash of the input file if it was computed.
 
 #### Exit codes
@@ -89,6 +90,4 @@ To use this hook, specify the path to the executable file using the `--close-out
 * `WARC_FILE_NAME`: Contains the file name of the output file.
 * `WARC_SRC_FILE_NAME`: Contains the file name of the input file from which the output file was created.
 * `WARC_SIZE`: Contains the size of the output file in bytes.
-* `WARC_HASH`: Contains the hash of the output file if it was computed.
 * `WARC_INFO_ID`: Contains the ID of the WarcInfo-record in the output file if it exists.
-* `WARC_ERROR_COUNT`: contains the number of errors found if the file was validated and the validation failed.

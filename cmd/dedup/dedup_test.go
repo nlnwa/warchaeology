@@ -40,7 +40,7 @@ func TestConvertArcFile(t *testing.T) {
 			}
 			defer warcWriterConfig.Close()
 
-			digestIndex, err := index.NewDigestIndex(t.TempDir(), "test", false, true)
+			digestIndex, err := index.NewDigestIndex(t.TempDir(), false, true)
 			if err != nil {
 				t.Fatalf("failed to create digest index: %v", err)
 			}

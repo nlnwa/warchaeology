@@ -16,11 +16,11 @@ type FileIndex struct {
 	keepIndex bool
 }
 
-func NewFileIndex(indexDir string, subdir string, keepIndex, newIndex bool) (*FileIndex, error) {
+func NewFileIndex(indexDir string, keepIndex, newIndex bool) (*FileIndex, error) {
 	// Set GOMAXPROCS to 128 as recommended by badger
 	runtime.GOMAXPROCS(128)
 
-	dir := filepath.Join(indexDir, subdir, "files")
+	dir := filepath.Join(indexDir, "file-index")
 	dir = filepath.Clean(dir)
 
 	db, err := badger.Open(badger.DefaultOptions(dir).WithLoggingLevel(badger.WARNING))
@@ -29,8 +29,9 @@ func NewFileIndex(indexDir string, subdir string, keepIndex, newIndex bool) (*Fi
 	}
 
 	idx := &FileIndex{
-		dir: dir,
-		db:  db,
+		dir:       dir,
+		db:        db,
+		keepIndex: keepIndex,
 	}
 
 	if newIndex {
@@ -39,6 +40,7 @@ func NewFileIndex(indexDir string, subdir string, keepIndex, newIndex bool) (*Fi
 			return nil, err
 		}
 	}
+
 	return idx, nil
 }
 
@@ -49,7 +51,7 @@ func (idx *FileIndex) GetFileStats(key string) (result stat.Result, err error) {
 			return err
 		}
 		return item.Value(func(val []byte) error {
-			result = stat.NewResult("")
+			result = stat.NewResult(key)
 			return result.UnmarshalBinary(val)
 		})
 	})

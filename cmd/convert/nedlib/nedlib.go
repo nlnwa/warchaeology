@@ -43,7 +43,7 @@ type ConvertNedlibOptions struct {
 type ConvertNedlibFlags struct {
 	FileWalkerFlags       flag.FileWalkerFlags
 	WarcWriterConfigFlags *flag.WarcWriterConfigFlags
-	IndexFlags            *flag.IndexFlags
+	IndexFlags            flag.IndexFlags
 	OutputHookFlags       *flag.OutputHookFlags
 	InputHookFlags        *flag.InputHookFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
@@ -52,7 +52,6 @@ type ConvertNedlibFlags struct {
 
 func NewConvertNedlibFlags() ConvertNedlibFlags {
 	return ConvertNedlibFlags{
-		IndexFlags:            &flag.IndexFlags{},
 		OutputHookFlags:       &flag.OutputHookFlags{},
 		InputHookFlags:        &flag.InputHookFlags{},
 		WarcWriterConfigFlags: &flag.WarcWriterConfigFlags{},
@@ -322,7 +321,9 @@ func (o *ConvertNedlibOptions) handleRecord(w *gowarc.WarcFileWriter, record war
 	result.IncrRecords()
 
 	if !record.Validation.Valid() {
-		result.AddError(record.Validation)
+		for _, err := range *record.Validation {
+			result.AddError(warc.Error(record, err))
+		}
 	}
 
 	writeResponse := w.Write(record.WarcRecord)

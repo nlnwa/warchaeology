@@ -67,7 +67,7 @@ type DedupFlags struct {
 	UtilFlags             flag.UtilFlags
 	RepairFlags           flag.RepairFlags
 	WarcRecordOptionFlags flag.WarcRecordOptionFlags
-	IndexFlags            *flag.IndexFlags
+	IndexFlags            flag.IndexFlags
 	ConcurrencyFlags      flag.ConcurrencyFlags
 	ErrorFlags            flag.ErrorFlags
 }
@@ -77,7 +77,6 @@ func NewDedupFlags() DedupFlags {
 		InputHookFlags:        &flag.InputHookFlags{},
 		OutputHookFlags:       &flag.OutputHookFlags{},
 		WarcWriterConfigFlags: &flag.WarcWriterConfigFlags{},
-		IndexFlags:            &flag.IndexFlags{},
 	}
 }
 
@@ -447,10 +446,12 @@ func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record warc.R
 
 	digest, err := getDigest(warcRecord, record.Validation)
 	if err != nil {
-		result.AddError(fmt.Errorf("failed to get digest: %w", err))
+		result.AddError(warc.Error(record, fmt.Errorf("failed to get digest: %w", err)))
 	}
 	if !record.Validation.Valid() {
-		result.AddError(record.Validation)
+		for _, err := range *record.Validation {
+			result.AddError(warc.Error(record, err))
+		}
 	}
 
 	// write response if no digest is found because we can't make a revisit record without a digest)
@@ -467,13 +468,13 @@ func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record warc.R
 
 	revisitRef, err := warcRecord.CreateRevisitRef(profile)
 	if err != nil {
-		result.AddError(fmt.Errorf("error creating revisit ref: %w", err))
+		result.AddError(warc.Error(record, fmt.Errorf("error creating revisit ref: %w", err)))
 	}
 
 	// determine if the record is a revisit record
 	revisitReference, err := o.DigestIndex.IsRevisit(digest, revisitRef)
 	if err != nil {
-		result.AddError(fmt.Errorf("error getting revisit ref: %w", err))
+		result.AddError(warc.Error(record, fmt.Errorf("error getting revisit ref: %w", err)))
 	}
 
 	// write a normal record if one of:
@@ -487,7 +488,7 @@ func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record warc.R
 	// Make a revisit record. If it fails, write the original record.
 	revisit, err := warcRecord.ToRevisitRecord(revisitReference)
 	if err != nil {
-		result.AddError(fmt.Errorf("error creating revisit record: %w", err))
+		result.AddError(warc.Error(record, fmt.Errorf("error creating revisit record: %w", err)))
 		return writeRecord(writer, warcRecord)
 	}
 

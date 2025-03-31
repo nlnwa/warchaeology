@@ -15,26 +15,32 @@ type DigestIndex struct {
 	keepIndex bool
 }
 
-func NewDigestIndex(indexDir string, subdir string, keepIndex bool, newIndex bool) (idx *DigestIndex, err error) {
+func NewDigestIndex(indexDir string, keepIndex bool, newIndex bool) (*DigestIndex, error) {
 	// Set GOMAXPROCS to 128 as recommended by badger
 	runtime.GOMAXPROCS(128)
 
-	dir := filepath.Join(indexDir, subdir, "digests")
+	dir := filepath.Join(indexDir, "digest-index")
 	dir = filepath.Clean(dir)
-	idx = &DigestIndex{
+
+	db, err := badger.Open(badger.DefaultOptions(dir).WithLoggingLevel(badger.WARNING))
+	if err != nil {
+		return nil, err
+	}
+
+	idx := &DigestIndex{
+		db:        db,
 		dir:       dir,
 		keepIndex: keepIndex,
 	}
-	if idx.db, err = badger.Open(badger.DefaultOptions(dir).WithLoggingLevel(badger.WARNING)); err != nil {
-		return
-	}
+
 	if newIndex {
 		if err = idx.db.DropAll(); err != nil {
 			idx.Close()
-			return
+			return nil, err
 		}
 	}
-	return
+
+	return idx, nil
 }
 
 func (digestIndex *DigestIndex) GetDir() string {
