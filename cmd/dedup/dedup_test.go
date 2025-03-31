@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/nlnwa/warchaeology/v3/internal/index"
 	"github.com/nlnwa/warchaeology/v3/internal/warcwriterconfig"
 	"github.com/spf13/afero"
 )
@@ -39,8 +40,15 @@ func TestConvertArcFile(t *testing.T) {
 			}
 			defer warcWriterConfig.Close()
 
+			digestIndex, err := index.NewDigestIndex(t.TempDir(), "test", false, true)
+			if err != nil {
+				t.Fatalf("failed to create digest index: %v", err)
+			}
+			defer digestIndex.Close()
+
 			o := &DedupOptions{
 				WarcWriterConfig: warcWriterConfig,
+				DigestIndex:      digestIndex,
 			}
 
 			result, err := o.handleFile(afero.NewOsFs(), filename)
