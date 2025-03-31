@@ -359,7 +359,9 @@ func (o *ConvertWarcOptions) handleRecord(warcFileWriter *gowarc.WarcFileWriter,
 	result.IncrRecords()
 
 	if !record.Validation.Valid() {
-		result.AddError(record.Validation)
+		for _, err := range *record.Validation {
+			result.AddError(warc.Error(record, err))
+		}
 	}
 
 	warcRecord := record.WarcRecord

@@ -321,7 +321,9 @@ func (o *ConvertNedlibOptions) handleRecord(w *gowarc.WarcFileWriter, record war
 	result.IncrRecords()
 
 	if !record.Validation.Valid() {
-		result.AddError(record.Validation)
+		for _, err := range *record.Validation {
+			result.AddError(warc.Error(record, err))
+		}
 	}
 
 	writeResponse := w.Write(record.WarcRecord)
