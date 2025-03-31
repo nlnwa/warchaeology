@@ -1,7 +1,6 @@
 package warc
 
 import (
-	"errors"
 	"io"
 	"iter"
 
@@ -50,7 +49,7 @@ func Records(iter RecordIterator, filter *filter.RecordFilter, nth int, limit in
 
 		for {
 			// return if previous record was the last record
-			if errors.Is(err, io.EOF) {
+			if err == io.EOF {
 				return
 			}
 
