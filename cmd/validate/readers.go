@@ -9,75 +9,35 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"os"
-
-	"github.com/nlnwa/warchaeology/v3/internal/hooks"
-	"github.com/nlnwa/warchaeology/v3/internal/stat"
-	"github.com/spf13/afero"
 )
 
-type teeReader struct {
-	io.Reader
-	r                   afero.File
-	w                   *os.File
-	inputFileName       string
-	outputFileName      string
-	closeOutputFileHook hooks.CloseOutputFileHook
-}
-
-func (reader *teeReader) Close(warcInfoId *string, result stat.Result) error {
-	if reader.r != nil {
-		_ = reader.r.Close()
-		reader.r = nil
-	}
-	if reader.w != nil {
-		_ = reader.w.Close()
-
-		return reader.closeOutputFileHook.
-			WithSrcFileName(reader.inputFileName).
-			WithHash(reader.Hash()).
-			WithErrorCount(result.ErrorCount()).
-			Run(reader.outputFileName, reader.Size(), *warcInfoId)
-	}
-
-	return nil
-}
-
-func (reader *teeReader) Size() int64 {
-	if countingReader, ok := reader.Reader.(*countingReader); ok {
-		return countingReader.size
-	}
-	return 0
-}
-
-func (reader *teeReader) Hash() string {
-	if countingReader, ok := reader.Reader.(*countingReader); ok && countingReader.hash != nil {
-		return fmt.Sprintf("%0x", countingReader.hash.Sum(nil))
-	}
-	return ""
-}
-
-func NewCountingReader(ioReader io.Reader, hashFunction string) io.Reader {
-	countingReader := &countingReader{Reader: ioReader}
+// NewCountingReader creates a new countingReader using the given reader and hash function.
+func NewCountingReader(r io.Reader, hashFunction string) *countingReader {
+	var hash hash.Hash
 	switch hashFunction {
 	case "md5":
-		countingReader.hash = crypto.MD5.New()
+		hash = crypto.MD5.New()
 	case "sha1":
-		countingReader.hash = crypto.SHA1.New()
+		hash = crypto.SHA1.New()
 	case "sha256":
-		countingReader.hash = crypto.SHA256.New()
+		hash = crypto.SHA256.New()
 	case "sha512":
-		countingReader.hash = crypto.SHA512.New()
+		hash = crypto.SHA512.New()
 	}
-	return countingReader
+	return &countingReader{
+		Reader: r,
+		hash:   hash,
+	}
 }
 
+// countingReader wraps an io.Reader and counts the number of bytes read and calculates a hash.
 type countingReader struct {
 	io.Reader
 	size int64
 	hash hash.Hash
 }
 
+// Read reads data from the underlying reader and updates the size and hash.
 func (reader *countingReader) Read(byteSlice []byte) (length int, err error) {
 	length, err = reader.Reader.Read(byteSlice)
 	reader.size += int64(length)
@@ -85,4 +45,17 @@ func (reader *countingReader) Read(byteSlice []byte) (length int, err error) {
 		reader.hash.Write(byteSlice[:length])
 	}
 	return
+}
+
+// Size returns the number of bytes read so far.
+func (reader *countingReader) Size() int64 {
+	return reader.size
+}
+
+// Hash returns the hash of the data read so far in hexadecimal format.
+func (reader *countingReader) Hash() string {
+	if reader.hash == nil {
+		return ""
+	}
+	return fmt.Sprintf("%0x", reader.hash.Sum(nil))
 }

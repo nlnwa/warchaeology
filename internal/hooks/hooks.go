@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+
+	"github.com/nlnwa/warchaeology/v3/internal/stat"
 )
 
 const (
 	EnvCommand     = "WARC_COMMAND"
 	EnvFileName    = "WARC_FILE_NAME"
 	EnvErrorCount  = "WARC_ERROR_COUNT"
+	EnvError       = "WARC_ERROR"
 	EnvWarcInfoId  = "WARC_INFO_ID"
 	EnvFileSize    = "WARC_SIZE"
 	EnvHash        = "WARC_HASH"
@@ -52,10 +55,6 @@ func (h OpenInputFileHook) Run(fileName string) error {
 }
 
 func (h OpenInputFileHook) Output(fileName string) ([]byte, error) {
-	if h.hook == "" {
-		return nil, nil
-	}
-
 	c := exec.Command(h.hook)
 	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
 	c.Env = append(c.Environ(), EnvHookType+"=OpenInputFile")
@@ -77,7 +76,6 @@ func (h OpenInputFileHook) Output(fileName string) ([]byte, error) {
 type CloseInputFileHook struct {
 	cmd  string
 	hook string
-	hash string
 }
 
 // NewCloseInputFileHook creates a new CloseInputFileHook
@@ -97,36 +95,35 @@ func NewCloseInputFileHook(cmd, hook string) (CloseInputFileHook, error) {
 	return h, nil
 }
 
-func (h CloseInputFileHook) WithHash(hash string) CloseInputFileHook {
-	h.hash = hash
-	return h
-}
-
-func (h CloseInputFileHook) Run(fileName string, errorCount int64) error {
+func (h CloseInputFileHook) Run(fileName string, result stat.Result, resultErr error) error {
 	if h.hook == "" {
 		return nil
 	}
-	b, err := h.Output(fileName, errorCount)
+	b, err := h.Output(fileName, result, resultErr)
 	if len(b) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, string(b))
 	}
 	return err
 }
 
-func (h CloseInputFileHook) Output(fileName string, errorCount int64) ([]byte, error) {
-	if h.hook == "" {
-		return nil, nil
-	}
-
+func (h CloseInputFileHook) Output(fileName string, result stat.Result, resultErr error) ([]byte, error) {
 	c := exec.Command(h.hook)
 	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
 	c.Env = append(c.Environ(), EnvHookType+"=CloseInputFile")
 	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
-	if errorCount > 0 {
-		c.Env = append(c.Environ(), fmt.Sprintf("%s=%d", EnvErrorCount, errorCount))
+	if resultErr != nil {
+		c.Env = append(c.Environ(), EnvError+"="+resultErr.Error())
 	}
-	if h.hash != "" {
-		c.Env = append(c.Environ(), EnvHash+"="+h.hash)
+	if result != nil {
+		errorCount := result.ErrorCount()
+		if errorCount > 0 {
+			c.Env = append(c.Environ(), fmt.Sprintf("%s=%d", EnvErrorCount, errorCount))
+		}
+
+		hash := result.Hash()
+		if hash != "" {
+			c.Env = append(c.Environ(), EnvHash+"="+hash)
+		}
 	}
 
 	b, err := c.CombinedOutput()
@@ -180,10 +177,6 @@ func (h OpenOutputFileHook) Run(fileName string) error {
 }
 
 func (h OpenOutputFileHook) Output(fileName string) ([]byte, error) {
-	if h.hook == "" {
-		return nil, nil
-	}
-
 	c := exec.Command(h.hook)
 	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
 	c.Env = append(c.Environ(), EnvHookType+"=OpenOutputFile")
@@ -207,8 +200,6 @@ type CloseOutputFileHook struct {
 	cmd         string
 	hook        string
 	srcFileName string
-	hash        string
-	errorCount  int64
 }
 
 // NewCloseOutputFileHook creates a new CloseOutputFileHook
@@ -230,16 +221,6 @@ func NewCloseOutputFileHook(cmd, hook string) (CloseOutputFileHook, error) {
 
 func (h CloseOutputFileHook) WithSrcFileName(srcFileName string) CloseOutputFileHook {
 	h.srcFileName = srcFileName
-	return h
-}
-
-func (h CloseOutputFileHook) WithHash(hash string) CloseOutputFileHook {
-	h.hash = hash
-	return h
-}
-
-func (h CloseOutputFileHook) WithErrorCount(errorCount int64) CloseOutputFileHook {
-	h.errorCount = errorCount
 	return h
 }
 
@@ -269,12 +250,6 @@ func (h CloseOutputFileHook) Output(fileName string, size int64, warcInfoId stri
 	}
 	if h.srcFileName != "" {
 		c.Env = append(c.Environ(), EnvSrcFileName+"="+h.srcFileName)
-	}
-	if h.hash != "" {
-		c.Env = append(c.Environ(), EnvHash+"="+h.hash)
-	}
-	if h.errorCount > 0 {
-		c.Env = append(c.Environ(), fmt.Sprintf("%s=%d", EnvErrorCount, h.errorCount))
 	}
 
 	b, err := c.CombinedOutput()

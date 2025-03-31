@@ -50,10 +50,8 @@ func PrePostHook(fs afero.Fs, path string, preHook hooks.OpenInputFileHook, post
 
 	result, resultErr := fn(fs, path)
 
-	if resultErr != nil {
-		if err := postHook.Run(path, result.ErrorCount()); err != nil {
-			return nil, fmt.Errorf("failed to run close input file hook: %w", err)
-		}
+	if err := postHook.Run(path, result, resultErr); err != nil {
+		return nil, fmt.Errorf("failed to run close input file hook: %w", err)
 	}
 
 	return result, resultErr
