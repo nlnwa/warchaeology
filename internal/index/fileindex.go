@@ -29,8 +29,9 @@ func NewFileIndex(indexDir string, subdir string, keepIndex, newIndex bool) (*Fi
 	}
 
 	idx := &FileIndex{
-		dir: dir,
-		db:  db,
+		dir:       dir,
+		db:        db,
+		keepIndex: keepIndex,
 	}
 
 	if newIndex {
