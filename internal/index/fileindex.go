@@ -50,7 +50,7 @@ func (idx *FileIndex) GetFileStats(key string) (result stat.Result, err error) {
 			return err
 		}
 		return item.Value(func(val []byte) error {
-			result = stat.NewResult("")
+			result = stat.NewResult(key)
 			return result.UnmarshalBinary(val)
 		})
 	})
