@@ -1,5 +1,5 @@
 ---
-date: 2025-03-31T14:23:40+02:00
+date: 2025-04-01T17:50:08+02:00
 title: "warc dedup"
 slug: warc_dedup
 url: /cmd/warc_dedup/
@@ -42,7 +42,7 @@ warc dedup FILE/DIR ... [flags]
   -C, --concurrent-writers int          maximum concurrent WARC writers. This is the number of WARC-files simultaneously written to.
                                         	A consequence is that at least this many WARC files are created even if there is only one input file. (default 16)
       --continue-on-error               continue on error. Will continue processing files and directories in spite of errors.
-      --default-date string             fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2025-3-31")
+      --default-date string             fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2025-4-1")
       --file-size string                The maximum size for WARC files (default "1GB")
       --flush                           if true, sync WARC file to disk after writing each record
   -f, --force                           force the record iterator to continue regardless of errors.
@@ -55,11 +55,12 @@ warc dedup FILE/DIR ... [flags]
                                         	ftp://user/pass@host:port
                                         
   -k, --keep-index                      true to keep index on disk so that the next run will continue where the previous run left off
+      --lax-host-parsing                sets the url parser to be lenient with host parsing.
       --lenient                         sets the parser to do as little validation as possible.
   -l, --limit int                       limit the number of records to process. If the -n option is specified the limit is ignored.
       --max-buffer-mem string           the maximum bytes of memory allowed for each buffer before overflowing to disk (default "1MB")
       --min-disk-free string            minimum free space on disk to allow WARC writing (default "1GB")
-      --min-index-disk-free string      minimum free space on disk to allow index writing (default "1 * 1024 * 1024")
+      --min-index-disk-free string      minimum free space on disk to allow index writing (default "1MB")
   -g, --min-size-gain string            minimum bytes one must earn to perform a deduplication (default "2KB")
       --name-generator string           the name generator to use. By setting this to 'identity', the input filename will also be used as
                                         output file name (prefix and suffix might still change). In this mode exactly one file is generated for every input file (default "default")
@@ -79,6 +80,7 @@ warc dedup FILE/DIR ... [flags]
                                         	WARC_SRC_FILE_NAME contains the file name of the input file if the output file is generated from an input file
   -w, --output-dir string               output directory for generated warc files. Directory must exist. (default ".")
   -p, --prefix string                   filename prefix for WARC files
+      --record-types strings            comma separated list of record types to deduplicate. Other record types are written as is. (default [response,resource])
   -r, --recursive                       walk directories recursively
   -R, --repair                          try to fix errors in records
       --source-file-list string         a file containing a list of files to process, one file per line

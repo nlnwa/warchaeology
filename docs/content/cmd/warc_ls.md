@@ -1,5 +1,5 @@
 ---
-date: 2025-03-31T14:23:40+02:00
+date: 2025-04-01T17:50:08+02:00
 title: "warc ls"
 slug: warc_ls
 url: /cmd/warc_ls/
@@ -52,6 +52,7 @@ warc ls FILE/DIR ... [flags]
                                   	ftp://user/pass@host:port
                                   
       --json                      output as JSON lines
+      --lax-host-parsing          sets the url parser to be lenient with host parsing.
       --lenient                   sets the parser to do as little validation as possible.
   -l, --limit int                 limit the number of records to process. If the -n option is specified the limit is ignored.
   -m, --mime-type strings         filter records with given mime-types. For more than one, repeat flag or use a comma separated list.
