@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/nlnwa/warchaeology/v3/internal/stat"
+	"github.com/nlnwa/warchaeology/v4/internal/stat"
 )
 
 const (

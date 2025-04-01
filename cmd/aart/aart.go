@@ -13,9 +13,9 @@ import (
 
 	"github.com/nfnt/resize"
 	"github.com/nlnwa/gowarc/v2"
-	"github.com/nlnwa/warchaeology/v3/cmd/internal/flag"
-	"github.com/nlnwa/warchaeology/v3/internal/filter"
-	"github.com/nlnwa/warchaeology/v3/internal/warc"
+	"github.com/nlnwa/warchaeology/v4/cmd/internal/flag"
+	"github.com/nlnwa/warchaeology/v4/internal/filter"
+	"github.com/nlnwa/warchaeology/v4/internal/warc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

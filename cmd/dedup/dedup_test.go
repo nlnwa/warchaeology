@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/nlnwa/warchaeology/v3/internal/index"
-	"github.com/nlnwa/warchaeology/v3/internal/warcwriterconfig"
+	"github.com/nlnwa/warchaeology/v4/internal/index"
+	"github.com/nlnwa/warchaeology/v4/internal/warcwriterconfig"
 	"github.com/spf13/afero"
 )
 

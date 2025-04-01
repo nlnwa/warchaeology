@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/nlnwa/gowarc/v2"
-	"github.com/nlnwa/warchaeology/v3/internal/hooks"
-	"github.com/nlnwa/warchaeology/v3/internal/util"
+	"github.com/nlnwa/warchaeology/v4/internal/hooks"
+	"github.com/nlnwa/warchaeology/v4/internal/util"
 )
 
 const DefaultDateFormat = "2006-1-2"

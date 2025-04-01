@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nlnwa/warchaeology/v3/cmd"
+	"github.com/nlnwa/warchaeology/v4/cmd"
 	"github.com/spf13/cobra/doc"
 )
 

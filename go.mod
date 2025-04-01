@@ -1,4 +1,4 @@
-module github.com/nlnwa/warchaeology/v3
+module github.com/nlnwa/warchaeology/v4
 
 go 1.23.0
 

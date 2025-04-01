@@ -5,7 +5,7 @@ import (
 	"iter"
 
 	"github.com/nlnwa/gowarc/v2"
-	"github.com/nlnwa/warchaeology/v3/internal/filter"
+	"github.com/nlnwa/warchaeology/v4/internal/filter"
 )
 
 // Record represents a WARC record with additional metadata such as offset,
