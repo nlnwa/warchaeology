@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/klauspost/compress/gzip"
-	"github.com/nlnwa/warchaeology/v3/internal/ftpfs"
-	"github.com/nlnwa/warchaeology/v3/internal/zipfs"
+	"github.com/nlnwa/warchaeology/v4/internal/ftpfs"
+	"github.com/nlnwa/warchaeology/v4/internal/zipfs"
 	whatwgUrl "github.com/nlnwa/whatwg-url/url"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/tarfs"

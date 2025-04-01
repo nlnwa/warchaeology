@@ -1,7 +1,7 @@
 package flag
 
 import (
-	"github.com/nlnwa/warchaeology/v3/internal/util"
+	"github.com/nlnwa/warchaeology/v4/internal/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

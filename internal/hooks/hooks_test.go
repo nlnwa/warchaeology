@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nlnwa/warchaeology/v3/internal/stat"
+	"github.com/nlnwa/warchaeology/v4/internal/stat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

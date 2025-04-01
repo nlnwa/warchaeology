@@ -1,5 +1,5 @@
 ---
-date: 2025-03-31T14:23:40+02:00
+date: 2025-04-01T17:50:08+02:00
 title: "warc convert nedlib"
 slug: warc_convert_nedlib
 url: /cmd/warc_convert_nedlib/
@@ -35,7 +35,7 @@ warc convert nedlib FILE/DIR ... [flags]
   -C, --concurrent-writers int          maximum concurrent WARC writers. This is the number of WARC-files simultaneously written to.
                                         	A consequence is that at least this many WARC files are created even if there is only one input file. (default 16)
       --continue-on-error               continue on error. Will continue processing files and directories in spite of errors.
-      --default-date string             fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2025-3-31")
+      --default-date string             fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2025-4-1")
       --file-size string                The maximum size for WARC files (default "1GB")
       --flush                           if true, sync WARC file to disk after writing each record
       --ftp-pool-size int32             size of the ftp pool (default 1)

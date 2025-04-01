@@ -1,5 +1,5 @@
 ---
-date: 2025-03-31T14:23:40+02:00
+date: 2025-04-01T17:50:08+02:00
 title: "warc convert warc"
 slug: warc_convert_warc
 url: /cmd/warc_convert_warc/
@@ -40,7 +40,7 @@ warc convert warc FILE/DIR ... [flags]
   -C, --concurrent-writers int          maximum concurrent WARC writers. This is the number of WARC-files simultaneously written to.
                                         	A consequence is that at least this many WARC files are created even if there is only one input file. (default 16)
       --continue-on-error               continue on error. Will continue processing files and directories in spite of errors.
-      --default-date string             fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2025-3-31")
+      --default-date string             fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date (default "2025-4-1")
       --file-size string                The maximum size for WARC files (default "1GB")
       --flush                           if true, sync WARC file to disk after writing each record
   -f, --force                           force the record iterator to continue regardless of errors.
@@ -53,6 +53,7 @@ warc convert warc FILE/DIR ... [flags]
                                         	ftp://user/pass@host:port
                                         
   -k, --keep-index                      true to keep index on disk so that the next run will continue where the previous run left off
+      --lax-host-parsing                sets the url parser to be lenient with host parsing.
       --lenient                         sets the parser to do as little validation as possible.
   -l, --limit int                       limit the number of records to process. If the -n option is specified the limit is ignored.
       --min-disk-free string            minimum free space on disk to allow WARC writing (default "1GB")

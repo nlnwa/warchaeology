@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nlnwa/warchaeology/v3/internal/fs"
+	"github.com/nlnwa/warchaeology/v4/internal/fs"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

@@ -13,7 +13,7 @@ import (
 
 	"github.com/klauspost/compress/gzip"
 	"github.com/nlnwa/gowarc/v2"
-	mytime "github.com/nlnwa/warchaeology/v3/internal/time"
+	mytime "github.com/nlnwa/warchaeology/v4/internal/time"
 )
 
 type unmarshaler struct {

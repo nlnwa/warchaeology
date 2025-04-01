@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/whatwg-url/url"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -17,6 +18,9 @@ const (
 
 	LenientValidation      = "lenient"
 	LentientValidationHelp = `sets the parser to do as little validation as possible.`
+
+	LaxHostParsing     = "lax-host-parsing"
+	LaxHostParsingHelp = `sets the url parser to be lenient with host parsing.`
 )
 
 type WarcRecordOptionFlags struct {
@@ -27,6 +31,7 @@ func (f WarcRecordOptionFlags) AddFlags(cmd *cobra.Command) {
 	flags.String(TmpDir, os.TempDir(), TmpDirHelp)
 	flags.Bool(StrictValidation, false, StrictValidationHelp)
 	flags.Bool(LenientValidation, false, LentientValidationHelp)
+	flags.Bool(LaxHostParsing, false, LaxHostParsingHelp)
 }
 
 func (f WarcRecordOptionFlags) TmpDir() string {
@@ -41,6 +46,10 @@ func (f WarcRecordOptionFlags) LenientValidation() bool {
 	return viper.GetBool(LenientValidation)
 }
 
+func (f WarcRecordOptionFlags) LaxHostParsing() bool {
+	return viper.GetBool(LaxHostParsing)
+}
+
 func (f WarcRecordOptionFlags) ToWarcRecordOptions() []gowarc.WarcRecordOption {
 	options := []gowarc.WarcRecordOption{
 		gowarc.WithBufferTmpDir(f.TmpDir()),
@@ -50,6 +59,9 @@ func (f WarcRecordOptionFlags) ToWarcRecordOptions() []gowarc.WarcRecordOption {
 	}
 	if f.StrictValidation() {
 		options = append(options, gowarc.WithStrictValidation())
+	}
+	if f.LaxHostParsing() {
+		options = append(options, gowarc.WithUrlParserOptions(url.WithLaxHostParsing()))
 	}
 	return options
 }
