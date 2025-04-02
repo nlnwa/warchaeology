@@ -236,7 +236,7 @@ func New(cmd string, options ...func(*WarcWriterOptions)) (*WarcWriterConfig, er
 	}, nil
 }
 
-func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) (*gowarc.WarcFileWriter, error) {
+func (w *WarcWriterConfig) GetWarcWriter(path, warcDate string) (*gowarc.WarcFileWriter, error) {
 	var namer gowarc.WarcFileNameGenerator
 	var dir string
 
@@ -257,11 +257,11 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) (*gowarc
 
 	switch w.WarcFileNameGenerator {
 	case "identity":
-		namer = NewIdentityNamer(fromFileName, w.FilePrefix, dir)
+		namer = NewIdentityNamer(path, w.FilePrefix, dir)
 	case "nedlib":
-		namer = NewNedlibNamer(fromFileName, w.FilePrefix, dir)
+		namer = NewNedlibNamer(path, w.FilePrefix, dir)
 	default:
-		namer = NewDefaultNamer(fromFileName, w.FilePrefix, dir)
+		namer = NewDefaultNamer(w.FilePrefix, dir)
 	}
 
 	var ww *gowarc.WarcFileWriter
@@ -270,8 +270,8 @@ func (w *WarcWriterConfig) GetWarcWriter(fromFileName, warcDate string) (*gowarc
 		ww = gowarc.NewWarcFileWriter(
 			append(w.WarcFileWriterOptions,
 				gowarc.WithFileNameGenerator(namer),
-				gowarc.WithBeforeFileCreationHook(w.openOutputFileHook.WithSrcFileName(fromFileName).Run),
-				gowarc.WithAfterFileCreationHook(w.closeOutputFileHook.WithSrcFileName(fromFileName).Run),
+				gowarc.WithBeforeFileCreationHook(w.openOutputFileHook.WithSrcFileName(path).Run),
+				gowarc.WithAfterFileCreationHook(w.closeOutputFileHook.WithSrcFileName(path).Run),
 			)...,
 		)
 		return ww, nil

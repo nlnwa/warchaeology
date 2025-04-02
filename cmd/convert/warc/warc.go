@@ -21,7 +21,6 @@ import (
 	"github.com/nlnwa/warchaeology/v4/internal/workerpool"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type ConvertWarcOptions struct {
@@ -83,9 +82,9 @@ func (f ConvertWarcFlags) ToConvertWarcOptions() (*ConvertWarcOptions, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create warc writer config: %w", err)
 	}
+
 	warcRecordOptions := []gowarc.WarcRecordOption{
 		gowarc.WithVersion(wwc.WarcVersion),
-		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)),
 	}
 	if f.RepairFlags.Repair() {
 		warcRecordOptions = append(warcRecordOptions,
@@ -109,8 +108,12 @@ func (f ConvertWarcFlags) ToConvertWarcOptions() (*ConvertWarcOptions, error) {
 			gowarc.WithAddMissingContentLength(false),
 			gowarc.WithAddMissingRecordId(false),
 			gowarc.WithFixContentLength(false),
+			gowarc.WithFixWarcFieldsBlockErrors(false),
 		)
 	}
+
+	overrideRecordOptions := f.WarcRecordOptionFlags.ToWarcRecordOptions()
+	warcRecordOptions = append(warcRecordOptions, overrideRecordOptions...)
 
 	fileWalker, err := f.FileWalkerFlags.ToFileWalker()
 	if err != nil {
@@ -302,8 +305,8 @@ func (o *ConvertWarcOptions) Run() error {
 	return nil
 }
 
-func (o *ConvertWarcOptions) handleFile(fileSystem afero.Fs, path string) (stat.Result, error) {
-	file, err := fileSystem.Open(path)
+func (o *ConvertWarcOptions) handleFile(fs afero.Fs, path string) (stat.Result, error) {
+	file, err := fs.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -365,11 +368,8 @@ func (o *ConvertWarcOptions) handleRecord(warcFileWriter *gowarc.WarcFileWriter,
 	}
 
 	warcRecord := record.WarcRecord
-	warcRecordBuilder := gowarc.NewRecordBuilder(
-		warcRecord.Type(),
-		gowarc.WithFixContentLength(false),
-		gowarc.WithFixDigest(false),
-	)
+	warcRecordBuilder := gowarc.NewRecordBuilder(warcRecord.Type(), o.WarcRecordOptions...)
+
 	for _, warcField := range *warcRecord.WarcHeader() {
 		if warcField.Name != gowarc.WarcType {
 			warcRecordBuilder.AddWarcHeader(warcField.Name, warcField.Value)

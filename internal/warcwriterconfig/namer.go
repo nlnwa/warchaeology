@@ -1,7 +1,7 @@
 package warcwriterconfig
 
 import (
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -9,22 +9,23 @@ import (
 	"github.com/nlnwa/gowarc/v2"
 )
 
-func NewIdentityNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGenerator {
-	fromFileName = path.Base(fromFileName)
-	fromFileName = strings.TrimSuffix(fromFileName, ".gz")
-	fromFileName = strings.TrimSuffix(fromFileName, ".arc")
-	fromFileName = strings.TrimSuffix(fromFileName, ".warc")
+func NewIdentityNamer(path, filePrefix, dir string) gowarc.WarcFileNameGenerator {
+	basename := filepath.Base(path)
+	basename = strings.TrimSuffix(basename, ".gz")
+	basename = strings.TrimSuffix(basename, ".arc")
+	basename = strings.TrimSuffix(basename, ".warc")
 
 	return &gowarc.PatternNameGenerator{
-		Pattern:   "%{prefix}s" + fromFileName + ".%{ext}s",
+		Pattern:   "%{prefix}s" + basename + ".%{ext}s",
 		Prefix:    filePrefix,
 		Directory: dir,
 	}
 }
 
-func NewNedlibNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGenerator {
+func NewNedlibNamer(path, filePrefix, dir string) gowarc.WarcFileNameGenerator {
+	filename := filepath.Base(path)
 	return &gowarc.PatternNameGenerator{
-		Pattern:   "%{prefix}s" + fromFileName + "-%04{serial}d-%{hostOrIp}s.%{ext}s",
+		Pattern:   "%{prefix}s" + filename + "-%04{serial}d-%{hostOrIp}s.%{ext}s",
 		Prefix:    filePrefix,
 		Directory: dir,
 	}
@@ -33,7 +34,7 @@ func NewNedlibNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGen
 var once sync.Once
 var defaultNamer gowarc.WarcFileNameGenerator
 
-func NewDefaultNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGenerator {
+func NewDefaultNamer(filePrefix, dir string) gowarc.WarcFileNameGenerator {
 	once.Do(func() {
 		defaultNamer = &gowarc.PatternNameGenerator{
 			Prefix:    filePrefix,

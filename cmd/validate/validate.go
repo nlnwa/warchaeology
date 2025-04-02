@@ -293,22 +293,15 @@ func (o *ValidateOptions) handleFile(fs afero.Fs, path string) (stat.Result, err
 			return result, warc.Error(record, err)
 		}
 
-		err = handleRecord(record, result)
-		if err != nil {
-			return result, warc.Error(record, err)
-		}
+		func() {
+			defer record.Close()
+
+			result.IncrRecords()
+
+			for _, err := range *record.Validation {
+				result.AddError(warc.Error(record, err))
+			}
+		}()
 	}
 	return result, nil
-}
-
-func handleRecord(record warc.Record, result stat.Result) error {
-	defer record.Close()
-
-	result.IncrRecords()
-
-	err := record.WarcRecord.ValidateDigest(record.Validation)
-	for _, err := range *record.Validation {
-		result.AddError(err)
-	}
-	return err
 }
