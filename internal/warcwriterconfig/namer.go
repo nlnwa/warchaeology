@@ -33,7 +33,7 @@ func NewNedlibNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGen
 var once sync.Once
 var defaultNamer gowarc.WarcFileNameGenerator
 
-func NewDefaultNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGenerator {
+func NewDefaultNamer(filePrefix, dir string) gowarc.WarcFileNameGenerator {
 	once.Do(func() {
 		defaultNamer = &gowarc.PatternNameGenerator{
 			Prefix:    filePrefix,
