@@ -22,9 +22,10 @@ func NewIdentityNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameG
 	}
 }
 
-func NewNedlibNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGenerator {
+func NewNedlibNamer(path, filePrefix, dir string) gowarc.WarcFileNameGenerator {
+	filename := filepath.Base(path)
 	return &gowarc.PatternNameGenerator{
-		Pattern:   "%{prefix}s" + fromFileName + "-%04{serial}d-%{hostOrIp}s.%{ext}s",
+		Pattern:   "%{prefix}s" + filename + "-%04{serial}d-%{hostOrIp}s.%{ext}s",
 		Prefix:    filePrefix,
 		Directory: dir,
 	}
