@@ -9,14 +9,14 @@ import (
 	"github.com/nlnwa/gowarc/v2"
 )
 
-func NewIdentityNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGenerator {
-	fromFileName = filepath.Base(fromFileName)
-	fromFileName = strings.TrimSuffix(fromFileName, ".gz")
-	fromFileName = strings.TrimSuffix(fromFileName, ".arc")
-	fromFileName = strings.TrimSuffix(fromFileName, ".warc")
+func NewIdentityNamer(path, filePrefix, dir string) gowarc.WarcFileNameGenerator {
+	basename := filepath.Base(path)
+	basename = strings.TrimSuffix(basename, ".gz")
+	basename = strings.TrimSuffix(basename, ".arc")
+	basename = strings.TrimSuffix(basename, ".warc")
 
 	return &gowarc.PatternNameGenerator{
-		Pattern:   "%{prefix}s" + fromFileName + ".%{ext}s",
+		Pattern:   "%{prefix}s" + basename + ".%{ext}s",
 		Prefix:    filePrefix,
 		Directory: dir,
 	}
