@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -38,7 +37,7 @@ func genMdDoc(docsDir string) {
 	if files, err := os.ReadDir(dir); err == nil {
 		for _, f := range files {
 			if strings.HasPrefix(f.Name(), "warc") {
-				p := path.Join(dir, f.Name())
+				p := filepath.Join(dir, f.Name())
 				_ = os.Remove(p)
 			}
 		}
@@ -50,13 +49,13 @@ func genMdDoc(docsDir string) {
 	filePrepender := func(filename string) string {
 		now := time.Now().Format(time.RFC3339)
 		name := filepath.Base(filename)
-		base := strings.TrimSuffix(name, path.Ext(name))
+		base := strings.TrimSuffix(name, filepath.Ext(name))
 		url := "/cmd/" + strings.ToLower(base) + "/"
 		return fmt.Sprintf(fmTemplate, now, strings.Replace(base, "_", " ", -1), base, url)
 	}
 
 	linkHandler := func(name string) string {
-		base := strings.TrimSuffix(name, path.Ext(name))
+		base := strings.TrimSuffix(name, filepath.Ext(name))
 		return "../" + strings.ToLower(base) + "/"
 	}
 

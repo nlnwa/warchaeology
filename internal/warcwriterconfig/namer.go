@@ -1,7 +1,7 @@
 package warcwriterconfig
 
 import (
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -10,7 +10,7 @@ import (
 )
 
 func NewIdentityNamer(fromFileName, filePrefix, dir string) gowarc.WarcFileNameGenerator {
-	fromFileName = path.Base(fromFileName)
+	fromFileName = filepath.Base(fromFileName)
 	fromFileName = strings.TrimSuffix(fromFileName, ".gz")
 	fromFileName = strings.TrimSuffix(fromFileName, ".arc")
 	fromFileName = strings.TrimSuffix(fromFileName, ".warc")

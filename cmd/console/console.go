@@ -3,7 +3,6 @@ package console
 import (
 	"errors"
 	"os"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -55,8 +54,8 @@ func (state *State) Complete(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if !fileInfo.IsDir() {
-		state.dir = path.Dir(state.dir)
-		state.files = append(state.files, path.Base(state.dir))
+		state.dir = filepath.Dir(state.dir)
+		state.files = append(state.files, filepath.Base(state.dir))
 	}
 	if state.suffixes, err = cmd.Flags().GetStringSlice(flag.Suffixes); err != nil {
 		return err
