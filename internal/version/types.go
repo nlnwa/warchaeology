@@ -23,7 +23,7 @@ Build date: %s
 Go version: %s
 Compiler: %s
 Platform: %s
-`, v.GitVersion, v.GitCommit, v.BuildDate, runtime.Version(), runtime.Compiler, fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH))
+`, v.GitVersion, v.GitCommit, v.BuildDate, v.GoVersion, v.Compiler, v.Platform)
 }
 
 func Set(version, commit, date string) {
@@ -31,6 +31,9 @@ func Set(version, commit, date string) {
 		GitVersion: version,
 		GitCommit:  commit,
 		BuildDate:  date,
+		GoVersion:  runtime.Version(),
+		Compiler:   runtime.Compiler,
+		Platform:   fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 	}
 }
 
