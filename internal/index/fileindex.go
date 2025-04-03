@@ -21,7 +21,6 @@ func NewFileIndex(indexDir string, keepIndex, newIndex bool) (*FileIndex, error)
 	runtime.GOMAXPROCS(128)
 
 	dir := filepath.Join(indexDir, "file-index")
-	dir = filepath.Clean(dir)
 
 	db, err := badger.Open(badger.DefaultOptions(dir).WithLoggingLevel(badger.WARNING))
 	if err != nil {

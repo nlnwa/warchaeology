@@ -20,7 +20,6 @@ func NewDigestIndex(indexDir string, keepIndex bool, newIndex bool) (*DigestInde
 	runtime.GOMAXPROCS(128)
 
 	dir := filepath.Join(indexDir, "digest-index")
-	dir = filepath.Clean(dir)
 
 	db, err := badger.Open(badger.DefaultOptions(dir).WithLoggingLevel(badger.WARNING))
 	if err != nil {
