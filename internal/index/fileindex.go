@@ -56,6 +56,8 @@ func (idx *FileIndex) GetFileStats(key string) (result stat.Result, err error) {
 	})
 	if errors.Is(err, badger.ErrKeyNotFound) {
 		err = nil
+	} else if errors.Is(err, badger.ErrConflict) {
+		return idx.GetFileStats(key)
 	}
 	return
 }
