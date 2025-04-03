@@ -111,12 +111,16 @@ func readConfigFile() error {
 }
 
 func initLogger(out io.WriteCloser, file string, format string, level string) (io.Closer, error) {
+	var err error
+	var w io.WriteCloser
+
 	if file == "-" {
-		return out, nil
-	}
-	w, err := os.Create(file)
-	if err != nil {
-		return nil, err
+		w = out
+	} else {
+		w, err = os.Create(file)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	levelVar := new(slog.LevelVar)
