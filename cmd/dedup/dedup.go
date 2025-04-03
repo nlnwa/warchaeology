@@ -286,7 +286,7 @@ func (o *DedupOptions) Run() error {
 
 		stats := stat.NewStats()
 		defer func() {
-			slog.Info("Total", "errors", stats.Errors, "records", stats.Records, "duplicates", stats.Duplicates)
+			slog.Info("Total", "errors", stats.Errors, "files", stats.Files, "records", stats.Records, "duplicates", stats.Duplicates)
 		}()
 
 		for result := range results {
