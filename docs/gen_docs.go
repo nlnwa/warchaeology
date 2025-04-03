@@ -51,7 +51,7 @@ func genMdDoc(docsDir string) {
 		name := filepath.Base(filename)
 		base := strings.TrimSuffix(name, filepath.Ext(name))
 		url := "/cmd/" + strings.ToLower(base) + "/"
-		return fmt.Sprintf(fmTemplate, now, strings.Replace(base, "_", " ", -1), base, url)
+		return fmt.Sprintf(fmTemplate, now, strings.ReplaceAll(base, "_", " "), base, url)
 	}
 
 	linkHandler := func(name string) string {
