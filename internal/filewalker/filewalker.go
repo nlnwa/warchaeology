@@ -69,10 +69,8 @@ func (fw *FileWalker) Walk(ctx context.Context, path string, walkFn func(fs afer
 
 func (fw *FileWalker) walkDir(ctx context.Context, root string, dirName string, walkFn func(fs afero.Fs, path string, err error) error) error {
 	return afero.Walk(fw.Fs, dirName, func(path string, info fs.FileInfo, err error) error {
-		select {
-		case <-ctx.Done():
+		if ctx.Err() != nil {
 			return ctx.Err()
-		default:
 		}
 		if err != nil {
 			return walkFn(fw.Fs, path, err)
