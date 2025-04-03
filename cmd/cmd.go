@@ -35,7 +35,7 @@ func NewWarcCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			logCloser, err = initLogger(os.Stderr, flag.LogFileName(), flag.LogLevel(), flag.LogFormat())
+			logCloser, err = initLogger(os.Stderr, flag.LogFileName(), flag.LogFormat(), flag.LogLevel())
 			return err
 		},
 		PersistentPostRun: func(cmd *cobra.Command, args []string) {
