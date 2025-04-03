@@ -30,7 +30,7 @@ func Preposterous(fs afero.Fs, path string, preHook hooks.OpenInputFileHook, pos
 	// Wrap the function call with pre and post hooks
 	result, resultErr := PrePostHook(fs, path, preHook, postHook, fn)
 
-	if fileIndex != nil && resultErr != nil {
+	if fileIndex != nil && resultErr == nil {
 		if err := fileIndex.SaveFileStats(path, result); err != nil {
 			return nil, fmt.Errorf("failed to save file stats: %w", err)
 		}

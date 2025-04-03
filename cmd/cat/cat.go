@@ -240,10 +240,8 @@ func (o *CatOptions) handleFile(ctx context.Context, fs afero.Fs, path string) e
 	var lastOffset int64 = -1
 
 	for record, err := range warc.Records(warcFileReader, o.filter, o.recordNum, o.recordCount) {
-		select {
-		case <-ctx.Done():
+		if ctx.Err() != nil {
 			return ctx.Err()
-		default:
 		}
 		if err != nil {
 			// When forcing, avoid infinite loop by ensuring the iterator moves forward
