@@ -173,7 +173,7 @@ func (o *CatOptions) Complete(cmd *cobra.Command, args []string) error {
 
 	// If no output is specified, show everything.
 	// This way we can specify a single flag to show just that part of the record.
-	if !(o.writer.showWarcHeader || o.writer.showProtocolHeader || o.writer.showPayload) {
+	if !o.writer.showWarcHeader && !o.writer.showProtocolHeader && !o.writer.showPayload {
 		o.writer.showWarcHeader = true
 		o.writer.showProtocolHeader = true
 		o.writer.showPayload = true
