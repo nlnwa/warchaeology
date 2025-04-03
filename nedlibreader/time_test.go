@@ -136,7 +136,7 @@ func TestParseTime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Local = location
+	time.Local = location //nolint:gosmopolitan
 
 	for testFormat, tests := range timeTests {
 		_, ok := timeParseFuncs[testFormat]
