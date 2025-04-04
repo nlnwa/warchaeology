@@ -86,34 +86,8 @@ func (f ConvertWarcFlags) ToConvertWarcOptions() (*ConvertWarcOptions, error) {
 	warcRecordOptions := []gowarc.WarcRecordOption{
 		gowarc.WithVersion(wwc.WarcVersion),
 	}
-	if f.RepairFlags.Repair() {
-		warcRecordOptions = append(warcRecordOptions,
-			gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
-			gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),
-			gowarc.WithAddMissingDigest(true),
-			gowarc.WithFixSyntaxErrors(true),
-			gowarc.WithFixDigest(true),
-			gowarc.WithAddMissingContentLength(true),
-			gowarc.WithAddMissingRecordId(true),
-			gowarc.WithFixContentLength(true),
-			gowarc.WithFixWarcFieldsBlockErrors(true),
-		)
-	} else {
-		warcRecordOptions = append(warcRecordOptions,
-			gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
-			gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),
-			gowarc.WithAddMissingDigest(false),
-			gowarc.WithFixSyntaxErrors(false),
-			gowarc.WithFixDigest(false),
-			gowarc.WithAddMissingContentLength(false),
-			gowarc.WithAddMissingRecordId(false),
-			gowarc.WithFixContentLength(false),
-			gowarc.WithFixWarcFieldsBlockErrors(false),
-		)
-	}
-
-	overrideRecordOptions := f.WarcRecordOptionFlags.ToWarcRecordOptions()
-	warcRecordOptions = append(warcRecordOptions, overrideRecordOptions...)
+	warcRecordOptions = append(warcRecordOptions, f.RepairFlags.ToWarcRecordOptions()...)
+	warcRecordOptions = append(warcRecordOptions, f.WarcRecordOptionFlags.ToWarcRecordOptions()...)
 
 	fileWalker, err := f.FileWalkerFlags.ToFileWalker()
 	if err != nil {
