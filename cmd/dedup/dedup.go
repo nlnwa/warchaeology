@@ -137,30 +137,10 @@ func (f DedupFlags) ToDedupOptions() (*DedupOptions, error) {
 	}
 
 	warcRecordOptions := []gowarc.WarcRecordOption{
-		gowarc.WithBufferTmpDir(f.WarcRecordOptionFlags.TmpDir()),
 		gowarc.WithBufferMaxMemBytes(f.BufferMaxMem()),
-		gowarc.WithSyntaxErrorPolicy(gowarc.ErrWarn),
-		gowarc.WithSpecViolationPolicy(gowarc.ErrWarn),
-		gowarc.WithAddMissingDigest(true),
-		gowarc.WithAddMissingContentLength(true),
 	}
-
-	if f.RepairFlags.Repair() {
-		warcRecordOptions = append(warcRecordOptions,
-			gowarc.WithFixSyntaxErrors(true),
-			gowarc.WithFixDigest(true),
-			gowarc.WithAddMissingRecordId(true),
-			gowarc.WithFixContentLength(true),
-			gowarc.WithFixWarcFieldsBlockErrors(true),
-		)
-	} else {
-		warcRecordOptions = append(warcRecordOptions,
-			gowarc.WithFixSyntaxErrors(false),
-			gowarc.WithFixDigest(false),
-			gowarc.WithAddMissingRecordId(false),
-			gowarc.WithFixContentLength(false),
-		)
-	}
+	warcRecordOptions = append(warcRecordOptions, f.RepairFlags.ToWarcRecordOptions()...)
+	warcRecordOptions = append(warcRecordOptions, f.WarcRecordOptionFlags.ToWarcRecordOptions()...)
 
 	fileWalker, err := f.FileWalkerFlags.ToFileWalker()
 	if err != nil {
