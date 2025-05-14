@@ -294,12 +294,12 @@ func (o *ConvertNedlibOptions) handleFile(fs afero.Fs, fileName string) (stat.Re
 			return result, warc.Error(record, err)
 		}
 
-		warcDate := record.WarcRecord.WarcHeader().Get(gowarc.WarcDate)
-
-		syntheticFileName, err := time.To14(warcDate)
+		warcDate, err := record.WarcRecord.WarcHeader().GetTime(gowarc.WarcDate)
 		if err != nil {
 			return result, warc.Error(record, err)
 		}
+
+		syntheticFileName := time.To14(warcDate)
 
 		writer, err := o.WarcWriterConfig.GetWarcWriter(syntheticFileName, warcDate)
 		if err != nil {

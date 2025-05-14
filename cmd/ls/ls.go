@@ -267,8 +267,5 @@ func (o *ListOptions) handleFile(ctx context.Context, fs afero.Fs, path string) 
 
 func (o *ListOptions) handleRecord(record warc.Record, path string) error {
 	defer record.Close()
-	if err := o.writer.WriteRecord(record, path); err != nil {
-		return warc.Error(record, err)
-	}
-	return nil
+	return o.writer.WriteRecord(record, path)
 }

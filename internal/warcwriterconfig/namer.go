@@ -44,14 +44,10 @@ func NewDefaultNamer(filePrefix, dir string) gowarc.WarcFileNameGenerator {
 	return defaultNamer
 }
 
-func parseSubdirPattern(dirPattern string, recordDate string) (string, error) {
-	t, err := time.Parse(time.RFC3339, recordDate)
-	if err != nil {
-		return "", err
-	}
+func parseSubdirPattern(dirPattern string, t time.Time) string {
 	p := strings.ReplaceAll(dirPattern, "{YYYY}", t.Format("2006"))
 	p = strings.ReplaceAll(p, "{YY}", t.Format("06"))
 	p = strings.ReplaceAll(p, "{MM}", t.Format("01"))
 	p = strings.ReplaceAll(p, "{DD}", t.Format("02"))
-	return p, nil
+	return p
 }

@@ -397,7 +397,10 @@ func (o *DedupOptions) handleFile(fs afero.Fs, path string) (stat.Result, error)
 		}
 
 		if writer == nil || !o.WarcWriterConfig.OneToOneWriter {
-			warcDate := record.WarcRecord.WarcHeader().Get(gowarc.WarcDate)
+			warcDate, err := record.WarcRecord.WarcHeader().GetTime(gowarc.WarcDate)
+			if err != nil {
+				return result, warc.Error(record, err)
+			}
 			writer, err = o.WarcWriterConfig.GetWarcWriter(path, warcDate)
 			if err != nil {
 				return result, warc.Error(record, err)

@@ -18,6 +18,7 @@ linters:
     - forbidigo
     - forcetypeassert
     - funlen
+    - funcorder # TODO: fix and enable
     - gochecknoglobals
     - gocognit
     - gocritic

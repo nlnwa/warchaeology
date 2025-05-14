@@ -1,25 +1,25 @@
 package warc
 
 import (
-	"net/url"
 	"time"
 
 	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/whatwg-url/url"
 )
 
 type Metadata struct {
-	Url        string    `json:"url,omitempty"`
-	Date       time.Time `json:"date,omitempty"`
-	IpAddress  string    `json:"ipAddress,omitempty"`
-	FileName   string    `json:"filename,omitempty"`
-	Hostname   string    `json:"hostname,omitempty"`
-	RecordId   string    `json:"recordId,omitempty"`
-	Checksum   string    `json:"checksum,omitempty"`
-	MimeType   string    `json:"mimeType,omitempty"`
-	StatusCode int       `json:"statusCode,omitempty"`
-	Size       int64     `json:"size,omitempty"`
-	Type       string    `json:"type,omitempty"`
-	Offset     int64     `json:"offset,omitempty"`
+	Url        string `json:"url,omitempty"`
+	Date       string `json:"date,omitempty"`
+	IpAddress  string `json:"ipAddress,omitempty"`
+	FileName   string `json:"filename,omitempty"`
+	Hostname   string `json:"hostname,omitempty"`
+	RecordId   string `json:"recordId,omitempty"`
+	Checksum   string `json:"checksum,omitempty"`
+	MimeType   string `json:"mimeType,omitempty"`
+	StatusCode int    `json:"statusCode,omitempty"`
+	Size       int64  `json:"size,omitempty"`
+	Type       string `json:"type,omitempty"`
+	Offset     int64  `json:"offset,omitempty"`
 }
 
 func Url(wr gowarc.WarcRecord) string {
@@ -58,18 +58,15 @@ func Checksum(wr gowarc.WarcRecord) string {
 func MimeType(wr gowarc.WarcRecord) string {
 	switch block := wr.Block().(type) {
 	case gowarc.HttpResponseBlock:
-		if block.HttpHeader() == nil {
-			return ""
+		if block.HttpHeader() != nil {
+			return block.HttpHeader().Get("Content-Type")
 		}
-		return block.HttpHeader().Get(gowarc.ContentType)
 	case gowarc.HttpRequestBlock:
 		if block.HttpHeader() == nil {
-			return ""
+			return block.HttpHeader().Get("Content-Type")
 		}
-		return block.HttpHeader().Get(gowarc.ContentType)
-	default:
-		return ""
 	}
+	return ""
 }
 
 func StatusCode(wr gowarc.WarcRecord) int {
