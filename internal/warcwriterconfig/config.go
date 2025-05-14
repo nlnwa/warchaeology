@@ -236,14 +236,11 @@ func New(cmd string, options ...func(*WarcWriterOptions)) (*WarcWriterConfig, er
 	}, nil
 }
 
-func (w *WarcWriterConfig) GetWarcWriter(path, warcDate string) (*gowarc.WarcFileWriter, error) {
+func (w *WarcWriterConfig) GetWarcWriter(path string, warcDate time.Time) (*gowarc.WarcFileWriter, error) {
 	var namer gowarc.WarcFileNameGenerator
 	var dir string
 
-	subDir, err := parseSubdirPattern(w.SubDirPattern, warcDate)
-	if err != nil {
-		return nil, err
-	}
+	subDir := parseSubdirPattern(w.SubDirPattern, warcDate)
 
 	if subDir != "" {
 		dir = filepath.Join(w.OutDir, subDir)

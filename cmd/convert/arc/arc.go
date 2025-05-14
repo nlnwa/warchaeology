@@ -308,7 +308,10 @@ func (o *ConvertArcOptions) handleFile(fs afero.Fs, fileName string) (stat.Resul
 			return result, warc.Error(record, err)
 		}
 		if writer == nil || !o.WarcWriterConfig.OneToOneWriter {
-			warcDate := record.WarcRecord.WarcHeader().Get(gowarc.WarcDate)
+			warcDate, err := record.WarcRecord.WarcHeader().GetTime(gowarc.WarcDate)
+			if err != nil {
+				return result, warc.Error(record, err)
+			}
 			writer, err = o.WarcWriterConfig.GetWarcWriter(fileName, warcDate)
 			if err != nil {
 				return result, warc.Error(record, err)
