@@ -14,7 +14,7 @@ require (
 	github.com/nlnwa/whatwg-url v0.6.2
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/afero v1.14.0
-	github.com/spf13/cast v1.7.1
+	github.com/spf13/cast v1.8.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.1
