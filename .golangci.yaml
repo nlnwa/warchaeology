@@ -35,6 +35,7 @@ linters:
     - nestif
     - nilerr
     - nlreturn
+    - noinlineerr
     - nonamedreturns
     - paralleltest
     - perfsprint
@@ -47,6 +48,7 @@ linters:
     - whitespace
     - wrapcheck
     - wsl
+    - wsl_v5 # too noisy
   exclusions:
     generated: lax
     presets:
