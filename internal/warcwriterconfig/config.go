@@ -264,13 +264,14 @@ func (w *WarcWriterConfig) GetWarcWriter(path string, warcDate time.Time) (*gowa
 	var ww *gowarc.WarcFileWriter
 
 	if w.OneToOneWriter {
-		ww = gowarc.NewWarcFileWriter(
-			append(w.WarcFileWriterOptions,
-				gowarc.WithFileNameGenerator(namer),
-				gowarc.WithBeforeFileCreationHook(w.openOutputFileHook.WithSrcFileName(path).Run),
-				gowarc.WithAfterFileCreationHook(w.closeOutputFileHook.WithSrcFileName(path).Run),
-			)...,
+		opts := make([]gowarc.WarcFileWriterOption, 0, len(w.WarcFileWriterOptions)+3)
+		opts = append(opts, w.WarcFileWriterOptions...)
+		opts = append(opts,
+			gowarc.WithFileNameGenerator(namer),
+			gowarc.WithBeforeFileCreationHook(w.openOutputFileHook.WithSrcFileName(path).Run),
+			gowarc.WithAfterFileCreationHook(w.closeOutputFileHook.WithSrcFileName(path).Run),
 		)
+		ww = gowarc.NewWarcFileWriter(opts...)
 		return ww, nil
 	}
 
@@ -282,11 +283,10 @@ func (w *WarcWriterConfig) GetWarcWriter(path string, warcDate time.Time) (*gowa
 		return ww, nil
 	}
 
-	ww = gowarc.NewWarcFileWriter(
-		append(w.WarcFileWriterOptions,
-			gowarc.WithFileNameGenerator(namer),
-		)...,
-	)
+	opts := make([]gowarc.WarcFileWriterOption, 0, len(w.WarcFileWriterOptions)+1)
+	opts = append(opts, w.WarcFileWriterOptions...)
+	opts = append(opts, gowarc.WithFileNameGenerator(namer))
+	ww = gowarc.NewWarcFileWriter(opts...)
 	w.writers[subDir] = ww
 
 	return ww, nil
