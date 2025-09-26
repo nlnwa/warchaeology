@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -55,7 +56,7 @@ func (h OpenInputFileHook) Run(fileName string) error {
 }
 
 func (h OpenInputFileHook) Output(fileName string) ([]byte, error) {
-	c := exec.Command(h.hook)
+	c := exec.CommandContext(context.TODO(), h.hook)
 	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
 	c.Env = append(c.Environ(), EnvHookType+"=OpenInputFile")
 	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
@@ -107,7 +108,7 @@ func (h CloseInputFileHook) Run(fileName string, result stat.Result, resultErr e
 }
 
 func (h CloseInputFileHook) Output(fileName string, result stat.Result, resultErr error) ([]byte, error) {
-	c := exec.Command(h.hook)
+	c := exec.CommandContext(context.TODO(), h.hook)
 	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
 	c.Env = append(c.Environ(), EnvHookType+"=CloseInputFile")
 	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
@@ -177,7 +178,7 @@ func (h OpenOutputFileHook) Run(fileName string) error {
 }
 
 func (h OpenOutputFileHook) Output(fileName string) ([]byte, error) {
-	c := exec.Command(h.hook)
+	c := exec.CommandContext(context.TODO(), h.hook)
 	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
 	c.Env = append(c.Environ(), EnvHookType+"=OpenOutputFile")
 	c.Env = append(c.Environ(), EnvFileName+"="+fileName)
@@ -240,7 +241,7 @@ func (h CloseOutputFileHook) Output(fileName string, size int64, warcInfoId stri
 		return nil, nil
 	}
 
-	c := exec.Command(h.hook)
+	c := exec.CommandContext(context.TODO(), h.hook)
 	c.Env = append(c.Environ(), EnvCommand+"="+h.cmd)
 	c.Env = append(c.Environ(), EnvHookType+"=CloseOutputFile")
 	c.Env = append(c.Environ(), EnvFileName+"="+fileName)

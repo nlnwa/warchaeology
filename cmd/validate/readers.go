@@ -33,6 +33,7 @@ func NewCountingReader(r io.Reader, hashFunction string) *countingReader {
 // countingReader wraps an io.Reader and counts the number of bytes read and calculates a hash.
 type countingReader struct {
 	io.Reader
+
 	size int64
 	hash hash.Hash
 }
