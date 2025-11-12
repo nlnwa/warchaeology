@@ -56,7 +56,7 @@ func TestWorkerPool(t *testing.T) {
 	}
 
 	queue := New(context.Background(), concurrency)
-	for i := 0; i < jobs; i++ {
+	for range jobs {
 		queue.Jobs <- perJobFn
 	}
 	queue.CloseWait()

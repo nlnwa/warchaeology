@@ -11,7 +11,7 @@ func SuffixCompletionFn(cmd *cobra.Command, args []string, toComplete string) ([
 	if suf, err := cmd.Flags().GetStringSlice(Suffixes); err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	} else {
-		for i := 0; i < len(suf); i++ {
+		for i := range suf {
 			suf[i] = strings.TrimLeft(suf[i], ".")
 		}
 		return suf, cobra.ShellCompDirectiveFilterFileExt | cobra.ShellCompDirectiveNoFileComp

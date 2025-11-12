@@ -112,7 +112,7 @@ func (p *pseudoRoot) Size() int64        { return 0 }
 func (p *pseudoRoot) Mode() os.FileMode  { return os.ModeDir | os.ModePerm }
 func (p *pseudoRoot) ModTime() time.Time { return time.Now() }
 func (p *pseudoRoot) IsDir() bool        { return true }
-func (p *pseudoRoot) Sys() interface{}   { return nil }
+func (p *pseudoRoot) Sys() any           { return nil }
 
 type pseudoDir struct {
 	path string
@@ -123,7 +123,7 @@ func (fi pseudoDir) Size() int64        { return 0 }
 func (fi pseudoDir) IsDir() bool        { return true }
 func (fi pseudoDir) ModTime() time.Time { return time.Now() }
 func (fi pseudoDir) Mode() os.FileMode  { return os.ModeDir | os.ModePerm }
-func (fi pseudoDir) Sys() interface{}   { return nil }
+func (fi pseudoDir) Sys() any           { return nil }
 
 func (fs *Fs) Stat(name string) (os.FileInfo, error) {
 	d, f := splitpath(name)
