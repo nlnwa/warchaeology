@@ -51,7 +51,7 @@ func BenchmarkListFile(b *testing.B) {
 		warcRecordOptions: []gowarc.WarcRecordOption{gowarc.WithBufferTmpDir(b.TempDir())},
 	}
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = opts.handleFile(context.Background(), afero.NewOsFs(), warcWithErrors)
 	}
 }

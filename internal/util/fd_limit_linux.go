@@ -23,10 +23,7 @@ func CheckFileDescriptorLimit(limit uint64) error {
 		return nil
 	}
 
-	rLimit.Cur = limit
-	if rLimit.Cur > rLimit.Max {
-		rLimit.Cur = rLimit.Max
-	}
+	rLimit.Cur = min(limit, rLimit.Max)
 
 	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
 	if err != nil {

@@ -33,10 +33,7 @@ func NewRecordWidget(name, prev, next string) *RecordWidget {
 
 func (recordWidget *RecordWidget) Layout(gui *gocui.Gui) error {
 	maxX, maxY := gui.Size()
-	dynamicColumnWidth := maxX - 60
-	if dynamicColumnWidth < 51 {
-		dynamicColumnWidth = 51
-	}
+	dynamicColumnWidth := max(maxX-60, 51)
 
 	if view, err := gui.SetView(recordWidget.headerView, 50, 10, dynamicColumnWidth, 30, gocui.BOTTOM|gocui.RIGHT); err != nil {
 		if err != gocui.ErrUnknownView {
@@ -259,13 +256,8 @@ func (recordWidget *RecordWidget) scroll(view *gocui.View, ScrollDelta int) erro
 		}
 
 		originX, originY := view.Origin()
-		scrollDestinationY := originY + ScrollDelta
-		if scrollDestinationY < 0 {
-			scrollDestinationY = 0
-		}
-		if contentHeight-viewHeight < scrollDestinationY {
-			scrollDestinationY = contentHeight - viewHeight
-		}
+		scrollDestinationY := max(originY+ScrollDelta, 0)
+		scrollDestinationY = min(contentHeight-viewHeight, min(scrollDestinationY, contentHeight-viewHeight))
 		_ = view.SetOrigin(originX, scrollDestinationY)
 	}
 	return nil

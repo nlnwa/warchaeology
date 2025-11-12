@@ -53,7 +53,7 @@ func (warcRecordRecord record) String() string {
 	return result.String()
 }
 
-func populateRecords(gui *gocui.Gui, ctx context.Context, finishedCb func(), widgetList *ListWidget, data interface{}) {
+func populateRecords(gui *gocui.Gui, ctx context.Context, finishedCb func(), widgetList *ListWidget, data any) {
 	warcFileReader, err := gowarc.NewWarcFileReader(data.(string), 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
 		panic(err)
@@ -92,7 +92,7 @@ end:
 	finishedCb()
 }
 
-func populateFiles(gui *gocui.Gui, ctx context.Context, finishedCb func(), widgetList *ListWidget, data interface{}) {
+func populateFiles(gui *gocui.Gui, ctx context.Context, finishedCb func(), widgetList *ListWidget, data any) {
 	state.dir = data.(string)
 	if view, err := gui.View("dir"); err == nil {
 		view.Title = state.dir

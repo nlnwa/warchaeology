@@ -164,7 +164,7 @@ func (recordWriter *RecordWriter) FormatRecord(record warc.Record, fileName stri
 // Write takes a string produced by FormatRecord, replaces eventual size place holders with actual values and
 // writes it to stdout.
 func (recordWriter *RecordWriter) Write(line string, size int64) error {
-	var v []interface{}
+	var v []any
 	for _, sizeField := range recordWriter.sizeFields {
 		if sizeField.length > 0 && sizeField.align != 0 {
 			v = append(v, sizeField.length)

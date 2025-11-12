@@ -13,7 +13,7 @@ type recordFilter struct {
 	recType gowarc.RecordType
 }
 
-func (recordfilter *recordFilter) filterFunc(rec interface{}) bool {
+func (recordfilter *recordFilter) filterFunc(rec any) bool {
 	if rec == nil {
 		return false
 	}

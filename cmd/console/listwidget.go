@@ -21,10 +21,10 @@ type ListWidget struct {
 	next                string
 	selected            int
 	selectFunc          func(gui *gocui.Gui, widget *ListWidget)
-	populateRecordsFunc func(gui *gocui.Gui, ctx context.Context, finishedCb func(), widget *ListWidget, data interface{})
-	filterFunc          func(interface{}) bool
-	records             []interface{}
-	filteredRecords     []interface{}
+	populateRecordsFunc func(gui *gocui.Gui, ctx context.Context, finishedCb func(), widget *ListWidget, data any)
+	filterFunc          func(any) bool
+	records             []any
+	filteredRecords     []any
 	cancelFunc          context.CancelFunc
 	cancelRefreshFunc   context.CancelFunc
 	finished            context.Context
@@ -33,7 +33,7 @@ type ListWidget struct {
 
 func NewListWidget(name string, prev, next string,
 	selectFunc func(gui *gocui.Gui, widget *ListWidget),
-	populateRecordsFunc func(gui *gocui.Gui, ctx context.Context, finishedCb func(), widget *ListWidget, data interface{})) *ListWidget {
+	populateRecordsFunc func(gui *gocui.Gui, ctx context.Context, finishedCb func(), widget *ListWidget, data any)) *ListWidget {
 
 	return &ListWidget{
 		name:                name,
@@ -45,7 +45,7 @@ func NewListWidget(name string, prev, next string,
 	}
 }
 
-func (widgetList *ListWidget) Init(gui *gocui.Gui, data interface{}) {
+func (widgetList *ListWidget) Init(gui *gocui.Gui, data any) {
 	if widgetList.cancelFunc != nil {
 		widgetList.cancelRefreshFunc()
 		widgetList.cancelRefreshFunc = nil
@@ -347,7 +347,7 @@ func (widgetList *ListWidget) update(gui *gocui.Gui, ctx context.Context, finish
 	}()
 }
 
-func (widgetList *ListWidget) upd(gui *gocui.Gui, ctx context.Context, rec []interface{}) {
+func (widgetList *ListWidget) upd(gui *gocui.Gui, ctx context.Context, rec []any) {
 	gui.UpdateAsync(func(guiInner *gocui.Gui) error {
 		view, err := guiInner.View(widgetList.name)
 		if err != nil {

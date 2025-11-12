@@ -164,8 +164,8 @@ var asciiChar = "MND8OZ$7I?+=~:,.."
 func asciiArt(img image.Image, w, h int) []byte {
 	table := []byte(asciiChar)
 	buffer := new(bytes.Buffer)
-	for i := 0; i < h; i++ {
-		for j := 0; j < w; j++ {
+	for i := range h {
+		for j := range w {
 			g := grayscale(img.At(j, i))
 			pos := len(asciiChar) * g / 65536
 			_ = buffer.WriteByte(table[pos])

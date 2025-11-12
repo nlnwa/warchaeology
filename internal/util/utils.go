@@ -68,10 +68,7 @@ func ParseSizeInBytes(sizeStr string) int64 {
 		}
 	}
 
-	size := cast.ToInt64(sizeStr)
-	if size < 0 {
-		size = 0
-	}
+	size := max(cast.ToInt64(sizeStr), 0)
 
 	return safeMul(size, multiplier)
 }
