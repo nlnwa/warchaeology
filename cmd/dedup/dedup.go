@@ -431,6 +431,7 @@ func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record warc.R
 	if err != nil {
 		result.AddError(warc.Error(record, fmt.Errorf("failed to get digest: %w", err)))
 	}
+
 	if !record.Validation.Valid() {
 		for _, err := range *record.Validation {
 			result.AddError(warc.Error(record, err))
@@ -511,14 +512,23 @@ func getDigest(warcRecord gowarc.WarcRecord, validation *gowarc.Validation) (str
 	if warcRecord.WarcHeader().Has(gowarc.WarcBlockDigest) {
 		return warcRecord.WarcHeader().Get(gowarc.WarcBlockDigest), nil
 	}
+	// Calculate and validate digest (generates digest if repair is enabled)
 	if err := warcRecord.Block().Cache(); err != nil {
 		return "", fmt.Errorf("could not cache record: %w", err)
 	}
 	if err := warcRecord.ValidateDigest(validation); err != nil {
 		return "", fmt.Errorf("failed to validate digest: %w", err)
 	}
+	// If repair was enabled, headers were added by ValidateDigest
+	if warcRecord.WarcHeader().Has(gowarc.WarcPayloadDigest) {
+		return warcRecord.WarcHeader().Get(gowarc.WarcPayloadDigest), nil
+	}
+	if warcRecord.WarcHeader().Has(gowarc.WarcBlockDigest) {
+		return warcRecord.WarcHeader().Get(gowarc.WarcBlockDigest), nil
+	}
 
-	return getDigest(warcRecord, validation)
+	// No digest found
+	return "", nil
 }
 
 func payloadLength(warcRecord gowarc.WarcRecord) int64 {
