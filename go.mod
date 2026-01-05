@@ -10,9 +10,9 @@ require (
 	github.com/jackc/puddle v1.3.0
 	github.com/jlaffaye/ftp v0.2.0
 	github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f
-	github.com/klauspost/compress v1.18.0
+	github.com/klauspost/compress v1.18.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	github.com/nlnwa/gowarc/v2 v2.2.1
+	github.com/nlnwa/gowarc/v2 v2.2.2
 	github.com/nlnwa/whatwg-url v0.6.2
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/afero v1.15.0
@@ -26,7 +26,7 @@ require (
 )
 
 require (
-	github.com/bits-and-blooms/bitset v1.24.0 // indirect
+	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
@@ -60,9 +60,9 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.44.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/term v0.35.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/term v0.38.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
