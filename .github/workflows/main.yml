@@ -57,39 +57,39 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # This should have been a matrix, but building separate targets is a paid feature in `goreleaser`
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: darwin-x86_64
           path: dist/warchaeology_Darwin_x86_64*.tar.gz
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: linux-x86_64
           path: dist/warchaeology_Linux_x86_64.tar.gz
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: linux-i386
           path: dist/warchaeology_Linux_i386.tar.gz
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: windows-x86_64
           path: dist/warchaeology_Windows_x86_64.zip
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: windows-i386
           path: dist/warchaeology_Windows_i386.zip
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: deb-amd64
           path: dist/warchaeology_*amd64.deb
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: deb-i386
           path: dist/warchaeology_*i386.deb
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: rpm-x86_64
           path: dist/warchaeology-*x86_64.rpm
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: rpm-i386
           path: dist/warchaeology-*i386.rpm
