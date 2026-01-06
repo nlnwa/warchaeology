@@ -4,8 +4,8 @@ import (
 	"io"
 	"iter"
 
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/filter"
 	"github.com/nlnwa/gowarc/v2"
-	"github.com/nlnwa/warchaeology/v4/internal/filter"
 )
 
 // Record represents a WARC record with additional metadata such as offset,

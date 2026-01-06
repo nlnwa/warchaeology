@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/filter"
 	"github.com/nlnwa/gowarc/v2"
-	"github.com/nlnwa/warchaeology/v4/internal/filter"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

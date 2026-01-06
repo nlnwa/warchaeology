@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nlnwa/warchaeology/v4/internal/stat"
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/stat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +20,7 @@ var testHook = "./testdata/test_hook.sh"
 
 func TestOpenInputFileHook(t *testing.T) {
 	if runtime.GOOS == windowsOs {
-		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/89): This test fails on windows")
+		t.Skip("TODO (https://github.com/nationallibraryofnorway/warchaeology/issues/89): This test fails on windows")
 	}
 	tests := []struct {
 		name     string
@@ -69,7 +69,7 @@ func TestOpenInputFileHook(t *testing.T) {
 
 func TestCloseInputFileHook(t *testing.T) {
 	if runtime.GOOS == windowsOs {
-		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/89): This test fails on windows")
+		t.Skip("TODO (https://github.com/nationallibraryofnorway/warchaeology/issues/89): This test fails on windows")
 	}
 	tests := []struct {
 		name       string
@@ -125,7 +125,7 @@ func TestCloseInputFileHook(t *testing.T) {
 
 func TestOpenOutputFileHook(t *testing.T) {
 	if runtime.GOOS == windowsOs {
-		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/89): This test fails on windows")
+		t.Skip("TODO (https://github.com/nationallibraryofnorway/warchaeology/issues/89): This test fails on windows")
 	}
 	tests := []struct {
 		name        string
@@ -178,7 +178,7 @@ func TestOpenOutputFileHook(t *testing.T) {
 
 func TestCloseOutputFileHook(t *testing.T) {
 	if runtime.GOOS == windowsOs {
-		t.Skip("TODO (https://github.com/nlnwa/warchaeology/issues/89): This test fails on windows")
+		t.Skip("TODO (https://github.com/nationallibraryofnorway/warchaeology/issues/89): This test fails on windows")
 	}
 	tests := []struct {
 		name        string
