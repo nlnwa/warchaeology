@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/hooks"
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/util"
 	"github.com/nlnwa/gowarc/v2"
-	"github.com/nlnwa/warchaeology/v4/internal/hooks"
-	"github.com/nlnwa/warchaeology/v4/internal/util"
 )
 
 const DefaultDateFormat = "2006-1-2"

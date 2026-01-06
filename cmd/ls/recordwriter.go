@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nlnwa/warchaeology/v4/internal/time"
-	"github.com/nlnwa/warchaeology/v4/internal/util"
-	"github.com/nlnwa/warchaeology/v4/internal/warc"
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/time"
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/util"
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
 )
 
 type JSONWriter struct {

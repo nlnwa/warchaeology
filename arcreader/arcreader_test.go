@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
 	"github.com/nlnwa/gowarc/v2"
-	"github.com/nlnwa/warchaeology/v4/internal/warc"
 	"github.com/nlnwa/whatwg-url/url"
 	"github.com/spf13/afero"
 )

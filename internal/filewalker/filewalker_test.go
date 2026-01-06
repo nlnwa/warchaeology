@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/nlnwa/warchaeology/v4/internal/filewalker"
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/filewalker"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )

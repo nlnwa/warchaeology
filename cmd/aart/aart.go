@@ -11,11 +11,11 @@ import (
 	_ "image/png"
 	"io"
 
+	"github.com/nationallibraryofnorway/warchaeology/v4/cmd/internal/flag"
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/filter"
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
 	"github.com/nfnt/resize"
 	"github.com/nlnwa/gowarc/v2"
-	"github.com/nlnwa/warchaeology/v4/cmd/internal/flag"
-	"github.com/nlnwa/warchaeology/v4/internal/filter"
-	"github.com/nlnwa/warchaeology/v4/internal/warc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/nlnwa/warchaeology/v4/internal/util"
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/util"
 )
 
 func TestContainsMatchOnMatching(t *testing.T) {

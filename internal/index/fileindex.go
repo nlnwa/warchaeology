@@ -7,7 +7,7 @@ import (
 	"runtime"
 
 	"github.com/dgraph-io/badger/v3"
-	"github.com/nlnwa/warchaeology/v4/internal/stat"
+	"github.com/nationallibraryofnorway/warchaeology/v4/internal/stat"
 )
 
 type FileIndex struct {
