@@ -11,21 +11,21 @@ weight: 1
 ### RPM package
 
 ```shell
-curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology-{{< version ".rpm" >}}.x86_64.rpm
+curl -LO https://github.com/nationallibraryofnorway/warchaeology/releases/latest/download/warchaeology-{{< version ".rpm" >}}.x86_64.rpm
 sudo rpm -Uvh warchaeology-{{< version ".rpm" >}}.x86_64.rpm
 ```
 
 ### Debian package
 
 ```shell
-curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology_{{< version >}}_amd64.deb
+curl -LO https://github.com/nationallibraryofnorway/warchaeology/releases/latest/download/warchaeology_{{< version >}}_amd64.deb
 sudo dpkg -i warchaeology_{{< version >}}_amd64.deb
 ```
 
 ### Binary download
 
 ```shell
-curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology_Linux_x86_64.tar.gz
+curl -LO https://github.com/nationallibraryofnorway/warchaeology/releases/latest/download/warchaeology_Linux_x86_64.tar.gz
 tar zxvf warchaeology_Linux_x86_64.tar.gz
 sudo install warc /usr/local/bin/warc
 ```
@@ -41,7 +41,7 @@ the [`warc completion`](../cmd/warc_completion) command.
 ## Mac
 
 ```shell
-curl -LO https://github.com/nlnwa/warchaeology/releases/latest/download/warchaeology_Darwin_x86_64.tar.gz
+curl -LO https://github.com/nationallibraryofnorway/warchaeology/releases/latest/download/warchaeology_Darwin_x86_64.tar.gz
 tar zxvf warchaeology_Darwin_x86_64.tar.gz
 sudo install warc /usr/local/bin/warc
 ```

@@ -10,7 +10,7 @@ Warchaeology is written in the [golang](https://go.dev) programming language.
 ### Clone the repository
 
 ```shell
-git clone https://github.com/nlnwa/warchaeology.git
+git clone https://github.com/nationallibraryofnorway/warchaeology.git
 cd warchaeology
 ```
 
