@@ -151,8 +151,12 @@ func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRe
 		return nil, nil, fmt.Errorf("could not parse ARC file header")
 	}
 	read += len(l2)
-	i := strings.IndexByte(l2, ' ')
-	v, err := strconv.Atoi(l2[:i])
+
+	verStr, _, ok := strings.Cut(l2, " ")
+	if !ok {
+		return nil, nil, fmt.Errorf("could not parse version from ARC file header: missing space")
+	}
+	v, err := strconv.Atoi(verStr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not parse version from ARC file header: %w", err)
 	}
