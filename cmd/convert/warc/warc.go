@@ -365,6 +365,9 @@ func (o *ConvertWarcOptions) handleRecord(warcFileWriter *gowarc.WarcFileWriter,
 	if err != nil {
 		return err
 	}
+	defer func() {
+		_ = warcRecord.Close()
+	}()
 	if writeResponse := warcFileWriter.Write(warcRecord); len(writeResponse) > 0 {
 		return writeResponse[0].Err
 	}
