@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/nationallibraryofnorway/warchaeology/v4/cmd"
 	"github.com/spf13/cobra/doc"
@@ -17,21 +16,17 @@ func main() {
 	// Find 'this' directory relative to this file to allow callers to be in any package
 	var _, b, _, _ = runtime.Caller(0)
 	var dir = filepath.Dir(b)
-	var docsDir = filepath.Join(dir, "content")
+	var docsDir = filepath.Join(dir, "reference", "cli")
 
 	genMdDoc(docsDir)
 }
 
 const fmTemplate = `---
-date: %s
 title: "%s"
-slug: %s
-url: %s
 ---
 `
 
-func genMdDoc(docsDir string) {
-	var dir = filepath.Join(docsDir, "cmd")
+func genMdDoc(dir string) {
 	fmt.Println("Generating documentation...")
 
 	if files, err := os.ReadDir(dir); err == nil {
@@ -47,16 +42,14 @@ func genMdDoc(docsDir string) {
 	c.DisableAutoGenTag = true
 
 	filePrepender := func(filename string) string {
-		now := time.Now().Format(time.RFC3339)
 		name := filepath.Base(filename)
 		base := strings.TrimSuffix(name, filepath.Ext(name))
-		url := "/cmd/" + strings.ToLower(base) + "/"
-		return fmt.Sprintf(fmTemplate, now, strings.ReplaceAll(base, "_", " "), base, url)
+		return fmt.Sprintf(fmTemplate, strings.ReplaceAll(base, "_", " "))
 	}
 
 	linkHandler := func(name string) string {
 		base := strings.TrimSuffix(name, filepath.Ext(name))
-		return "../" + strings.ToLower(base) + "/"
+		return strings.ToLower(base) + ".md"
 	}
 
 	if err := doc.GenMarkdownTreeCustom(c, dir, filePrepender, linkHandler); err != nil {
