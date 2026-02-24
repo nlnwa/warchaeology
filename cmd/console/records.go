@@ -22,7 +22,7 @@ type record struct {
 }
 
 func (warcRecordRecord record) String() string {
-	result := strings.Builder{}
+	var result strings.Builder
 	if warcRecordRecord.hasError {
 		result.WriteString(escapeFgColor(ErrorColor))
 		result.WriteString(warcRecordRecord.id)
@@ -31,21 +31,21 @@ func (warcRecordRecord record) String() string {
 		reset := escapeFgColor(gocui.ColorDefault)
 		switch warcRecordRecord.recordType {
 		case gowarc.Warcinfo:
-			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(WarcInfoColor), warcRecordRecord.id, reset))
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(WarcInfoColor), warcRecordRecord.id, reset)
 		case gowarc.Request:
-			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(RequestColor), warcRecordRecord.id, reset))
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(RequestColor), warcRecordRecord.id, reset)
 		case gowarc.Response:
-			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ResponseColor), warcRecordRecord.id, reset))
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ResponseColor), warcRecordRecord.id, reset)
 		case gowarc.Metadata:
-			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(MetadataColor), warcRecordRecord.id, reset))
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(MetadataColor), warcRecordRecord.id, reset)
 		case gowarc.Resource:
-			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ResourceColor), warcRecordRecord.id, reset))
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ResourceColor), warcRecordRecord.id, reset)
 		case gowarc.Revisit:
-			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(RevisitColor), warcRecordRecord.id, reset))
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(RevisitColor), warcRecordRecord.id, reset)
 		case gowarc.Continuation:
-			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ContinuationColor), warcRecordRecord.id, reset))
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ContinuationColor), warcRecordRecord.id, reset)
 		case gowarc.Conversion:
-			result.WriteString(fmt.Sprintf("%s%s%s", escapeFgColor(ConversionColor), warcRecordRecord.id, reset))
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ConversionColor), warcRecordRecord.id, reset)
 		default:
 			result.WriteString(warcRecordRecord.id)
 		}
