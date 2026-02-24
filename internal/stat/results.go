@@ -84,7 +84,7 @@ func (r *result) Error() string {
 		if i > 0 {
 			sb.WriteByte('\n')
 		}
-		sb.WriteString(fmt.Sprintf("   %s", e))
+		fmt.Fprintf(&sb, "   %s", e)
 	}
 	return sb.String()
 }
