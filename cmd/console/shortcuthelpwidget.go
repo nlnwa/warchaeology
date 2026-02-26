@@ -32,7 +32,7 @@ func (shortcutHelpWidget *ShortcutHelpWidget) Layout(gui *gocui.Gui) error {
 			_ = gui.DeleteView(shortcutHelpWidgetName)
 		})
 		view.Title = shortcutHelpWidgetName
-		view.WriteString("f: find in current window\n\nFilters:\ne: error\ni: warcinfo\nq: request\nr: response\nm: metadata\nv: revisit\ns: resource\nc: continuation\nn: conversion")
+		view.WriteString("f or /: find in current window\nz: toggle content fullscreen\n\nFilters:\ne: error\ni: warcinfo\nq: request\nr: response\nm: metadata\nv: revisit\ns: resource\nc: continuation\nn: conversion")
 	}
 	state.modalView = shortcutHelpWidgetName
 	return nil

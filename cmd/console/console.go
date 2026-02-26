@@ -8,11 +8,21 @@ import (
 
 	"github.com/awesome-gocui/gocui"
 	"github.com/nationallibraryofnorway/warchaeology/v4/cmd/internal/flag"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/cobra"
 )
 
-var state = &State{curView: "dir"}
+const (
+	viewDir     = "dir"
+	viewRecords = "Records"
+	viewHelp    = "help"
+)
+
+var state = newState()
+
+func newState() *State {
+	return &State{curView: viewDir}
+}
 
 func NewCmdConsole() *cobra.Command {
 	var cmd = &cobra.Command{
@@ -54,8 +64,9 @@ func (state *State) Complete(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if !fileInfo.IsDir() {
+		selectedFile := filepath.Base(state.dir)
 		state.dir = filepath.Dir(state.dir)
-		state.files = append(state.files, filepath.Base(state.dir))
+		state.files = append(state.files, selectedFile)
 	}
 	if state.suffixes, err = cmd.Flags().GetStringSlice(flag.Suffixes); err != nil {
 		return err
@@ -88,11 +99,11 @@ func Run() error {
 	nonWidgets := gocui.ManagerFunc(state.layout)
 	flowLayout := gocui.ManagerFunc(flowLayout)
 
-	filesWidget := NewListWidget("dir", "Content_error", "Records", state.readFile, populateFiles)
+	filesWidget := NewListWidget(viewDir, "Content_error", viewRecords, state.readFile, populateFiles)
 
 	viewRecordWidget := NewRecordWidget("Content", "Records", "dir")
 
-	recordsWidget := NewListWidget("Records", "dir", "Content_header", viewRecordWidget.readRecord, populateRecords)
+	recordsWidget := NewListWidget(viewRecords, viewDir, "Content_header", viewRecordWidget.readRecord, populateRecords)
 	state.filter = &recordFilter{}
 	recordsWidget.filterFunc = state.filter.filterFunc
 
@@ -102,56 +113,19 @@ func Run() error {
 		return err
 	}
 
-	if err := gui.SetKeybinding("", 'e', gocui.ModNone, state.filter.toggleErrorFilter); err != nil {
+	if err := registerFilterBindings(gui); err != nil {
 		return err
 	}
-	if err := gui.SetKeybinding("help", gocui.MouseLeft, gocui.ModNone, state.filter.mouseToggleFilter); err != nil {
-		return err
-	}
-	if err := gui.SetKeybinding("", 'i', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(gui, gowarc.Warcinfo)
-	}); err != nil {
-		return err
-	}
-	if err := gui.SetKeybinding("", 'q', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(gui, gowarc.Request)
-	}); err != nil {
-		return err
-	}
-	if err := gui.SetKeybinding("", 'r', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(gui, gowarc.Response)
-	}); err != nil {
-		return err
-	}
-	if err := gui.SetKeybinding("", 'm', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(gui, gowarc.Metadata)
-	}); err != nil {
-		return err
-	}
-	if err := gui.SetKeybinding("", 's', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(gui, gowarc.Resource)
-	}); err != nil {
-		return err
-	}
-	if err := gui.SetKeybinding("", 'v', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(gui, gowarc.Revisit)
-	}); err != nil {
-		return err
-	}
-	if err := gui.SetKeybinding("", 'c', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(gui, gowarc.Continuation)
-	}); err != nil {
-		return err
-	}
-	if err := gui.SetKeybinding("", 'n', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
-		return state.filter.toggleRecordTypeFilter(gui, gowarc.Conversion)
-	}); err != nil {
+	if err := gui.SetKeybinding(viewHelp, gocui.MouseLeft, gocui.ModNone, state.filter.mouseToggleFilter); err != nil {
 		return err
 	}
 	if err := gui.SetKeybinding("", 'h', gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
 		shortcutHelpWidget := NewShortcutHelpWidget()
 		return shortcutHelpWidget.Layout(gui)
 	}); err != nil {
+		return err
+	}
+	if err := gui.SetKeybinding("", 'z', gocui.ModNone, viewRecordWidget.toggleContentFullscreen); err != nil {
 		return err
 	}
 
@@ -181,12 +155,12 @@ func flowLayout(gui *gocui.Gui) error {
 	for _, view := range views {
 		var x0, y0, x1, y1 int
 		switch view.Name() {
-		case "Records":
+		case viewRecords:
 			x0 = 0
 			y0 = 10
 			x1 = 49
 			y1 = maxY - 2
-		case "dir":
+		case viewDir:
 			x0 = 0
 			y0 = 0
 			x1 = maxX - 1
@@ -205,7 +179,7 @@ func flowLayout(gui *gocui.Gui) error {
 func (state *State) layout(gui *gocui.Gui) error {
 	maxX, maxY := gui.Size()
 
-	if view, err := gui.SetView("help", 0, maxY-2, maxX, maxY, 0); err != nil {
+	if view, err := gui.SetView(viewHelp, 0, maxY-2, maxX, maxY, 0); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -219,7 +193,10 @@ func (state *State) layout(gui *gocui.Gui) error {
 		newView = state.modalView
 	}
 	if _, err := gui.SetCurrentView(newView); err != nil {
-		return err
+		if _, fallbackErr := gui.SetCurrentView(viewDir); fallbackErr != nil {
+			return fallbackErr
+		}
+		state.curView = viewDir
 	}
 
 	return nil
@@ -232,8 +209,41 @@ func quit(gui *gocui.Gui, v *gocui.View) error {
 func (state *State) readFile(gui *gocui.Gui, widget *ListWidget) {
 	if len(widget.filteredRecords) > 0 {
 		state.file = widget.filteredRecords[widget.selected].(string)
-		state.records.Init(gui, state.dir+"/"+state.file)
+		state.records.Init(gui, filepath.Join(state.dir, state.file))
 	}
+}
+
+func registerFilterBindings(gui *gocui.Gui) error {
+	if err := gui.SetKeybinding("", 'e', gocui.ModNone, state.filter.toggleErrorFilter); err != nil {
+		return err
+	}
+
+	type recordTypeBinding struct {
+		key     rune
+		recType gowarc.RecordType
+	}
+
+	bindings := []recordTypeBinding{
+		{key: 'i', recType: gowarc.Warcinfo},
+		{key: 'q', recType: gowarc.Request},
+		{key: 'r', recType: gowarc.Response},
+		{key: 'm', recType: gowarc.Metadata},
+		{key: 's', recType: gowarc.Resource},
+		{key: 'v', recType: gowarc.Revisit},
+		{key: 'c', recType: gowarc.Continuation},
+		{key: 'n', recType: gowarc.Conversion},
+	}
+
+	for _, binding := range bindings {
+		recType := binding.recType
+		if err := gui.SetKeybinding("", binding.key, gocui.ModNone, func(guiInner *gocui.Gui, view *gocui.View) error {
+			return state.filter.toggleRecordTypeFilter(gui, recType)
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type State struct {
@@ -246,4 +256,5 @@ type State struct {
 	file      string
 	records   *ListWidget
 	filter    *recordFilter
+	fullView  bool
 }

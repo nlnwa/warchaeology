@@ -2,6 +2,7 @@ package dedup
 
 import (
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/index"
@@ -65,5 +66,16 @@ func TestConvertArcFile(t *testing.T) {
 				t.Errorf("readFile() expected error, got none")
 			}
 		})
+	}
+}
+
+func TestDedupOptionsCompleteDeterministicSortsPaths(t *testing.T) {
+	o := &DedupOptions{Deterministic: true}
+	err := o.Complete(nil, []string{"b.warc", "a.warc", "c.warc"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(o.Paths, []string{"a.warc", "b.warc", "c.warc"}) {
+		t.Fatalf("paths not sorted: %+v", o.Paths)
 	}
 }

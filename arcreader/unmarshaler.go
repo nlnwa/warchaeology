@@ -13,7 +13,7 @@ import (
 
 	"github.com/klauspost/compress/gzip"
 	mytime "github.com/nationallibraryofnorway/warchaeology/v4/internal/time"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 )
 
 type unmarshaler struct {
@@ -30,7 +30,7 @@ func NewUnmarshaler(opts ...gowarc.WarcRecordOption) gowarc.Unmarshaler {
 	return u
 }
 
-func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gowarc.Validation, error) {
+func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, []error, error) {
 	isGzip, r, offset, err := u.searchNextRecord(b)
 	if err == io.EOF {
 		return nil, offset, nil, err
@@ -71,7 +71,7 @@ func (u *unmarshaler) Unmarshal(b *bufio.Reader) (gowarc.WarcRecord, int64, *gow
 		return nil, 0, nil, fmt.Errorf("could not parse ARC record: %w", err)
 	}
 
-	var validation *gowarc.Validation
+	var validation []error
 	var wr gowarc.WarcRecord
 	if strings.HasPrefix(l, "filedesc://") {
 		wr, validation, err = u.parseFileHeader(r, l)
@@ -144,7 +144,7 @@ func (u *unmarshaler) searchNextRecord(b *bufio.Reader) (bool, *bufio.Reader, in
 	return isGzip, r, offset, err
 }
 
-func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRecord, *gowarc.Validation, error) {
+func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRecord, []error, error) {
 	var read int
 	l2, err := r.ReadString('\n')
 	if err != nil {
@@ -209,7 +209,7 @@ func (u *unmarshaler) parseFileHeader(r *bufio.Reader, l1 string) (gowarc.WarcRe
 	return wr, validation, err
 }
 
-func (u *unmarshaler) parseRecord(r *bufio.Reader, l1 string) (gowarc.WarcRecord, *gowarc.Validation, error) {
+func (u *unmarshaler) parseRecord(r *bufio.Reader, l1 string) (gowarc.WarcRecord, []error, error) {
 	var recordType gowarc.RecordType
 	var url, ip, contentType string
 	var date time.Time

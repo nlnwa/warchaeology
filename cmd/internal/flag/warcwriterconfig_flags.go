@@ -11,51 +11,48 @@ import (
 
 const (
 	ConcurrentWriters     = "concurrent-writers"
-	ConcurrentWritersHelp = `maximum concurrent WARC writers. This is the number of WARC-files simultaneously written to.
-	A consequence is that at least this many WARC files are created even if there is only one input file.`
+	ConcurrentWritersHelp = `maximum number of WARC files written concurrently.
+This may create at least this many output files even with a single input file.`
 
 	FileSize     = "file-size"
-	FileSizeHelp = `The maximum size for WARC files`
+	FileSizeHelp = `maximum size of each WARC output file`
 
 	Compress     = "compress"
-	CompressHelp = `use gzip compression for WARC files`
+	CompressHelp = `enable gzip compression for WARC output files`
 
 	CompressionLevel     = "compression-level"
-	CompressionLevelHelp = `the gzip compression level to use (value between 1 and 9, -1 means the gzip library default level)`
+	CompressionLevelHelp = `gzip compression level (1-9, -1 uses the gzip library default)`
 
 	FilePrefix     = "prefix"
-	FilePrefixHelp = `filename prefix for WARC files`
+	FilePrefixHelp = `filename prefix for generated WARC files`
 
 	SubdirPattern     = "subdir-pattern"
-	SubdirPatternHelp = `a pattern to use for generating subdirectories.
-	/ in pattern separates subdirectories on all platforms
-	{YYYY} is replaced with a 4 digit year
-	{YY} is replaced with a 2 digit year
-	{MM} is replaced with a 2 digit month
-	{DD} is replaced with a 2 digit day
-	The date used is the WARC date of each record. Therefore a input file might be split into 
-	WARC files in different subdirectories. If NameGenerator is 'identity' only the first record
-	of each file's date is used to keep the file as one.`
+	SubdirPatternHelp = `pattern used to create output subdirectories.
+Use '/' to separate subdirectories on all platforms.
+Supported tokens: {YYYY}, {YY}, {MM}, {DD}.
+The WARC-Date of each record is used, so one input file may be split across subdirectories.
+With --name-generator=identity, only the first record date is used per input file.`
 
 	NameGenerator     = "name-generator"
-	NameGeneratorHelp = `the name generator to use. By setting this to 'identity', the input filename will also be used as
-output file name (prefix and suffix might still change). In this mode exactly one file is generated for every input file`
+	NameGeneratorHelp = `name generator strategy.
+With 'identity', the input filename is reused for output (prefix/suffix may still change),
+and exactly one output file is created per input file.`
 
 	Flush     = "flush"
-	FlushHelp = `if true, sync WARC file to disk after writing each record`
+	FlushHelp = `sync each WARC file to disk after every record`
 
 	WarcVersion     = "warc-version"
-	WarcVersionHelp = `the WARC version to use for created files`
+	WarcVersionHelp = `WARC version used for generated files`
 
 	DefaultDate     = "default-date"
-	DefaultDateHelp = `fetch date to use for records missing date metadata. Fetchtime is set to 12:00 UTC for the date`
+	DefaultDateHelp = `fallback date used when records are missing WARC-Date metadata (time is set to 12:00 UTC)`
 
 	OutputDir     = "output-dir"
-	OutputDirHelp = `output directory for generated warc files. Directory must exist.`
+	OutputDirHelp = `output directory for generated WARC files (must already exist)`
 
 	OneToOne     = "one-to-one"
-	OneToOneHelp = `write each input file to a separate output file
-The same as --concurrent-writers=1, --file-size=0 and --name-generator=identity`
+	OneToOneHelp = `write each input file to exactly one output file.
+Equivalent to: --concurrent-writers=1 --file-size=0 --name-generator=identity`
 )
 
 type WarcWriterConfigFlags struct {

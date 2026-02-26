@@ -10,8 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 )
 
 var (
@@ -129,7 +128,7 @@ func TestWriteWarcRecord(t *testing.T) {
 			got := new(bytes.Buffer)
 			var currentOffset int64
 
-			for record, err := range warc.Records(warcFileReader, nil, 0, 0) {
+			for record, err := range warcFileReader.Records() {
 				if err != nil {
 					if !errors.Is(err, test.err) {
 						t.Fatal(err)

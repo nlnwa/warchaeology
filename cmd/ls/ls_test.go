@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/afero"
 )
 
@@ -48,7 +48,7 @@ func BenchmarkListFile(b *testing.B) {
 
 	opts := &ListOptions{
 		writer:            writer,
-		warcRecordOptions: []gowarc.WarcRecordOption{gowarc.WithBufferTmpDir(b.TempDir())},
+		warcRecordOptions: []gowarc.WarcRecordOption{gowarc.WithBufferTmpDir(b.TempDir()), gowarc.WithSkipParseBlock()},
 	}
 
 	for b.Loop() {

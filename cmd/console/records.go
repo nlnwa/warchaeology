@@ -4,50 +4,59 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"strings"
 
 	"github.com/awesome-gocui/gocui"
 	"github.com/nationallibraryofnorway/warchaeology/v4/cmd/internal/flag"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/viper"
 )
 
 type record struct {
 	id         string
 	offset     int64
+	size       int64
 	recordType gowarc.RecordType
 	hasError   bool
+	errMsg     string
 }
 
-func (warcRecordRecord record) String() string {
-	var result strings.Builder
-	if warcRecordRecord.hasError {
+func (r record) titleWithSize() string {
+	if r.size > 0 {
+		return fmt.Sprintf("%s (%dB)", r.id, r.size)
+	}
+	return r.id
+}
+
+func (r record) String() string {
+	result := strings.Builder{}
+	title := r.titleWithSize()
+	if r.hasError {
 		result.WriteString(escapeFgColor(ErrorColor))
-		result.WriteString(warcRecordRecord.id)
+		result.WriteString(title)
 		result.WriteString(escapeFgColor(gocui.ColorDefault))
 	} else {
 		reset := escapeFgColor(gocui.ColorDefault)
-		switch warcRecordRecord.recordType {
+		switch r.recordType {
 		case gowarc.Warcinfo:
-			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(WarcInfoColor), warcRecordRecord.id, reset)
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(WarcInfoColor), title, reset)
 		case gowarc.Request:
-			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(RequestColor), warcRecordRecord.id, reset)
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(RequestColor), title, reset)
 		case gowarc.Response:
-			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ResponseColor), warcRecordRecord.id, reset)
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ResponseColor), title, reset)
 		case gowarc.Metadata:
-			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(MetadataColor), warcRecordRecord.id, reset)
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(MetadataColor), title, reset)
 		case gowarc.Resource:
-			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ResourceColor), warcRecordRecord.id, reset)
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ResourceColor), title, reset)
 		case gowarc.Revisit:
-			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(RevisitColor), warcRecordRecord.id, reset)
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(RevisitColor), title, reset)
 		case gowarc.Continuation:
-			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ContinuationColor), warcRecordRecord.id, reset)
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ContinuationColor), title, reset)
 		case gowarc.Conversion:
-			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ConversionColor), warcRecordRecord.id, reset)
+			fmt.Fprintf(&result, "%s%s%s", escapeFgColor(ConversionColor), title, reset)
 		default:
-			result.WriteString(warcRecordRecord.id)
+			result.WriteString(title)
 		}
 	}
 	return result.String()
@@ -56,34 +65,45 @@ func (warcRecordRecord record) String() string {
 func populateRecords(gui *gocui.Gui, ctx context.Context, finishedCb func(), widgetList *ListWidget, data any) {
 	warcFileReader, err := gowarc.NewWarcFileReader(data.(string), 0, gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
-		panic(err)
+		widgetList.records = append(widgetList.records, record{hasError: true, errMsg: err.Error()})
+		finishedCb()
+		return
 	}
-	defer warcFileReader.Close()
+	defer func() { _ = warcFileReader.Close() }()
 
 	for {
 		select {
 		case <-ctx.Done():
 			goto end
 		default:
-			warcRecord, offset, validate, err := warcFileReader.Next()
+			rec, err := warcFileReader.Next()
 			if err == io.EOF {
 				goto end
 			}
 			if err != nil {
+				widgetList.records = append(widgetList.records, record{hasError: true, errMsg: err.Error()})
 				goto end
 			}
-			_ = warcRecord.ValidateDigest(validate)
+			warcRecord := rec.WarcRecord
+			offset := rec.Offset
+			validation := append([]error{}, rec.Validation...)
+			digestValidation, err := warcRecord.ValidateDigest()
+			validation = append(validation, digestValidation...)
+			if err != nil {
+				validation = append(validation, err)
+			}
 
 			warcRecordRecord := record{
 				id:         warcRecord.WarcHeader().Get(gowarc.WarcRecordID),
 				offset:     offset,
+				size:       rec.Size,
 				recordType: warcRecord.Type(),
 			}
 
-			if err := warcRecord.Close(); err != nil {
-				*validate = append(*validate, err)
+			if err := rec.Close(); err != nil {
+				validation = append(validation, err)
 			}
-			warcRecordRecord.hasError = !validate.Valid()
+			warcRecordRecord.hasError = len(validation) > 0
 
 			widgetList.records = append(widgetList.records, warcRecordRecord)
 		}
@@ -120,42 +140,14 @@ func populateFiles(gui *gocui.Gui, ctx context.Context, finishedCb func(), widge
 		case <-ctx.Done():
 			goto end
 		default:
-			if strings.HasSuffix(entry.Name(), ".warc") || strings.HasSuffix(entry.Name(), ".warc.gz") {
-				widgetList.records = append(widgetList.records, entry.Name())
+			for _, suffix := range state.suffixes {
+				if strings.HasSuffix(entry.Name(), suffix) {
+					widgetList.records = append(widgetList.records, entry.Name())
+					break
+				}
 			}
 		}
 	}
 end:
 	finishedCb()
-}
-
-// Copied from standard lib for go 1.17 while we are waiting for 1.17 to be in common use
-// dirInfo is a DirEntry based on a FileInfo.
-type dirInfo struct {
-	fileInfo fs.FileInfo
-}
-
-func (directoryInfo dirInfo) IsDir() bool {
-	return directoryInfo.fileInfo.IsDir()
-}
-
-func (directoryInfo dirInfo) Type() fs.FileMode {
-	return directoryInfo.fileInfo.Mode().Type()
-}
-
-func (directoryInfo dirInfo) Info() (fs.FileInfo, error) {
-	return directoryInfo.fileInfo, nil
-}
-
-func (directoryInfo dirInfo) Name() string {
-	return directoryInfo.fileInfo.Name()
-}
-
-// FileInfoToDirEntry returns a DirEntry that returns information from info.
-// If info is nil, FileInfoToDirEntry returns nil.
-func FileInfoToDirEntry(fileInfo fs.FileInfo) fs.DirEntry {
-	if fileInfo == nil {
-		return nil
-	}
-	return dirInfo{fileInfo: fileInfo}
 }

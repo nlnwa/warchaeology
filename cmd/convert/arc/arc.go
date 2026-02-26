@@ -20,7 +20,7 @@ import (
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warcwriterconfig"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/workerpool"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -303,37 +303,38 @@ func (o *ConvertArcOptions) handleFile(fs afero.Fs, fileName string) (stat.Resul
 		}()
 	}
 
-	for record, err := range warc.Records(arcFileReader, nil, 0, 0) {
+	records := warc.Compose(arcFileReader.Records(), nil, 0, 0)
+	for record, err := range records {
 		if err != nil {
-			return result, warc.Error(record, err)
+			return result, warc.ErrorFrom(record, err)
 		}
 		if writer == nil || !o.WarcWriterConfig.OneToOneWriter {
 			warcDate, err := record.WarcRecord.WarcHeader().GetTime(gowarc.WarcDate)
 			if err != nil {
-				return result, warc.Error(record, err)
+				return result, warc.ErrorFrom(record, err)
 			}
 			writer, err = o.WarcWriterConfig.GetWarcWriter(fileName, warcDate)
 			if err != nil {
-				return result, warc.Error(record, err)
+				return result, warc.ErrorFrom(record, err)
 			}
 		}
 		err = o.handleRecord(writer, record, result)
 		if err != nil {
-			return result, warc.Error(record, err)
+			return result, warc.ErrorFrom(record, err)
 		}
 	}
 
 	return result, nil
 }
 
-func (o *ConvertArcOptions) handleRecord(warcFileWriter *gowarc.WarcFileWriter, record warc.Record, result stat.Result) error {
+func (o *ConvertArcOptions) handleRecord(warcFileWriter *gowarc.WarcFileWriter, record gowarc.Record, result stat.Result) error {
 	defer record.Close()
 
 	result.IncrRecords()
 
-	if !record.Validation.Valid() {
-		for _, err := range *record.Validation {
-			result.AddError(warc.Error(record, err))
+	if len(record.Validation) > 0 {
+		for _, err := range record.Validation {
+			result.AddError(warc.ErrorFrom(record, err))
 		}
 	}
 

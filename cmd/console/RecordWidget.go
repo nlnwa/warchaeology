@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/awesome-gocui/gocui"
 	"github.com/nationallibraryofnorway/warchaeology/v4/cmd/internal/flag"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/viper"
 )
 
@@ -33,6 +34,28 @@ func NewRecordWidget(name, prev, next string) *RecordWidget {
 
 func (recordWidget *RecordWidget) Layout(gui *gocui.Gui) error {
 	maxX, maxY := gui.Size()
+	if state.fullView {
+		if _, err := gui.SetView(recordWidget.contentView, 0, 0, maxX-1, maxY-2, 0); err != nil {
+			if err != gocui.ErrUnknownView {
+				return err
+			}
+		}
+		if view, err := gui.View(recordWidget.contentView); err == nil {
+			view.FgColor = gocui.ColorDefault
+			view.BgColor = gocui.ColorDefault
+			view.SelBgColor = gocui.ColorWhite
+			view.SelFgColor = gocui.ColorBlack
+			view.Highlight = false
+			view.Wrap = true
+			view.Title = "WARC content [FULL]"
+		}
+		_ = gui.DeleteView(recordWidget.headerView)
+		_ = gui.DeleteView(recordWidget.errorView)
+
+		_ = recordWidget.addKeybindings(gui, recordWidget.contentView)
+		return nil
+	}
+
 	dynamicColumnWidth := max(maxX-60, 51)
 
 	if view, err := gui.SetView(recordWidget.headerView, 50, 10, dynamicColumnWidth, 30, gocui.BOTTOM|gocui.RIGHT); err != nil {
@@ -58,7 +81,7 @@ func (recordWidget *RecordWidget) Layout(gui *gocui.Gui) error {
 		view.SelFgColor = gocui.ColorBlack
 		view.Highlight = false
 		view.Wrap = true
-		view.Title = "WARC content"
+		view.Title = "WARC content [z]"
 	}
 
 	if view, err := gui.SetView(recordWidget.errorView, dynamicColumnWidth, 10, maxX-1, maxY-2, gocui.LEFT); err != nil {
@@ -143,54 +166,65 @@ func (recordWidget *RecordWidget) addKeybindings(gui *gocui.Gui, widget string) 
 }
 
 func (recordWidget *RecordWidget) readRecord(gui *gocui.Gui, widget *ListWidget) {
-	warcFileReader, err := gowarc.NewWarcFileReader(state.dir+"/"+state.file, widget.filteredRecords[widget.selected].(record).offset,
+	selected := widget.filteredRecords[widget.selected].(record)
+	if selected.errMsg != "" {
+		recordWidget.renderErrors(gui, []error{fmt.Errorf("%s", selected.errMsg)})
+		recordWidget.clearViews(gui)
+		return
+	}
+
+	warcFileReader, err := gowarc.NewWarcFileReader(filepath.Join(state.dir, state.file), selected.offset,
 		gowarc.WithBufferTmpDir(viper.GetString(flag.TmpDir)))
 	if err != nil {
-		panic(err)
+		recordWidget.renderErrors(gui, []error{err})
+		recordWidget.clearViews(gui)
+		return
 	}
 	defer func() { _ = warcFileReader.Close() }()
 
-	warcRecord, offset, validation, err := warcFileReader.Next()
+	record, err := warcFileReader.Next()
 	if err != nil {
-		panic(err)
+		recordWidget.renderErrors(gui, []error{err})
+		recordWidget.clearViews(gui)
+		return
 	}
-	defer func() { _ = warcRecord.Close() }()
+	defer record.Close()
 
-	recordWidget.poopulateHeader(gui, warcRecord, offset)
-	recordWidget.poopulateContent(gui, warcRecord)
+	warcRecord := record.WarcRecord
+	offset := record.Offset
+	validation := append([]error{}, record.Validation...)
 
-	if err := warcRecord.ValidateDigest(validation); err != nil {
-		*validation = append(*validation, err)
-	}
+	recordWidget.populateHeader(gui, warcRecord, offset, record.Size)
+	recordWidget.populateContent(gui, warcRecord)
 
-	if err := warcRecord.Close(); err != nil {
-		*validation = append(*validation, err)
-	}
-
-	view, err := gui.View(recordWidget.errorView)
+	digestValidation, err := warcRecord.ValidateDigest()
+	validation = append(validation, digestValidation...)
 	if err != nil {
-		panic(err)
+		validation = append(validation, err)
 	}
-	view.Clear()
-	_, _ = fmt.Fprintf(view, "%s\n", validation)
+	recordWidget.renderErrors(gui, validation)
 }
 
-func (recordWidget *RecordWidget) poopulateHeader(gui *gocui.Gui, warcRecord gowarc.WarcRecord, offset int64) {
+func (recordWidget *RecordWidget) populateHeader(gui *gocui.Gui, warcRecord gowarc.WarcRecord, offset int64, size int64) {
 	view, err := gui.View(recordWidget.headerView)
 	if err != nil {
-		panic(err)
+		return
 	}
 	view.Clear()
-	view.Subtitle = fmt.Sprintf("Offset: %d", offset)
+	if size > 0 {
+		view.Subtitle = fmt.Sprintf("Offset: %d, Size: %dB", offset, size)
+	} else {
+		view.Subtitle = fmt.Sprintf("Offset: %d", offset)
+	}
 	visibleLineEndingFilter := &visibleLineEndingFilter{view}
 	_, _ = visibleLineEndingFilter.Write([]byte(warcRecord.Version().String() + "\r\n"))
 	_, _ = warcRecord.WarcHeader().Write(visibleLineEndingFilter)
 }
 
-func (recordWidget *RecordWidget) poopulateContent(gui *gocui.Gui, warcRecord gowarc.WarcRecord) {
+func (recordWidget *RecordWidget) populateContent(gui *gocui.Gui, warcRecord gowarc.WarcRecord) {
 	view, err := gui.View(recordWidget.contentView)
 	if err != nil {
-		panic(err)
+		return
 	}
 	view.Clear()
 	if _, ok := warcRecord.Block().(gowarc.PayloadBlock); ok {
@@ -200,27 +234,55 @@ func (recordWidget *RecordWidget) poopulateContent(gui *gocui.Gui, warcRecord go
 	visibleLineEndingFilter := &visibleLineEndingFilter{view}
 	ioReader, err := warcRecord.Block().RawBytes()
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintf(view, "<error reading block: %v>\n", err)
+		return
 	}
-	content, err := io.ReadAll(ioReader)
+	bytesWritten, err := io.Copy(visibleLineEndingFilter, ioReader)
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintf(view, "<error rendering block: %v>\n", err)
+		return
 	}
-	_, _ = visibleLineEndingFilter.Write(content)
 
-	subtitle := fmt.Sprintf("Blocksize: %d", len(content))
+	subtitle := fmt.Sprintf("Blocksize: %d", bytesWritten)
 	if payloadblock, ok := warcRecord.Block().(gowarc.PayloadBlock); ok {
 		ioReader, err := payloadblock.PayloadBytes()
 		if err != nil {
-			panic(err)
+			view.Subtitle = subtitle
+			return
 		}
 		bytesWritten, err := io.Copy(io.Discard, ioReader)
 		if err != nil {
-			panic(err)
+			view.Subtitle = subtitle
+			return
 		}
 		subtitle = fmt.Sprintf("%s, PayloadSize: %d", subtitle, bytesWritten)
 	}
 	view.Subtitle = subtitle
+}
+
+func (recordWidget *RecordWidget) clearViews(gui *gocui.Gui) {
+	for _, name := range []string{recordWidget.headerView, recordWidget.contentView} {
+		if view, err := gui.View(name); err == nil {
+			view.Clear()
+		}
+	}
+}
+
+func (recordWidget *RecordWidget) renderErrors(gui *gocui.Gui, errs []error) {
+	view, err := gui.View(recordWidget.errorView)
+	if err != nil {
+		return
+	}
+	view.Clear()
+	if len(errs) == 0 {
+		_, _ = fmt.Fprintln(view, "[]")
+		return
+	}
+	for _, validationErr := range errs {
+		if validationErr != nil {
+			_, _ = fmt.Fprintf(view, "%v\n", validationErr)
+		}
+	}
 }
 
 type visibleLineEndingFilter struct {
@@ -264,6 +326,11 @@ func (recordWidget *RecordWidget) scroll(view *gocui.View, ScrollDelta int) erro
 }
 
 func (recordWidget *RecordWidget) prevView(gui *gocui.Gui, view *gocui.View) error {
+	if state.fullView && state.curView == recordWidget.contentView {
+		state.curView = recordWidget.prev
+		return nil
+	}
+
 	switch state.curView {
 	case recordWidget.errorView:
 		state.curView = recordWidget.contentView
@@ -276,6 +343,11 @@ func (recordWidget *RecordWidget) prevView(gui *gocui.Gui, view *gocui.View) err
 }
 
 func (recordWidget *RecordWidget) nextView(gui *gocui.Gui, view *gocui.View) error {
+	if state.fullView && state.curView == recordWidget.contentView {
+		state.curView = recordWidget.next
+		return nil
+	}
+
 	switch state.curView {
 	case recordWidget.headerView:
 		state.curView = recordWidget.contentView
@@ -289,5 +361,13 @@ func (recordWidget *RecordWidget) nextView(gui *gocui.Gui, view *gocui.View) err
 
 func (recordWidget *RecordWidget) currentView(gui *gocui.Gui, view *gocui.View) error {
 	state.curView = view.Name()
+	return nil
+}
+
+func (recordWidget *RecordWidget) toggleContentFullscreen(gui *gocui.Gui, view *gocui.View) error {
+	state.fullView = !state.fullView
+	if state.fullView {
+		state.curView = recordWidget.contentView
+	}
 	return nil
 }
