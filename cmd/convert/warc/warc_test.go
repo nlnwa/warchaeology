@@ -4,9 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warcwriterconfig"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/afero"
 )
 
@@ -159,16 +158,16 @@ func TestRepairWarcFile(t *testing.T) {
 			}
 			defer func() { _ = wr.Close() }()
 
-			for record, err := range warc.Records(wr, nil, 0, 0) {
+			for record, err := range wr.Records() {
 				if err != nil {
 					t.Fatal(err)
 				}
-				for _, err = range *record.Validation {
+				for _, err = range record.Validation {
 					if err != nil {
 						t.Error(err)
 					}
 				}
-				record.Close()
+				_ = record.Close()
 			}
 		})
 	}

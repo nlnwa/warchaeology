@@ -3,10 +3,9 @@ package index
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/dgraph-io/badger/v3"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 )
 
 type DigestIndex struct {
@@ -16,9 +15,6 @@ type DigestIndex struct {
 }
 
 func NewDigestIndex(indexDir string, keepIndex bool, newIndex bool) (*DigestIndex, error) {
-	// Set GOMAXPROCS to 128 as recommended by badger
-	runtime.GOMAXPROCS(128)
-
 	dir := filepath.Join(indexDir, "digest-index")
 
 	db, err := badger.Open(badger.DefaultOptions(dir).WithLoggingLevel(badger.WARNING))
@@ -52,23 +48,22 @@ func (digestIndex *DigestIndex) IsRevisit(key string, revisitRef *gowarc.Revisit
 	if err != nil {
 		return nil, err
 	}
-	err = digestIndex.db.Update(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(key))
-		if err == badger.ErrKeyNotFound {
-			return txn.Set([]byte(key), val)
-		}
-		if err != nil {
-			return err
-		}
-		return item.Value(func(val []byte) error {
-			rr, err := UnmarshalRevisitRef(val)
-			revisitReference = rr
-			return err
+	err = runWithConflictRetry(func() error {
+		return digestIndex.db.Update(func(txn *badger.Txn) error {
+			item, err := txn.Get([]byte(key))
+			if err == badger.ErrKeyNotFound {
+				return txn.Set([]byte(key), val)
+			}
+			if err != nil {
+				return err
+			}
+			return item.Value(func(val []byte) error {
+				rr, err := UnmarshalRevisitRef(val)
+				revisitReference = rr
+				return err
+			})
 		})
 	})
-	if err == badger.ErrConflict {
-		return digestIndex.IsRevisit(key, revisitRef)
-	}
 	return revisitReference, err
 }
 

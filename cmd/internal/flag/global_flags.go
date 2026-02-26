@@ -7,16 +7,16 @@ import (
 
 const (
 	LogFileNameFlag = "log-file"
-	LogFileNameHelp = `log to file`
+	LogFileNameHelp = `log output destination ('-' for stderr)`
 
 	LogFormatFlag = "log-format"
-	LogFormatHelp = `log format. Valid values: text, json`
+	LogFormatHelp = `log output format (text or json)`
 
 	LogLevelFlag = "log-level"
-	LogLevelHelp = `log level. Valid values: debug, info, warn, error`
+	LogLevelHelp = `minimum log level (debug, info, warn, error)`
 
 	ConfigFlag = "config"
-	ConfigHelp = `config file. If not set $XDG_CONFIG_DIRS, /etc/xdg/warc $XDG_CONFIG_HOME/warc and the current directory will be searched for a file named 'config.yaml'`
+	ConfigHelp = `path to config file; if unset, searches standard XDG config locations and the current directory for config.yaml`
 )
 
 type PersistentFlags struct {

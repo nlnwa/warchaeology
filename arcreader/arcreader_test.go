@@ -4,8 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/nlnwa/whatwg-url/url"
 	"github.com/spf13/afero"
 )
@@ -64,10 +63,11 @@ func TestArcReader(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			for _, err := range warc.Records(arcFileReader, nil, 0, 0) {
+			for record, err := range arcFileReader.Records() {
 				if err != nil && !test.wantErr {
 					t.Errorf("unexpected error: %v", err)
 				}
+				_ = record.Close()
 			}
 		})
 	}

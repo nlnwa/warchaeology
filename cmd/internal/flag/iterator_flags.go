@@ -7,16 +7,16 @@ import (
 
 const (
 	Offset     = "offset"
-	OffsetHelp = `start processing from this byte offset in file. Defaults to 0.`
+	OffsetHelp = `start processing at this byte offset in the input file (default: 0)`
 
 	RecordNum     = "nth"
-	RecordNumHelp = `only process the n'th record. Only records that are not filtered out by other options are counted.`
+	RecordNumHelp = `process only the n-th record after filtering`
 
 	Limit     = "limit"
-	LimitHelp = `limit the number of records to process. If the -n option is specified the limit is ignored.`
+	LimitHelp = `maximum number of records to process; ignored when --nth is set`
 
 	Force     = "force"
-	ForceHelp = `force the record iterator to continue regardless of errors.`
+	ForceHelp = `continue iterating even when record read errors occur`
 )
 
 type WarcIteratorFlags struct {

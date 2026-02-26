@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/stat"
@@ -17,9 +16,6 @@ type FileIndex struct {
 }
 
 func NewFileIndex(indexDir string, keepIndex, newIndex bool) (*FileIndex, error) {
-	// Set GOMAXPROCS to 128 as recommended by badger
-	runtime.GOMAXPROCS(128)
-
 	dir := filepath.Join(indexDir, "file-index")
 
 	db, err := badger.Open(badger.DefaultOptions(dir).WithLoggingLevel(badger.WARNING))
@@ -44,38 +40,37 @@ func NewFileIndex(indexDir string, keepIndex, newIndex bool) (*FileIndex, error)
 }
 
 func (idx *FileIndex) GetFileStats(key string) (result stat.Result, err error) {
-	err = idx.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(key))
-		if err != nil {
-			return err
-		}
-		return item.Value(func(val []byte) error {
-			result = stat.NewResult(key)
-			return result.UnmarshalBinary(val)
+	err = runWithConflictRetry(func() error {
+		return idx.db.View(func(txn *badger.Txn) error {
+			item, err := txn.Get([]byte(key))
+			if err != nil {
+				return err
+			}
+			return item.Value(func(val []byte) error {
+				result = stat.NewResult(key)
+				return result.UnmarshalBinary(val)
+			})
 		})
 	})
 	if errors.Is(err, badger.ErrKeyNotFound) {
 		err = nil
-	} else if errors.Is(err, badger.ErrConflict) {
-		return idx.GetFileStats(key)
 	}
 	return
 }
 
 func (idx *FileIndex) SaveFileStats(key string, result stat.Result) error {
-	err := idx.db.Update(func(txn *badger.Txn) error {
-		if result == nil {
-			return txn.Set([]byte(key), nil)
-		}
-		val, err := result.MarshalBinary()
-		if err != nil {
-			return err
-		}
-		return txn.Set([]byte(key), val)
+	err := runWithConflictRetry(func() error {
+		return idx.db.Update(func(txn *badger.Txn) error {
+			if result == nil {
+				return txn.Set([]byte(key), nil)
+			}
+			val, err := result.MarshalBinary()
+			if err != nil {
+				return err
+			}
+			return txn.Set([]byte(key), val)
+		})
 	})
-	if errors.Is(err, badger.ErrConflict) {
-		return idx.SaveFileStats(key, result)
-	}
 	return err
 }
 

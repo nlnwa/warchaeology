@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 )
 
 var (
@@ -21,7 +21,7 @@ var testFiles = map[string]string{
 
 var tests = []struct {
 	file         string // path to WARC file
-	limit        int    // limit number of recor
+	limit        int    // limit number of records
 	nth          int    // return only the Nth record
 	wantCount    int    // expected number of records from iterator
 	wantRecordId string // expected record id
@@ -53,7 +53,7 @@ var tests = []struct {
 	},
 }
 
-func TestIterator(t *testing.T) {
+func TestCompose(t *testing.T) {
 	for _, test := range tests {
 		t.Run(filepath.Base(test.file), func(t *testing.T) {
 			// capture test variable from outer scope
@@ -74,8 +74,9 @@ func TestIterator(t *testing.T) {
 			// count records
 			count := 0
 
-			// iterate over the records channel
-			for record, err := range Records(warcFileReader, nil, test.nth, test.limit) {
+			// iterate over records
+			records := Compose(warcFileReader.Records(), nil, test.nth, test.limit)
+			for record, err := range records {
 				if err != nil {
 					if !errors.Is(err, test.err) {
 						t.Fatal(err)

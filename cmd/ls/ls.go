@@ -14,7 +14,7 @@ import (
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/filter"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/workerpool"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -48,7 +48,7 @@ A number after the field letter restricts the field length. By adding a + or - s
 )
 
 type Writer interface {
-	WriteRecord(record warc.Record, fileName string) error
+	WriteRecord(record gowarc.Record, fileName string) error
 }
 
 type ListOptions struct {
@@ -113,6 +113,9 @@ func (f ListFlags) ToListOptions() (*ListOptions, error) {
 	}
 
 	opts := f.WarcRecordOptionFlags.ToWarcRecordOptions()
+	if !f.WarcRecordOptionFlags.StrictValidation() && !fieldsNeedParsedBlock(f.Fields()) {
+		opts = append(opts, gowarc.WithSkipParseBlock())
+	}
 
 	var writer Writer
 	if f.JSON() {
@@ -244,7 +247,8 @@ func (o *ListOptions) handleFile(ctx context.Context, fs afero.Fs, path string) 
 
 	var lastOffset int64 = -1
 
-	for record, err := range warc.Records(warcFileReader, o.filter, o.recordNum, o.recordCount) {
+	records := warc.Compose(warcFileReader.Records(), o.filter, o.recordNum, o.recordCount)
+	for record, err := range records {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -255,17 +259,17 @@ func (o *ListOptions) handleFile(ctx context.Context, fs afero.Fs, path string) 
 				lastOffset = record.Offset
 				continue
 			}
-			return warc.Error(record, err)
+			return warc.ErrorFrom(record, err)
 		}
 		if err := o.handleRecord(record, path); err != nil {
-			return warc.Error(record, err)
+			return warc.ErrorFrom(record, err)
 		}
 	}
 
 	return nil
 }
 
-func (o *ListOptions) handleRecord(record warc.Record, path string) error {
+func (o *ListOptions) handleRecord(record gowarc.Record, path string) error {
 	defer record.Close()
 	return o.writer.WriteRecord(record, path)
 }

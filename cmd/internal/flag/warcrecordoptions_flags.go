@@ -3,7 +3,7 @@ package flag
 import (
 	"os"
 
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/nlnwa/whatwg-url/url"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -11,16 +11,16 @@ import (
 
 const (
 	TmpDir     = "tmp-dir"
-	TmpDirHelp = `directory to use for temporary files`
+	TmpDirHelp = `directory used for temporary files`
 
 	StrictValidation     = "strict"
-	StrictValidationHelp = `sets the parser to fail on first validation error.`
+	StrictValidationHelp = `fail on the first validation error`
 
-	LenientValidation      = "lenient"
-	LentientValidationHelp = `sets the parser to do as little validation as possible.`
+	LenientValidation     = "lenient"
+	LenientValidationHelp = `minimize validation for faster, more permissive parsing`
 
 	LaxHostParsing     = "lax-host-parsing"
-	LaxHostParsingHelp = `sets the url parser to be lenient with host parsing.`
+	LaxHostParsingHelp = `allow lenient host parsing in URL parsing`
 )
 
 type WarcRecordOptionFlags struct {
@@ -30,7 +30,7 @@ func (f WarcRecordOptionFlags) AddFlags(cmd *cobra.Command) {
 	flags := cmd.Flags()
 	flags.String(TmpDir, os.TempDir(), TmpDirHelp)
 	flags.Bool(StrictValidation, false, StrictValidationHelp)
-	flags.Bool(LenientValidation, false, LentientValidationHelp)
+	flags.Bool(LenientValidation, false, LenientValidationHelp)
 	flags.Bool(LaxHostParsing, false, LaxHostParsingHelp)
 }
 

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"slices"
+	"sort"
 	"syscall"
 
 	"github.com/nationallibraryofnorway/warchaeology/v4/cmd/internal/flag"
@@ -19,7 +20,7 @@ import (
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warcwriterconfig"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/workerpool"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -37,6 +38,9 @@ const (
 
 	RecordTypes     = "record-types"
 	RecordTypesHelp = `comma separated list of record types to deduplicate. Other record types are written as is.`
+
+	Deterministic     = "deterministic"
+	DeterministicHelp = `force deterministic execution order (single worker and sorted input paths)`
 )
 
 type DedupOptions struct {
@@ -52,6 +56,7 @@ type DedupOptions struct {
 	RecordTypes         []gowarc.RecordType
 	FileWalker          *filewalker.FileWalker
 	WarcRecordOptions   []gowarc.WarcRecordOption
+	Deterministic       bool
 	OpenInputFileHook   hooks.OpenInputFileHook
 	CloseInputFileHook  hooks.CloseInputFileHook
 	OpenOutputFileHook  hooks.OpenOutputFileHook
@@ -98,6 +103,7 @@ func (f DedupFlags) AddFlags(cmd *cobra.Command) {
 	flags.StringP(DedupSizeGain, "g", "2KB", DedupSizeGainHelp)
 	flags.String(MinIndexDiskFree, "1MB", MinIndexDiskFreeHelp)
 	flags.StringSlice(RecordTypes, []string{"response", "resource"}, RecordTypesHelp)
+	flags.Bool(Deterministic, false, DeterministicHelp)
 }
 
 func (f DedupFlags) BufferMaxMem() int64 {
@@ -116,6 +122,10 @@ func (f DedupFlags) RecordTypes() []string {
 	return viper.GetStringSlice(RecordTypes)
 }
 
+func (f DedupFlags) Deterministic() bool {
+	return viper.GetBool(Deterministic)
+}
+
 func (f DedupFlags) ToDedupOptions() (*DedupOptions, error) {
 	var recordTypes []gowarc.RecordType
 	for _, rt := range f.RecordTypes() {
@@ -130,6 +140,10 @@ func (f DedupFlags) ToDedupOptions() (*DedupOptions, error) {
 	}
 
 	concurrency := f.ConcurrencyFlags.Concurrency()
+	deterministic := f.Deterministic()
+	if deterministic {
+		concurrency = 1
+	}
 
 	warcWriterConfig, err := f.WarcWriterConfigFlags.ToWarcWriterConfig()
 	if err != nil {
@@ -186,6 +200,7 @@ func (f DedupFlags) ToDedupOptions() (*DedupOptions, error) {
 		RecordTypes:        recordTypes,
 		WarcWriterConfig:   warcWriterConfig,
 		WarcRecordOptions:  warcRecordOptions,
+		Deterministic:      deterministic,
 		DigestIndex:        digestIndex,
 		FileIndex:          fileIndex,
 		OpenInputFileHook:  openInputFileHook,
@@ -231,6 +246,9 @@ The remaining records are written as is.`,
 
 func (o *DedupOptions) Complete(cmd *cobra.Command, args []string) error {
 	o.Paths = append(o.Paths, args...)
+	if o.Deterministic {
+		sort.Strings(o.Paths)
+	}
 
 	return nil
 }
@@ -391,31 +409,32 @@ func (o *DedupOptions) handleFile(fs afero.Fs, path string) (stat.Result, error)
 		}()
 	}
 
-	for record, err := range warc.Records(warcReader, nil, 0, 0) {
+	records := warc.Compose(warcReader.Records(), nil, 0, 0)
+	for record, err := range records {
 		if err != nil {
-			return result, warc.Error(record, err)
+			return result, warc.ErrorFrom(record, err)
 		}
 
 		if writer == nil || !o.WarcWriterConfig.OneToOneWriter {
 			warcDate, err := record.WarcRecord.WarcHeader().GetTime(gowarc.WarcDate)
 			if err != nil {
-				return result, warc.Error(record, err)
+				return result, warc.ErrorFrom(record, err)
 			}
 			writer, err = o.WarcWriterConfig.GetWarcWriter(path, warcDate)
 			if err != nil {
-				return result, warc.Error(record, err)
+				return result, warc.ErrorFrom(record, err)
 			}
 		}
 		err = o.handleRecord(writer, record, result)
 		if err != nil {
-			return result, warc.Error(record, err)
+			return result, warc.ErrorFrom(record, err)
 		}
 	}
 
 	return result, nil
 }
 
-func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record warc.Record, result stat.Result) error {
+func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record gowarc.Record, result stat.Result) error {
 	defer record.Close()
 
 	result.IncrRecords()
@@ -427,14 +446,14 @@ func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record warc.R
 		return writeRecord(writer, warcRecord)
 	}
 
-	digest, err := getDigest(warcRecord, record.Validation)
+	digest, err := getDigest(warcRecord)
 	if err != nil {
-		result.AddError(warc.Error(record, fmt.Errorf("failed to get digest: %w", err)))
+		result.AddError(warc.ErrorFrom(record, fmt.Errorf("failed to get digest: %w", err)))
 	}
 
-	if !record.Validation.Valid() {
-		for _, err := range *record.Validation {
-			result.AddError(warc.Error(record, err))
+	if len(record.Validation) > 0 {
+		for _, err := range record.Validation {
+			result.AddError(warc.ErrorFrom(record, err))
 		}
 	}
 
@@ -452,13 +471,13 @@ func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record warc.R
 
 	revisitRef, err := warcRecord.CreateRevisitRef(profile)
 	if err != nil {
-		result.AddError(warc.Error(record, fmt.Errorf("error creating revisit ref: %w", err)))
+		result.AddError(warc.ErrorFrom(record, fmt.Errorf("error creating revisit ref: %w", err)))
 	}
 
 	// determine if the record is a revisit record
 	revisitReference, err := o.DigestIndex.IsRevisit(digest, revisitRef)
 	if err != nil {
-		result.AddError(warc.Error(record, fmt.Errorf("error getting revisit ref: %w", err)))
+		result.AddError(warc.ErrorFrom(record, fmt.Errorf("error getting revisit ref: %w", err)))
 	}
 
 	// write a normal record if one of:
@@ -472,7 +491,7 @@ func (o *DedupOptions) handleRecord(writer *gowarc.WarcFileWriter, record warc.R
 	// Make a revisit record. If it fails, write the original record.
 	revisit, err := warcRecord.ToRevisitRecord(revisitReference)
 	if err != nil {
-		result.AddError(warc.Error(record, fmt.Errorf("error creating revisit record: %w", err)))
+		result.AddError(warc.ErrorFrom(record, fmt.Errorf("error creating revisit record: %w", err)))
 		return writeRecord(writer, warcRecord)
 	}
 
@@ -505,7 +524,7 @@ func getRevisitProfile(warcRecord gowarc.WarcRecord) string {
 }
 
 // getDigest returns the digest of a record. If the record does not have a digest, it will be calculated and validated.
-func getDigest(warcRecord gowarc.WarcRecord, validation *gowarc.Validation) (string, error) {
+func getDigest(warcRecord gowarc.WarcRecord) (string, error) {
 	if warcRecord.WarcHeader().Has(gowarc.WarcPayloadDigest) {
 		return warcRecord.WarcHeader().Get(gowarc.WarcPayloadDigest), nil
 	}
@@ -516,7 +535,7 @@ func getDigest(warcRecord gowarc.WarcRecord, validation *gowarc.Validation) (str
 	if err := warcRecord.Block().Cache(); err != nil {
 		return "", fmt.Errorf("could not cache record: %w", err)
 	}
-	if err := warcRecord.ValidateDigest(validation); err != nil {
+	if _, err := warcRecord.ValidateDigest(); err != nil {
 		return "", fmt.Errorf("failed to validate digest: %w", err)
 	}
 	// If repair was enabled, headers were added by ValidateDigest

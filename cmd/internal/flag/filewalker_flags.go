@@ -10,13 +10,13 @@ import (
 
 const (
 	Recursive     = "recursive"
-	RecursiveHelp = "walk directories recursively"
+	RecursiveHelp = `walk input directories recursively`
 
 	FollowSymlinks     = "symlinks"
-	FollowSymlinksHelp = `follow symlinks`
+	FollowSymlinksHelp = `follow symbolic links while walking`
 
 	Suffixes     = "suffixes"
-	SuffixesHelp = `filter files by suffix`
+	SuffixesHelp = `only process files with these suffixes`
 )
 
 type FileWalkerFlags struct {

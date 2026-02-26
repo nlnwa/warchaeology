@@ -21,7 +21,7 @@ import (
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warcwriterconfig"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/workerpool"
 	"github.com/nationallibraryofnorway/warchaeology/v4/nedlibreader"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -289,40 +289,41 @@ func (o *ConvertNedlibOptions) handleFile(fs afero.Fs, fileName string) (stat.Re
 		}()
 	}
 
-	for record, err := range warc.Records(nedlibReader, nil, 0, 0) {
+	records := warc.Compose(nedlibReader.Records(), nil, 0, 0)
+	for record, err := range records {
 		if err != nil {
-			return result, warc.Error(record, err)
+			return result, warc.ErrorFrom(record, err)
 		}
 
 		warcDate, err := record.WarcRecord.WarcHeader().GetTime(gowarc.WarcDate)
 		if err != nil {
-			return result, warc.Error(record, err)
+			return result, warc.ErrorFrom(record, err)
 		}
 
 		syntheticFileName := time.To14(warcDate)
 
 		writer, err := o.WarcWriterConfig.GetWarcWriter(syntheticFileName, warcDate)
 		if err != nil {
-			return result, warc.Error(record, err)
+			return result, warc.ErrorFrom(record, err)
 		}
 
 		err = o.handleRecord(writer, record, result)
 		if err != nil {
-			return result, warc.Error(record, err)
+			return result, warc.ErrorFrom(record, err)
 		}
 	}
 
 	return result, nil
 }
 
-func (o *ConvertNedlibOptions) handleRecord(w *gowarc.WarcFileWriter, record warc.Record, result stat.Result) error {
+func (o *ConvertNedlibOptions) handleRecord(w *gowarc.WarcFileWriter, record gowarc.Record, result stat.Result) error {
 	defer record.Close()
 
 	result.IncrRecords()
 
-	if !record.Validation.Valid() {
-		for _, err := range *record.Validation {
-			result.AddError(warc.Error(record, err))
+	if len(record.Validation) > 0 {
+		for _, err := range record.Validation {
+			result.AddError(warc.ErrorFrom(record, err))
 		}
 	}
 

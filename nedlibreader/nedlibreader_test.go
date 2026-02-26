@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/afero"
 )
 
@@ -69,13 +69,14 @@ func TestNedlibReader(t *testing.T) {
 				warcRecordOptions: nil,
 			}
 
-			wr, _, _, err := nedlibReader.Next()
+			record, err := nedlibReader.Next()
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
 				return
 			}
+			wr := record.WarcRecord
 			for key, value := range test.warcHeaders {
 				if wr.WarcHeader().Get(key) != value {
 					t.Errorf("expected %s: %s, got %s: %s", key, value, key, wr.WarcHeader().Get(key))

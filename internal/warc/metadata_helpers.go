@@ -3,7 +3,7 @@ package warc
 import (
 	"time"
 
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/nlnwa/whatwg-url/url"
 )
 
@@ -22,16 +22,24 @@ type Metadata struct {
 	Offset     int64  `json:"offset,omitempty"`
 }
 
-func Url(wr gowarc.WarcRecord) string {
+func URL(wr gowarc.WarcRecord) string {
 	return wr.WarcHeader().Get(gowarc.WarcTargetURI)
+}
+
+func Url(wr gowarc.WarcRecord) string {
+	return URL(wr)
 }
 
 func Date(wr gowarc.WarcRecord) (time.Time, error) {
 	return wr.WarcHeader().GetTime(gowarc.WarcDate)
 }
 
-func IpAddress(wr gowarc.WarcRecord) string {
+func IPAddress(wr gowarc.WarcRecord) string {
 	return wr.WarcHeader().Get(gowarc.WarcIPAddress)
+}
+
+func IpAddress(wr gowarc.WarcRecord) string {
+	return IPAddress(wr)
 }
 
 func FileName(wr gowarc.WarcRecord) string {
@@ -47,15 +55,19 @@ func Hostname(wr gowarc.WarcRecord) string {
 	return ""
 }
 
-func RecordId(wr gowarc.WarcRecord) string {
+func RecordID(wr gowarc.WarcRecord) string {
 	return wr.WarcHeader().GetId(gowarc.WarcRecordID)
+}
+
+func RecordId(wr gowarc.WarcRecord) string {
+	return RecordID(wr)
 }
 
 func Checksum(wr gowarc.WarcRecord) string {
 	return wr.WarcHeader().Get(gowarc.WarcBlockDigest)
 }
 
-func MimeType(wr gowarc.WarcRecord) string {
+func MIMEType(wr gowarc.WarcRecord) string {
 	switch block := wr.Block().(type) {
 	case gowarc.HttpResponseBlock:
 		if block.HttpHeader() != nil {
@@ -67,6 +79,10 @@ func MimeType(wr gowarc.WarcRecord) string {
 		}
 	}
 	return ""
+}
+
+func MimeType(wr gowarc.WarcRecord) string {
+	return MIMEType(wr)
 }
 
 func StatusCode(wr gowarc.WarcRecord) int {

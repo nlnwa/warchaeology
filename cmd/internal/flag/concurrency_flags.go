@@ -9,7 +9,7 @@ import (
 
 const (
 	Concurrency     = "concurrency"
-	ConcurrencyHelp = `number of input files to process simultaneously.`
+	ConcurrencyHelp = `number of input files to process in parallel`
 )
 
 type ConcurrencyFlags struct{}

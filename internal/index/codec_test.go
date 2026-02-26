@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 )
 
 func Test_codec_decode(t *testing.T) {
@@ -78,6 +78,45 @@ func Test_codec_encode(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("encode() got = %v,\n want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_codec_decode_invalid(t *testing.T) {
+	tests := []struct {
+		name  string
+		value []byte
+	}{
+		{name: "empty", value: []byte{}},
+		{name: "too short", value: []byte{1, 2, 3}},
+		{name: "invalid profile", value: append([]byte{9}, make([]byte, oUri-1)...)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := UnmarshalRevisitRef(tt.value); err == nil {
+				t.Fatalf("expected error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func Test_codec_encode_invalid(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *gowarc.RevisitRef
+	}{
+		{name: "nil", value: nil},
+		{name: "invalid id", value: &gowarc.RevisitRef{Profile: gowarc.ProfileIdenticalPayloadDigestV1_1, TargetRecordId: "bad", TargetDate: "2006-11-17T11:48:47Z"}},
+		{name: "invalid date", value: &gowarc.RevisitRef{Profile: gowarc.ProfileIdenticalPayloadDigestV1_1, TargetRecordId: "<urn:uuid:ce151eae-2bb0-41a7-a1b5-a984d5e4fa70>", TargetDate: "not-a-date"}},
+		{name: "invalid profile", value: &gowarc.RevisitRef{Profile: "invalid", TargetRecordId: "<urn:uuid:ce151eae-2bb0-41a7-a1b5-a984d5e4fa70>", TargetDate: "2006-11-17T11:48:47Z"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := MarshalRevisitRef(tt.value); err == nil {
+				t.Fatalf("expected error for %s", tt.name)
 			}
 		})
 	}

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/awesome-gocui/gocui"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 )
 
 type recordFilter struct {
@@ -77,7 +77,7 @@ func indexFunc(recordfilter rune) bool {
 
 func (recordfilter *recordFilter) toggleErrorFilter(gui *gocui.Gui, view *gocui.View) error {
 	recordfilter.error = !recordfilter.error
-	recordView, err := gui.View("Records")
+	recordView, err := gui.View(viewRecords)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (recordfilter *recordFilter) toggleErrorFilter(gui *gocui.Gui, view *gocui.
 
 func (recordfilter *recordFilter) toggleRecordTypeFilter(gui *gocui.Gui, recType gowarc.RecordType) error {
 	recordfilter.recType = recordfilter.recType ^ recType
-	recordView, err := gui.View("Records")
+	recordView, err := gui.View(viewRecords)
 	if err != nil {
 		return err
 	}
@@ -107,11 +107,11 @@ func (recordfilter *recordFilter) refreshHelp(gui *gocui.Gui) {
 	toolbarString.WriteString(filterString("reSource", ResourceColor, recordfilter.recType&gowarc.Resource != 0))
 	toolbarString.WriteString(filterString("Continuation", ContinuationColor, recordfilter.recType&gowarc.Continuation != 0))
 	toolbarString.WriteString(filterString("coNversion", ConversionColor, recordfilter.recType&gowarc.Conversion != 0))
-	if view, err := gui.View("help"); err == nil {
+	if view, err := gui.View(viewHelp); err == nil {
 		view.Clear()
-		helpText := "h: help"
+		helpText := "h: help | z: fullscreen"
 		width, _ := view.Size()
-		space := width - 85
+		space := max(width-100, 1)
 		fmt.Fprintf(view, "%[1]s%[2]*[3]s", toolbarString.String(), space, helpText)
 	}
 }

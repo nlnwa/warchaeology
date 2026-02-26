@@ -15,7 +15,7 @@ import (
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/filewalker"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/filter"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -239,7 +239,8 @@ func (o *CatOptions) handleFile(ctx context.Context, fs afero.Fs, path string) e
 
 	var lastOffset int64 = -1
 
-	for record, err := range warc.Records(warcFileReader, o.filter, o.recordNum, o.recordCount) {
+	records := warc.Compose(warcFileReader.Records(), o.filter, o.recordNum, o.recordCount)
+	for record, err := range records {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -250,16 +251,16 @@ func (o *CatOptions) handleFile(ctx context.Context, fs afero.Fs, path string) e
 				lastOffset = record.Offset
 				continue
 			}
-			return warc.Error(record, err)
+			return warc.ErrorFrom(record, err)
 		}
 		if err := o.handleRecord(record); err != nil {
-			return warc.Error(record, err)
+			return warc.ErrorFrom(record, err)
 		}
 	}
 	return nil
 }
 
-func (o *CatOptions) handleRecord(record warc.Record) error {
+func (o *CatOptions) handleRecord(record gowarc.Record) error {
 	defer record.Close()
 	var w io.Writer
 	if o.compress {

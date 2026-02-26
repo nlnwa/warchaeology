@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	archivefs "github.com/nationallibraryofnorway/warchaeology/v4/internal/fs"
 	"github.com/spf13/afero"
 )
 
@@ -64,24 +65,29 @@ func (fw *FileWalker) hasSuffix(path string) bool {
 }
 
 func (fw *FileWalker) Walk(ctx context.Context, path string, walkFn func(fs afero.Fs, path string, err error) error) error {
-	return fw.walkDir(ctx, path, path, walkFn)
+	return fw.walkDir(ctx, fw.Fs, path, path, "", walkFn)
 }
 
-func (fw *FileWalker) walkDir(ctx context.Context, root string, dirName string, walkFn func(fs afero.Fs, path string, err error) error) error {
-	return afero.Walk(fw.Fs, dirName, func(path string, info fs.FileInfo, err error) error {
+func (fw *FileWalker) walkDir(ctx context.Context, currentFs afero.Fs, root string, dirName string, mountPrefix string, walkFn func(fs afero.Fs, path string, err error) error) error {
+	return afero.Walk(currentFs, dirName, func(path string, info fs.FileInfo, err error) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 		if err != nil {
-			return walkFn(fw.Fs, path, err)
+			return walkFn(currentFs, path, err)
+		}
+
+		logicalPath := path
+		if mountPrefix != "" {
+			logicalPath = mountPrefix + "!" + path
 		}
 
 		if info.IsDir() {
 			// skip already processed directories
-			if fw.processedPaths.Contains(path) {
+			if fw.processedPaths.Contains(logicalPath) {
 				return filepath.SkipDir
 			} else {
-				fw.processedPaths.Add(path)
+				fw.processedPaths.Add(logicalPath)
 			}
 			// always process the path that is equal to the root directory
 			if root == path {
@@ -99,7 +105,7 @@ func (fw *FileWalker) walkDir(ctx context.Context, root string, dirName string, 
 			if !fw.FollowSymlinks {
 				return nil
 			}
-			linkReader, ok := fw.Fs.(afero.LinkReader)
+			linkReader, ok := currentFs.(afero.LinkReader)
 			if !ok {
 				return afero.ErrNoReadlink
 			}
@@ -110,19 +116,25 @@ func (fw *FileWalker) walkDir(ctx context.Context, root string, dirName string, 
 			if !filepath.IsAbs(linkPath) {
 				linkPath = filepath.Join(filepath.Dir(path), linkPath)
 			}
-			return fw.walkDir(ctx, root, linkPath, walkFn)
+			return fw.walkDir(ctx, currentFs, root, linkPath, mountPrefix, walkFn)
 		}
+
+		mountedFs, resolveErr := archivefs.ResolveFilesystem(currentFs, path)
+		if resolveErr == nil && mountedFs != currentFs {
+			return fw.walkDir(ctx, mountedFs, "/", "/", logicalPath, walkFn)
+		}
+
 		// filter files by suffix
 		if !fw.hasSuffix(path) {
 			return nil
 		}
 		// skip already processed files
-		if fw.processedPaths.Contains(path) {
+		if fw.processedPaths.Contains(logicalPath) {
 			return nil
 		} else {
-			fw.processedPaths.Add(path)
+			fw.processedPaths.Add(logicalPath)
 		}
 
-		return walkFn(fw.Fs, path, nil)
+		return walkFn(currentFs, path, nil)
 	})
 }

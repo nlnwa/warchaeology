@@ -13,16 +13,16 @@ import (
 
 const (
 	SrcFileSystem     = "input-file"
-	SrcFileSystemHelp = `input file (system). Default is to use OS file system.
+	SrcFileSystemHelp = `input filesystem source; default is the local OS filesystem
 Legal values:
 	/path/to/archive.( tar | tar.gz | tgz | zip | wacz )
 	ftp://user/pass@host:port
 `
 	SrcFileList     = "source-file-list"
-	SrcFileListHelp = `a file containing a list of files to process, one file per line`
+	SrcFileListHelp = `path to a file listing input paths, one per line`
 
 	FtpPoolSize     = "ftp-pool-size"
-	FtpPoolSizeHelp = `size of the ftp pool`
+	FtpPoolSizeHelp = `size of the FTP connection pool`
 )
 
 type SrcFileListFlags struct {

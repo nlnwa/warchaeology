@@ -3,7 +3,6 @@ package console
 import (
 	"context"
 	"fmt"
-	"runtime/debug"
 	"strings"
 	"time"
 
@@ -47,11 +46,15 @@ func NewListWidget(name string, prev, next string,
 
 func (widgetList *ListWidget) Init(gui *gocui.Gui, data any) {
 	if widgetList.cancelFunc != nil {
-		widgetList.cancelRefreshFunc()
-		widgetList.cancelRefreshFunc = nil
+		if widgetList.cancelRefreshFunc != nil {
+			widgetList.cancelRefreshFunc()
+			widgetList.cancelRefreshFunc = nil
+		}
 		widgetList.cancelFunc()
 		widgetList.cancelFunc = nil
-		<-widgetList.finished.Done()
+		if widgetList.finished != nil {
+			<-widgetList.finished.Done()
+		}
 		widgetList.finished = nil
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -125,6 +128,9 @@ func (widgetList *ListWidget) Layout(gui *gocui.Gui) error {
 		return err
 	}
 	if err := gui.SetKeybinding(widgetList.name, 'f', gocui.ModNone, widgetList.search); err != nil {
+		return err
+	}
+	if err := gui.SetKeybinding(widgetList.name, '/', gocui.ModNone, widgetList.search); err != nil {
 		return err
 	}
 	if err := gui.SetKeybinding(widgetList.name, gocui.KeyEnter, gocui.ModNone, widgetList.nextView); err != nil {
@@ -310,25 +316,26 @@ func (widgetList *ListWidget) selectLine(gui *gocui.Gui, view *gocui.View, selec
 }
 
 func (widgetList *ListWidget) update(gui *gocui.Gui, ctx context.Context, finished context.Context) {
-	time.Sleep(100 * time.Millisecond)
-	view, err := gui.View(widgetList.name)
-	if err != nil {
-		panic(err)
-	}
-	view.Clear()
+	gui.Update(func(guiInner *gocui.Gui) error {
+		view, viewErr := guiInner.View(widgetList.name)
+		if viewErr != nil {
+			return nil
+		}
+		view.Clear()
+		return nil
+	})
 
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Printf("Recovered in f %s\n%s", r, debug.Stack())
-			}
-		}()
-
 		length := 0
+		ticker := time.NewTicker(40 * time.Millisecond)
+		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
-				<-finished.Done()
+				if finished != nil {
+					<-finished.Done()
+				}
 				return
 			case <-finished.Done():
 				if length < len(widgetList.records) {
@@ -336,7 +343,7 @@ func (widgetList *ListWidget) update(gui *gocui.Gui, ctx context.Context, finish
 					widgetList.upd(gui, ctx, rec)
 				}
 				return
-			default:
+			case <-ticker.C:
 				if length < len(widgetList.records) {
 					rec := widgetList.records[length:]
 					length = length + len(rec)
@@ -351,7 +358,7 @@ func (widgetList *ListWidget) upd(gui *gocui.Gui, ctx context.Context, rec []any
 	gui.UpdateAsync(func(guiInner *gocui.Gui) error {
 		view, err := guiInner.View(widgetList.name)
 		if err != nil {
-			return err
+			return nil
 		}
 
 		for _, r := range rec {
@@ -393,6 +400,9 @@ func (widgetList *ListWidget) refreshFilter(gui *gocui.Gui, view *gocui.View) er
 
 	go func() {
 		length := 0
+		ticker := time.NewTicker(40 * time.Millisecond)
+		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -403,7 +413,7 @@ func (widgetList *ListWidget) refreshFilter(gui *gocui.Gui, view *gocui.View) er
 					widgetList.upd(gui, ctx, rec)
 				}
 				return
-			default:
+			case <-ticker.C:
 				if length < len(widgetList.records) {
 					rec := widgetList.records[length:]
 					length = length + len(rec)

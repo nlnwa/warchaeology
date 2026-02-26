@@ -1,6 +1,8 @@
 package filewalker_test
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"path/filepath"
 	"testing"
@@ -71,4 +73,48 @@ func TestFilewalker_Walk(t *testing.T) {
 			assert.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+func TestFilewalker_Walk_ResolvesWACZAsFilesystem(t *testing.T) {
+	memfs := afero.NewMemMapFs()
+
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	w, err := zw.Create("nested/record.txt")
+	if err != nil {
+		t.Fatalf("zip create: %v", err)
+	}
+	if _, err := w.Write([]byte("hello")); err != nil {
+		t.Fatalf("zip write: %v", err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatalf("zip close: %v", err)
+	}
+
+	if err := afero.WriteFile(memfs, "/sample.wacz", buf.Bytes(), 0o644); err != nil {
+		t.Fatalf("write wacz: %v", err)
+	}
+
+	fw := filewalker.New(
+		filewalker.WithFs(memfs),
+		filewalker.WithRecursive(true),
+		filewalker.WithSuffixes([]string{".txt"}),
+	)
+
+	var got []string
+	err = fw.Walk(context.Background(), "/sample.wacz", func(wfs afero.Fs, path string, err error) error {
+		if err != nil {
+			return err
+		}
+		if _, readErr := afero.ReadFile(wfs, path); readErr != nil {
+			return readErr
+		}
+		got = append(got, path)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Walk() error = %v", err)
+	}
+
+	assert.Equal(t, []string{"/nested/record.txt"}, got)
 }
