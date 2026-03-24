@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	TmpDir     = "tmp-dir"
-	TmpDirHelp = `directory used for temporary files`
+	TempDir     = "tmp-dir"
+	TempDirHelp = `directory used for temporary files`
 
 	StrictValidation     = "strict"
 	StrictValidationHelp = `fail on the first validation error`
@@ -28,14 +28,14 @@ type WarcRecordOptionFlags struct {
 
 func (f WarcRecordOptionFlags) AddFlags(cmd *cobra.Command) {
 	flags := cmd.Flags()
-	flags.String(TmpDir, os.TempDir(), TmpDirHelp)
+	flags.String(TempDir, os.TempDir(), TempDirHelp)
 	flags.Bool(StrictValidation, false, StrictValidationHelp)
 	flags.Bool(LenientValidation, false, LenientValidationHelp)
 	flags.Bool(LaxHostParsing, false, LaxHostParsingHelp)
 }
 
-func (f WarcRecordOptionFlags) TmpDir() string {
-	return viper.GetString(TmpDir)
+func (f WarcRecordOptionFlags) TempDir() string {
+	return viper.GetString(TempDir)
 }
 
 func (f WarcRecordOptionFlags) StrictValidation() bool {
@@ -52,7 +52,7 @@ func (f WarcRecordOptionFlags) LaxHostParsing() bool {
 
 func (f WarcRecordOptionFlags) ToWarcRecordOptions() []gowarc.WarcRecordOption {
 	options := []gowarc.WarcRecordOption{
-		gowarc.WithBufferTmpDir(f.TmpDir()),
+		gowarc.WithBufferTmpDir(f.TempDir()),
 	}
 	if f.LenientValidation() {
 		options = append(options, gowarc.WithNoValidation())
