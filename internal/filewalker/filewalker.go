@@ -3,7 +3,10 @@ package filewalker
 import (
 	"context"
 	"io/fs"
+	"os"
+	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	archivefs "github.com/nationallibraryofnorway/warchaeology/v4/internal/fs"
@@ -69,7 +72,17 @@ func (fw *FileWalker) Walk(ctx context.Context, path string, walkFn func(fs afer
 }
 
 func (fw *FileWalker) walkDir(ctx context.Context, currentFs afero.Fs, root string, dirName string, mountPrefix string, walkFn func(fs afero.Fs, path string, err error) error) error {
-	return afero.Walk(currentFs, dirName, func(path string, info fs.FileInfo, err error) error {
+	walkImpl := func(walkFn filepath.WalkFunc) error {
+		// Use the custom walk with path.Join (forward slashes) for virtual
+		// filesystems (zip, tar, ftp) where entry names use forward slashes.
+		// Use afero.Walk for OS filesystems to preserve symlink handling
+		// via lstatIfPossible.
+		if currentFs.Name() != "OsFs" {
+			return Walk(currentFs, dirName, walkFn)
+		}
+		return afero.Walk(currentFs, dirName, walkFn)
+	}
+	return walkImpl(func(path string, info fs.FileInfo, err error) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -137,4 +150,65 @@ func (fw *FileWalker) walkDir(ctx context.Context, currentFs afero.Fs, root stri
 
 		return walkFn(currentFs, path, nil)
 	})
+}
+
+// Walk walks an afero.Fs using forward-slash path joining (path.Join)
+// instead of OS-native separators (filepath.Join). This is needed because
+// afero.Walk hardcodes filepath.Join, which produces backslash paths on Windows
+// that don't match virtual filesystem conventions (zip, tar, etc.).
+func Walk(fs afero.Fs, root string, walkFn filepath.WalkFunc) error {
+	info, err := fs.Stat(root)
+	if err != nil {
+		return walkFn(root, nil, err)
+	}
+	return walk(fs, root, info, walkFn)
+}
+
+func readDirNames(afs afero.Fs, dirname string) ([]string, error) {
+	f, err := afs.Open(dirname)
+	if err != nil {
+		return nil, err
+	}
+	names, err := f.Readdirnames(-1)
+	_ = f.Close()
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+func walk(afs afero.Fs, name string, info os.FileInfo, walkFn filepath.WalkFunc) error {
+	err := walkFn(name, info, nil)
+	if err != nil {
+		if info.IsDir() && err == filepath.SkipDir {
+			return nil
+		}
+		return err
+	}
+	if !info.IsDir() {
+		return nil
+	}
+
+	names, err := readDirNames(afs, name)
+	if err != nil {
+		return walkFn(name, info, err)
+	}
+
+	for _, child := range names {
+		childPath := path.Join(name, child)
+		childInfo, err := afs.Stat(childPath)
+		if err != nil {
+			if err := walkFn(childPath, nil, err); err != nil && err != filepath.SkipDir {
+				return err
+			}
+		} else {
+			if err := walk(afs, childPath, childInfo, walkFn); err != nil {
+				if !childInfo.IsDir() || err != filepath.SkipDir {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }

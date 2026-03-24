@@ -3,7 +3,8 @@ package zipfs
 import (
 	"archive/zip"
 	"os"
-	"path/filepath"
+	"path"
+	"strings"
 	"syscall"
 	"time"
 
@@ -19,13 +20,13 @@ type Fs struct {
 // It returns the cleaned versions of the directory and file.
 // If the path is empty or does not start with a slash, it is prefixed with a slash.
 func splitpath(name string) (dir, file string) {
-	name = filepath.ToSlash(name)
-	if len(name) == 0 || name[0] != os.PathSeparator {
-		name = string(os.PathSeparator) + name
+	name = strings.ReplaceAll(name, "\\", "/")
+	if len(name) == 0 || name[0] != '/' {
+		name = "/" + name
 	}
-	name = filepath.Clean(name)
-	dir, file = filepath.Split(name)
-	dir = filepath.Clean(dir)
+	name = path.Clean(name)
+	dir, file = path.Split(name)
+	dir = path.Clean(dir)
 	return
 }
 
@@ -40,7 +41,7 @@ func New(r *zip.Reader) afero.Fs {
 			fs.files[d][f] = file
 		}
 		if file.FileInfo().IsDir() {
-			dirname := filepath.Join(d, f)
+			dirname := path.Join(d, f)
 			if _, ok := fs.files[dirname]; !ok {
 				fs.files[dirname] = make(map[string]*zip.File)
 			}
@@ -85,7 +86,7 @@ func (fs *Fs) Open(name string) (afero.File, error) {
 	if file == nil {
 		return &File{
 			fs:        fs,
-			pseudodir: &pseudoDir{path: filepath.Join(d, f)},
+			pseudodir: &pseudoDir{path: path.Join(d, f)},
 			isdir:     true,
 		}, nil
 	}
@@ -107,7 +108,7 @@ func (fs *Fs) Rename(oldname, newname string) error { return syscall.EPERM }
 
 type pseudoRoot struct{}
 
-func (p *pseudoRoot) Name() string       { return string(filepath.Separator) }
+func (p *pseudoRoot) Name() string       { return "/" }
 func (p *pseudoRoot) Size() int64        { return 0 }
 func (p *pseudoRoot) Mode() os.FileMode  { return os.ModeDir | os.ModePerm }
 func (p *pseudoRoot) ModTime() time.Time { return time.Now() }
@@ -118,7 +119,7 @@ type pseudoDir struct {
 	path string
 }
 
-func (fi pseudoDir) Name() string       { return filepath.Base(fi.path) }
+func (fi pseudoDir) Name() string       { return path.Base(fi.path) }
 func (fi pseudoDir) Size() int64        { return 0 }
 func (fi pseudoDir) IsDir() bool        { return true }
 func (fi pseudoDir) ModTime() time.Time { return time.Now() }
