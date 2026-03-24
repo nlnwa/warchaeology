@@ -6,7 +6,7 @@ title: "warc console"
 A shell for working with WARC files
 
 ```
-warc console DIR [flags]
+warc console DIR/FILE [flags]
 ```
 
 ### Options
@@ -14,6 +14,7 @@ warc console DIR [flags]
 ```
   -h, --help               help for console
       --suffixes strings   only process files with these suffixes (default [.warc,.warc.gz])
+      --tmp-dir string     directory used for temporary files (default "/tmp")
 ```
 
 ### Options inherited from parent commands
