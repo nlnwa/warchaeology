@@ -4,7 +4,7 @@ import (
 	"compress/gzip"
 	"time"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warcwriterconfig"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/warcwriterconfig"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

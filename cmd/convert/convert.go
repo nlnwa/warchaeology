@@ -1,9 +1,9 @@
 package convert
 
 import (
-	"github.com/nationallibraryofnorway/warchaeology/v4/cmd/convert/arc"
-	"github.com/nationallibraryofnorway/warchaeology/v4/cmd/convert/nedlib"
-	"github.com/nationallibraryofnorway/warchaeology/v4/cmd/convert/warc"
+	"github.com/nationallibraryofnorway/warchaeology/v5/cmd/convert/arc"
+	"github.com/nationallibraryofnorway/warchaeology/v5/cmd/convert/nedlib"
+	"github.com/nationallibraryofnorway/warchaeology/v5/cmd/convert/warc"
 	"github.com/spf13/cobra"
 )
 

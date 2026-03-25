@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/time"
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/util"
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/time"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/util"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/warc"
 	"github.com/nlnwa/gowarc/v3"
 )
 

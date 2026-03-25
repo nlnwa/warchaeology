@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/cmd/internal/flag"
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/ui"
+	"github.com/nationallibraryofnorway/warchaeology/v5/cmd/internal/flag"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/ui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

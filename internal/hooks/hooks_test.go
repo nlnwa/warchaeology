@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/stat"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/stat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

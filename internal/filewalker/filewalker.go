@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	archivefs "github.com/nationallibraryofnorway/warchaeology/v4/internal/fs"
+	archivefs "github.com/nationallibraryofnorway/warchaeology/v5/internal/fs"
 	"github.com/spf13/afero"
 )
 

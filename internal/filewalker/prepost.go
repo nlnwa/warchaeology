@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/hooks"
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/index"
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/stat"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/hooks"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/index"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/stat"
 	"github.com/spf13/afero"
 )
 

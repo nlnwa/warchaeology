@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/dgraph-io/badger/v3"
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/stat"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/stat"
 )
 
 type FileIndex struct {
