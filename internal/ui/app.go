@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/awesome-gocui/gocui"
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/ui/model"
-	widgets "github.com/nationallibraryofnorway/warchaeology/v4/internal/ui/widget"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/ui/model"
+	widgets "github.com/nationallibraryofnorway/warchaeology/v5/internal/ui/widget"
 	"github.com/nlnwa/gowarc/v3"
 )
 

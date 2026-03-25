@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/klauspost/compress/gzip"
-	mytime "github.com/nationallibraryofnorway/warchaeology/v4/internal/time"
+	mytime "github.com/nationallibraryofnorway/warchaeology/v5/internal/time"
 	"github.com/nlnwa/gowarc/v3"
 )
 

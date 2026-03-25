@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/awesome-gocui/gocui"
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/ui/model"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/ui/model"
 	"github.com/nlnwa/gowarc/v3"
 )
 

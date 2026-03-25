@@ -4,7 +4,7 @@ import (
 	"iter"
 	"strings"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/filter"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/filter"
 	"github.com/nlnwa/gowarc/v3"
 )
 

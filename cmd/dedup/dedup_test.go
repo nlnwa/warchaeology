@@ -5,8 +5,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/index"
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warcwriterconfig"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/index"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/warcwriterconfig"
 	"github.com/spf13/afero"
 )
 

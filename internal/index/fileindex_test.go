@@ -3,7 +3,7 @@ package index
 import (
 	"testing"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/stat"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/stat"
 )
 
 func TestFileIndex_SaveAndGetFileStats(t *testing.T) {

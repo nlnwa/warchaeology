@@ -1,4 +1,4 @@
-module github.com/nationallibraryofnorway/warchaeology/v4
+module github.com/nationallibraryofnorway/warchaeology/v5
 
 go 1.24.0
 

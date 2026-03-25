@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/cmd"
+	"github.com/nationallibraryofnorway/warchaeology/v5/cmd"
 	"github.com/spf13/cobra/doc"
 )
 

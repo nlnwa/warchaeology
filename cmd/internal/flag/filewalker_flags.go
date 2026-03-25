@@ -3,7 +3,7 @@ package flag
 import (
 	"fmt"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/filewalker"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/filewalker"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

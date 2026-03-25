@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/cmd"
-	cmdversion "github.com/nationallibraryofnorway/warchaeology/v4/internal/version"
+	"github.com/nationallibraryofnorway/warchaeology/v5/cmd"
+	cmdversion "github.com/nationallibraryofnorway/warchaeology/v5/internal/version"
 )
 
 var (

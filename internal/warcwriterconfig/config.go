@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/hooks"
-	"github.com/nationallibraryofnorway/warchaeology/v4/internal/util"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/hooks"
+	"github.com/nationallibraryofnorway/warchaeology/v5/internal/util"
 	"github.com/nlnwa/gowarc/v3"
 )
 
