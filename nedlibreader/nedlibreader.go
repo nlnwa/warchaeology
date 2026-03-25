@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"iter"
 	"net/http"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/afero"
 )
 
@@ -32,10 +33,10 @@ func NewNedlibReader(fileSystem afero.Fs, metaFilename string, defaultTime time.
 	return nedlibReader, nil
 }
 
-func (nedlibReader *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Validation, error) {
-	var validation *gowarc.Validation
+func (nedlibReader *NedlibReader) Next() (gowarc.Record, error) {
+	var validation []error
 	if nedlibReader.done {
-		return nil, 0, validation, io.EOF
+		return gowarc.Record{}, io.EOF
 	}
 	defer func() {
 		nedlibReader.done = true
@@ -43,13 +44,13 @@ func (nedlibReader *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Vali
 
 	file, err := nedlibReader.fs.Open(nedlibReader.metaFilename)
 	if err != nil {
-		return nil, 0, validation, err
+		return gowarc.Record{}, err
 	}
 	defer func() { _ = file.Close() }()
 
 	response, err := http.ReadResponse(bufio.NewReader(io.MultiReader(file, bytes.NewReader([]byte{'\r', '\n'}))), nil)
 	if err != nil {
-		return nil, 0, validation, err
+		return gowarc.Record{}, err
 	}
 	defer response.Body.Close()
 
@@ -99,29 +100,46 @@ func (nedlibReader *NedlibReader) Next() (gowarc.WarcRecord, int64, *gowarc.Vali
 		}
 	}
 	if _, err = warcRecordBuilder.WriteString(response.Proto + " " + response.Status + "\n"); err != nil {
-		return nil, 0, validation, err
+		return gowarc.Record{}, err
 	}
 	if err = header.Write(warcRecordBuilder); err != nil {
-		return nil, 0, validation, err
+		return gowarc.Record{}, err
 	}
 
 	if _, err = warcRecordBuilder.WriteString("\r\n"); err != nil {
-		return nil, 0, validation, err
+		return gowarc.Record{}, err
 	}
 
 	payloadFile, err := nedlibReader.fs.Open(strings.TrimSuffix(nedlibReader.metaFilename, ".meta"))
 	if err != nil {
-		return nil, 0, validation, err
+		return gowarc.Record{}, err
 	}
 	defer func() { _ = payloadFile.Close() }()
 
 	if _, err = warcRecordBuilder.ReadFrom(payloadFile); err != nil {
-		return nil, 0, validation, err
+		return gowarc.Record{}, err
 	}
 
 	var warcRecord gowarc.WarcRecord
 	warcRecord, validation, err = warcRecordBuilder.Build()
-	return warcRecord, 0, validation, err
+	return gowarc.Record{WarcRecord: warcRecord, Offset: 0, Size: 0, Validation: validation}, err
+}
+
+func (nedlibReader *NedlibReader) Records() iter.Seq2[gowarc.Record, error] {
+	return func(yield func(gowarc.Record, error) bool) {
+		for {
+			record, err := nedlibReader.Next()
+			if err == io.EOF {
+				return
+			}
+			if !yield(record, err) {
+				return
+			}
+			if err != nil {
+				return
+			}
+		}
+	}
 }
 
 func (nedlibReader *NedlibReader) Close() error {

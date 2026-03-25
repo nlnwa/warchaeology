@@ -8,7 +8,7 @@ import (
 
 const (
 	MinDiskFree     = "min-disk-free"
-	MinDiskFreeHelp = `minimum free space on disk to allow WARC writing`
+	MinDiskFreeHelp = `minimum free disk space required to continue writing WARC output`
 )
 
 type UtilFlags struct {

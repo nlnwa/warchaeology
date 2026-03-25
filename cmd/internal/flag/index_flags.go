@@ -12,13 +12,13 @@ import (
 
 const (
 	NewIndex     = "new-index"
-	NewIndexHelp = `true to start from a fresh index, deleting eventual index from last run`
+	NewIndexHelp = `start with a fresh index by deleting any existing index in --index-dir at startup`
 
 	KeepIndex     = "keep-index"
-	KeepIndexHelp = `true to keep index on disk so that the next run will continue where the previous run left off`
+	KeepIndexHelp = `keep index files in --index-dir after the run so later runs can continue from them`
 
 	IndexDir     = "index-dir"
-	IndexDirHelp = `directory to store indexes`
+	IndexDirHelp = `directory used to store index data`
 )
 
 type IndexFlags struct{}

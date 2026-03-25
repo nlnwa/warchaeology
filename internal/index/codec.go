@@ -1,10 +1,11 @@
 package index
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 )
 
 const (
@@ -15,6 +16,10 @@ const (
 )
 
 func UnmarshalRevisitRef(data []byte) (*gowarc.RevisitRef, error) {
+	if len(data) < oUri {
+		return nil, fmt.Errorf("invalid revisit reference encoding: length %d is smaller than minimum %d", len(data), oUri)
+	}
+
 	revisitReference := &gowarc.RevisitRef{}
 	switch data[0] {
 	case 1:
@@ -25,7 +30,10 @@ func UnmarshalRevisitRef(data []byte) (*gowarc.RevisitRef, error) {
 		revisitReference.Profile = gowarc.ProfileServerNotModifiedV1_0
 	case 4:
 		revisitReference.Profile = gowarc.ProfileServerNotModifiedV1_1
+	default:
+		return nil, fmt.Errorf("invalid revisit profile encoding: %d", data[0])
 	}
+
 	revisitReference.TargetRecordId = "<urn:uuid:" + string(data[oId:oDate]) + ">"
 	now := time.Time{}
 	if err := now.UnmarshalBinary(data[oDate:oUri]); err != nil {
@@ -37,13 +45,20 @@ func UnmarshalRevisitRef(data []byte) (*gowarc.RevisitRef, error) {
 }
 
 func MarshalRevisitRef(revisitReference *gowarc.RevisitRef) (data []byte, err error) {
-	id := strings.Trim(revisitReference.TargetRecordId, "<>")[9:]
-	uri := revisitReference.TargetUri
-	time, err := time.Parse(time.RFC3339, revisitReference.TargetDate)
+	if revisitReference == nil {
+		return nil, fmt.Errorf("revisit reference is nil")
+	}
+
+	id, err := normalizeRecordID(revisitReference.TargetRecordId)
 	if err != nil {
 		return nil, err
 	}
-	date, err := time.MarshalBinary()
+	uri := revisitReference.TargetUri
+	t, err := time.Parse(time.RFC3339, revisitReference.TargetDate)
+	if err != nil {
+		return nil, err
+	}
+	date, err := t.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +73,8 @@ func MarshalRevisitRef(revisitReference *gowarc.RevisitRef) (data []byte, err er
 		profile = 3
 	case gowarc.ProfileServerNotModifiedV1_1:
 		profile = 4
+	default:
+		return nil, fmt.Errorf("invalid revisit profile: %q", revisitReference.Profile)
 	}
 
 	length := oUri + len(uri)
@@ -67,4 +84,16 @@ func MarshalRevisitRef(revisitReference *gowarc.RevisitRef) (data []byte, err er
 	copy(b[oDate:], date)
 	copy(b[oUri:], uri)
 	return b, nil
+}
+
+func normalizeRecordID(recordID string) (string, error) {
+	trimmed := strings.Trim(recordID, "<>")
+	if !strings.HasPrefix(trimmed, "urn:uuid:") {
+		return "", fmt.Errorf("invalid target record id: %q", recordID)
+	}
+	id := strings.TrimPrefix(trimmed, "urn:uuid:")
+	if len(id) != 36 {
+		return "", fmt.Errorf("invalid target record id length: %d", len(id))
+	}
+	return id, nil
 }

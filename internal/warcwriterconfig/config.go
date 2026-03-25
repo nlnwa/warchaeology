@@ -9,7 +9,7 @@ import (
 
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/hooks"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/util"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 )
 
 const DefaultDateFormat = "2006-1-2"

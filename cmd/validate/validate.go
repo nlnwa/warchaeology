@@ -17,7 +17,7 @@ import (
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/stat"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/workerpool"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -282,7 +282,8 @@ func (o *ValidateOptions) handleFile(fs afero.Fs, path string) (stat.Result, err
 
 	var lastOffset int64 = -1
 
-	for record, err := range warc.Records(warcFileReader, o.filter, o.recordNum, o.recordCount) {
+	records := warc.Compose(warcFileReader.Records(), o.filter, o.recordNum, o.recordCount)
+	for record, err := range records {
 		if err != nil {
 			// When forcing, avoid infinite loop by ensuring the iterator moves forward
 			if o.force && lastOffset != record.Offset {
@@ -290,18 +291,14 @@ func (o *ValidateOptions) handleFile(fs afero.Fs, path string) (stat.Result, err
 				lastOffset = record.Offset
 				continue
 			}
-			return result, warc.Error(record, err)
+			return result, warc.ErrorFrom(record, err)
 		}
 
-		func() {
-			defer record.Close()
-
-			result.IncrRecords()
-
-			for _, err := range *record.Validation {
-				result.AddError(warc.Error(record, err))
-			}
-		}()
+		result.IncrRecords()
+		for _, err := range record.Validation {
+			result.AddError(warc.ErrorFrom(record, err))
+		}
+		record.Close()
 	}
 	return result, nil
 }

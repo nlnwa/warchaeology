@@ -9,22 +9,22 @@ import (
 	"strings"
 
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/filter"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 const (
 	RecordId     = "id"
-	RecordIdHelp = `filter record ID's. For more than one, repeat flag or use comma separated list.`
+	RecordIdHelp = `only process records with these record IDs; repeat the flag or use a comma-separated list`
 
 	RecordType     = "record-type"
-	RecordTypeHelp = `filter records by type. For more than one, repeat the flag or use a comma separated list.
+	RecordTypeHelp = `only process records with these record types; repeat the flag or use a comma-separated list.
 Legal values:
 	warcinfo, request, response, metadata, revisit, resource, continuation and conversion`
 
 	ResponseCode     = "response-code"
-	ResponseCodeHelp = `filter records by http response code
+	ResponseCodeHelp = `only process records by HTTP response code
 Example:
 	200	- only records with a 200 response
 	200-300	- records with response codes between 200 (inclusive) and 300 (exclusive)
@@ -32,7 +32,7 @@ Example:
 	-400	- all response codes below 400`
 
 	MimeType     = "mime-type"
-	MimeTypeHelp = `filter records with given mime-types. For more than one, repeat flag or use a comma separated list.`
+	MimeTypeHelp = `only process records with these MIME types; repeat the flag or use a comma-separated list`
 )
 
 type FilterFlags struct {

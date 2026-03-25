@@ -6,7 +6,7 @@ import (
 	_ "crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
-	"fmt"
+	"encoding/hex"
 	"hash"
 	"io"
 )
@@ -58,5 +58,5 @@ func (reader *countingReader) Hash() string {
 	if reader.hash == nil {
 		return ""
 	}
-	return fmt.Sprintf("%0x", reader.hash.Sum(nil))
+	return hex.EncodeToString(reader.hash.Sum(nil))
 }

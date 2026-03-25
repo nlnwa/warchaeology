@@ -1,6 +1,7 @@
 package aart
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -10,12 +11,13 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
+	"os"
 
 	"github.com/nationallibraryofnorway/warchaeology/v4/cmd/internal/flag"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/filter"
 	"github.com/nationallibraryofnorway/warchaeology/v4/internal/warc"
 	"github.com/nfnt/resize"
-	"github.com/nlnwa/gowarc/v2"
+	"github.com/nlnwa/gowarc/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -98,6 +100,9 @@ func NewCmdAart() *cobra.Command {
 }
 
 func (o *AartOptions) Complete(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return errors.New("missing file name")
+	}
 	o.fileName = args[0]
 
 	return nil
@@ -106,6 +111,9 @@ func (o *AartOptions) Complete(cmd *cobra.Command, args []string) error {
 func (o *AartOptions) Validate() error {
 	if len(o.fileName) == 0 {
 		return errors.New("missing file name")
+	}
+	if o.width <= 0 {
+		return errors.New("width must be greater than zero")
 	}
 	return nil
 }
@@ -121,11 +129,13 @@ func (o *AartOptions) Run() error {
 		return fmt.Errorf("failed to create WARC reader: %v", err)
 	}
 
-	for record, err := range warc.Records(wf, o.filter, o.recordNum, o.recordCount) {
+	records := warc.Compose(wf.Records(), o.filter, o.recordNum, o.recordCount)
+	stdin := bufio.NewReader(os.Stdin)
+	for record, err := range records {
 		if err != nil {
 			return err
 		}
-		err = o.handleRecord(record)
+		err = o.handleRecord(record, stdin)
 		if err != nil {
 			return err
 		}
@@ -135,7 +145,9 @@ func (o *AartOptions) Run() error {
 
 const ansiClearScreenEscapeSequence = "\u001B[2J\u001B[H"
 
-func (o *AartOptions) handleRecord(record warc.Record) error {
+func (o *AartOptions) handleRecord(record gowarc.Record, stdin *bufio.Reader) error {
+	defer record.Close()
+
 	wr := record.WarcRecord
 
 	block, ok := wr.Block().(gowarc.HttpResponseBlock)
@@ -154,7 +166,7 @@ func (o *AartOptions) handleRecord(record warc.Record) error {
 		return fmt.Errorf("failed to display: %w", err)
 	}
 	fmt.Printf("Hit enter to continue\n")
-	_, _ = fmt.Scanln()
+	_, _ = stdin.ReadString('\n')
 
 	return nil
 }
@@ -177,7 +189,7 @@ func asciiArt(img image.Image, w, h int) []byte {
 
 func grayscale(c color.Color) int {
 	r, g, b, _ := c.RGBA()
-	return int(0.299*float64(r) + 0.587*float64(g) + 0.114*float64(b))
+	return int((299*r + 587*g + 114*b) / 1000)
 }
 
 func getHeight(img image.Image, w int) (image.Image, int, int) {

@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"io"
 	"os"
-	"path/filepath"
+	"path"
 	"syscall"
 
 	"github.com/spf13/afero"
@@ -110,9 +110,9 @@ func (f *File) Name() string {
 		if f.pseudodir != nil {
 			return f.pseudodir.path
 		}
-		return string(filepath.Separator)
+		return "/"
 	}
-	return filepath.Join(splitpath(f.zipfile.Name))
+	return path.Join(splitpath(f.zipfile.Name))
 }
 
 func (f *File) getDirEntries() (map[string]*zip.File, error) {

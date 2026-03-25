@@ -8,27 +8,27 @@ import (
 
 const (
 	OpenInputFileHook     = "open-input-file-hook"
-	OpenInputFileHookHelp = `a command to run before opening each input file. The command has access to data as environment variables.
+	OpenInputFileHookHelp = `command to run before opening each input file; the command receives these environment variables:
 	WARC_COMMAND contains the subcommand name
 	WARC_HOOK_TYPE contains the hook type (OpenInputFile, CloseInputFile, OpenOutputFile, CloseOutputFile)
 	WARC_FILE_NAME contains the file name of the input file`
 
 	CloseInputFileHook     = "close-input-file-hook"
-	CloseInputFileHookHelp = `a command to run after closing each input file. The command has access to data as environment variables.
+	CloseInputFileHookHelp = `command to run after closing each input file; the command receives these environment variables:
 	WARC_COMMAND contains the subcommand name
 	WARC_HOOK_TYPE contains the hook type (OpenInputFile, CloseInputFile, OpenOutputFile, CloseOutputFile)
 	WARC_FILE_NAME contains the file name of the input file
 	WARC_ERROR_COUNT contains the number of errors found if the file was validated and the validation failed`
 
 	OpenOutputFileHook     = "open-output-file-hook"
-	OpenOutputFileHookHelp = `a command to run before opening each output file. The command has access to data as environment variables.
+	OpenOutputFileHookHelp = `command to run before opening each output file; the command receives these environment variables:
 	WARC_COMMAND contains the subcommand name
 	WARC_HOOK_TYPE contains the hook type (OpenInputFile, CloseInputFile, OpenOutputFile, CloseOutputFile)
 	WARC_FILE_NAME contains the file name of the output file
 	WARC_SRC_FILE_NAME contains the file name of the input file if the output file is generated from an input file`
 
 	CloseOutputFileHook     = "close-output-file-hook"
-	CloseOutputFileHookHelp = `a command to run after closing each output file. The command has access to data as environment variables.
+	CloseOutputFileHookHelp = `command to run after closing each output file; the command receives these environment variables:
 	WARC_COMMAND contains the subcommand name
 	WARC_HOOK_TYPE contains the hook type (OpenInputFile, CloseInputFile, OpenOutputFile, CloseOutputFile)
 	WARC_FILE_NAME contains the file name of the output file

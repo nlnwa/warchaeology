@@ -7,7 +7,7 @@ import (
 
 const (
 	ContinueOnError     = "continue-on-error"
-	ContinueOnErrorHelp = `continue on error. Will continue processing files and directories in spite of errors.`
+	ContinueOnErrorHelp = `continue processing remaining files and directories after errors`
 )
 
 type ErrorFlags struct {
