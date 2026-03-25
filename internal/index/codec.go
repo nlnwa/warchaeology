@@ -54,11 +54,11 @@ func MarshalRevisitRef(revisitReference *gowarc.RevisitRef) (data []byte, err er
 		return nil, err
 	}
 	uri := revisitReference.TargetUri
-	time, err := time.Parse(time.RFC3339, revisitReference.TargetDate)
+	t, err := time.Parse(time.RFC3339, revisitReference.TargetDate)
 	if err != nil {
 		return nil, err
 	}
-	date, err := time.MarshalBinary()
+	date, err := t.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
