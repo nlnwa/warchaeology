@@ -62,7 +62,7 @@ func (idx *FileIndex) SaveFileStats(key string, result stat.Result) error {
 	err := runWithConflictRetry(func() error {
 		return idx.db.Update(func(txn *badger.Txn) error {
 			if result == nil {
-				return txn.Set([]byte(key), nil)
+				return txn.Delete([]byte(key))
 			}
 			val, err := result.MarshalBinary()
 			if err != nil {
