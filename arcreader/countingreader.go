@@ -7,7 +7,7 @@ import (
 
 // CountingReader counts the bytes read through it.
 type CountingReader struct {
-	bytesRead int64
+	bytesRead atomic.Int64
 	maxBytes  int64
 	ioReader  io.Reader
 }
@@ -43,10 +43,10 @@ func (r *CountingReader) Read(p []byte) (n int, err error) {
 			p = p[:remaining]
 		}
 		n, err = r.ioReader.Read(p)
-		atomic.AddInt64(&r.bytesRead, int64(n))
+		r.bytesRead.Add(int64(n))
 	} else {
 		n, err = r.ioReader.Read(p)
-		atomic.AddInt64(&r.bytesRead, int64(n))
+		r.bytesRead.Add(int64(n))
 	}
 	return
 }
@@ -54,5 +54,5 @@ func (r *CountingReader) Read(p []byte) (n int, err error) {
 // N gets the number of bytes that have been read
 // so far.
 func (r *CountingReader) N() int64 {
-	return atomic.LoadInt64(&r.bytesRead)
+	return r.bytesRead.Load()
 }
