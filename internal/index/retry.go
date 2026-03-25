@@ -13,17 +13,14 @@ const (
 )
 
 func runWithConflictRetry(op func() error) error {
-	err := op()
-	if !errors.Is(err, badger.ErrConflict) {
-		return err
-	}
+	var err error
 
 	for attempt := range maxConflictRetries {
-		time.Sleep(time.Duration(attempt+1) * conflictBackoff)
 		err = op()
 		if !errors.Is(err, badger.ErrConflict) {
 			return err
 		}
+		time.Sleep(time.Duration(attempt+1) * conflictBackoff)
 	}
 
 	return err
