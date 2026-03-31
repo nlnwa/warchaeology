@@ -4,7 +4,7 @@ Warchaeology is a collection of tools for inspecting, manipulating and validatin
 
 ## Installation
 
-[Installation instructions](https://nationallibraryofnorway.github.io/warchaeology/installation).
+[Installation instructions](https://nationallibraryofnorway.github.io/warchaeology/getting-started/installation)
 
 ## Documentation
 
